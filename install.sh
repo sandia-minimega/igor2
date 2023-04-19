@@ -1,0 +1,219 @@
+#!/bin/bash
+
+INSTALL_ALL=true
+bold=$(tput bold)
+normal=$(tput sgr0)
+
+USAGE="Usage: install.sh [-server] [-cli] [-web] [-h|-help]
+${bold}(must be run as root)${normal}"
+HELP="
+This script will install Igor apps and set up initial environment for running
+them. It must be in the same directory as the ${bold}igor2.tar.gz${normal} file created with
+the build.sh script.
+
+By default all apps are installed, otherwise specify ${bold}-server${normal}, ${bold}-cli${normal} and/or
+${bold}-web${normal} flags to install the apps of your choice.
+
+When installing igor-server the script will use the OS's package manager to
+download npm and sqlite if not already present.
+
+When installing either igor-server or igor-web a sub-folder in your current
+working directory named 'igor-extra' will be created. It contains example
+scripts for setting up these apps with logrotate and systemd.
+
+Creates the 'igor' system user with a home directory and sets the IGOR_HOME
+environment variable to this folder (if no prior install was performed). This
+is the default location of files used by the server unless others are specified
+in its YAML config.
+
+*** Default app install locations ***
+servers + web-app: /opt/igor
+CLI app:           /usr/local/bin
+config files:      /etc/igor
+"
+
+while [[ $# -gt 0 ]]; do
+   arg="$1"
+   case $arg in
+   -cli)
+      INSTALL_CLI=true
+      INSTALL_ALL=false
+      shift
+      ;;
+   -server)
+      INSTALL_SERVER=true
+      INSTALL_ALL=false
+      shift
+      ;;
+   -web)
+      INSTALL_WEB=true
+      INSTALL_ALL=false
+      shift
+      ;;
+   -all)
+      INSTALL_ALL=true
+      shift
+      ;;
+   -h | -help)
+      echo "$USAGE"
+      echo "$HELP"
+      exit 0
+      ;;
+   -*)
+      echo "... unknown flag $1"
+      echo "$USAGE"
+      exit 1
+      ;;
+   *)
+      echo "... unknown argument $1"
+      echo "$USAGE"
+      exit 1
+      ;;
+   esac
+done
+
+# Check if the script is being run as root
+if [ "$(id -u)" != "0" ]; then
+   echo "${bold}This script must be run as root.${normal} See full help for important info." 1>&2
+   exit 1
+fi
+
+function get_os_type() {
+   case $(uname) in
+   Linux)
+      command -v apt-get >/dev/null && {
+         DEBIAN=1
+         echo "detected apt-get, assuming Debian-based distro"
+         return
+      }
+      command -v yum >/dev/null && {
+         RH=1
+         echo "detected yum, assuming RH-based distro"
+         return
+      }
+      ;;
+   *)
+      echo "Unsupported OS. Did not detect Debian or RedHat distro features."
+      exit 1
+      ;;
+   esac
+}
+
+get_os_type
+
+if [[ "$INSTALL_WEB" == true && "$INSTALL_CLI" == true && "$INSTALL_SERVER" == true ]]; then
+   INSTALL_ALL=true
+fi
+
+# Define variables
+USERNAME=igor
+HOME_DIR=/home/igor
+CLI_DIR=/usr/local/bin
+SERVER_DIR=/opt/igor
+ETC_DIR=/etc/igor
+LOG_DIR=/var/log/igor
+
+if id "$USERNAME" &>/dev/null; then
+   echo "System user '$USERNAME' already exists ... skipping creation"
+else
+   echo "Adding '$USERNAME' as system user"
+   if [ $DEBIAN ]; then
+      adduser igor --system --group
+   fi
+   if [ $RH ]; then
+      useradd -r -m -s /sbin/nologin igor
+   fi
+   chmod 750 $HOME_DIR
+fi
+
+# Set IGOR_HOME for everyone if setting doesn't already exist
+if [ ! -f /etc/profile.d/igor.sh ]; then
+   if [ $DEBIAN ]; then
+      grep -qxF "export IGOR_HOME=" /etc/environment || echo "export IGOR_HOME=$HOME_DIR" >>/etc/environment
+   fi
+   if [ $RH ]; then
+      grep -qxF "export IGOR_HOME=" $HOME_DIR/.bashrc || echo "export IGOR_HOME=$HOME_DIR" >>$HOME_DIR/.bashrc
+   fi
+   if [[ ! -f /etc/profile.d/igor.sh ]]; then
+      echo "export IGOR_HOME=$HOME_DIR" >/etc/profile.d/igor.sh
+   fi
+fi
+
+source /etc/profile.d/igor.sh
+mkdir -p "$ETC_DIR/certs"
+tar -xzvf igor2.tar.gz --transform='s|README-certs.txt|README|' --strip-components=2 -C $ETC_DIR/certs ./other/README-certs.txt
+chown igor:igor -R $ETC_DIR
+mkdir -p $SERVER_DIR
+chown root:root $SERVER_DIR
+
+if [[ $INSTALL_ALL == true || $INSTALL_SERVER == true ]]; then
+   echo -e "Installing Igor server\n"
+   echo "Starting Igor server package install ..."
+   if [ $DEBIAN ]; then
+      apt-get install -y nmap sqlite3
+   fi
+   if [ $RH ]; then
+      yum install -y nmap sqlite
+   fi
+   echo -e "Igor server package installation finished.\n"
+
+   tar -xzf igor2.tar.gz --strip-component=1 -C $SERVER_DIR ./igor-server
+   if [ -f "$ETC_DIR/igor-server.yaml" ]; then
+      tar -xzvf igor2.tar.gz --transform='s|igor-server.yaml|igor-server.yaml.blank-orig|' --strip-components=2 -C $ETC_DIR ./etc/igor-server.yaml
+      echo -e "$ETC_DIR/igor-server.yaml already exists - writing out blank server yaml file for reference\n"
+      W_BLANK=true
+   else
+      tar -xzf igor2.tar.gz --strip-components=2 -C $ETC_DIR ./etc/igor-server.yaml
+   fi
+   if [ -f "$ETC_DIR/igor-clusters.yaml" ]; then
+      echo -e "$ETC_DIR/igor-clusters.yaml already exists - will not be overwritten\n"
+   else
+      tar -xzf igor2.tar.gz --strip-components=2 -C $ETC_DIR ./etc/igor-clusters.yaml
+   fi
+fi
+
+if [[ $INSTALL_ALL == true || $INSTALL_WEB == true ]]; then
+   echo -e "Installing Igor web server\n"
+   tar -xzf igor2.tar.gz --strip-components=1 -C $SERVER_DIR ./igor-web
+   if [ -f "$ETC_DIR/igor-web.yaml" ]; then
+      tar -xzvf igor2.tar.gz --transform='s|igor-web.yaml|igor-web.yaml.blank-orig|' --strip-components=2 -C $ETC_DIR ./etc/igor-web.yaml
+      echo -e "$ETC_DIR/igor-web.yaml already exists - writing out blank web server yaml file for reference\n"
+      W_BLANK=true
+   else
+      tar -xzf igor2.tar.gz --strip-components=2 -C $ETC_DIR ./etc/igor-web.yaml
+   fi
+   # Attempt to save an existing config.json file and put it back after update
+   if [ -f "$SERVER_DIR/web-content/config.json" ]; then
+      mv $SERVER_DIR/web-content/config.json /tmp/igorweb.config.json
+   fi
+   rm -rf $SERVER_DIR/web-content
+   tar -xzf igor2.tar.gz --strip-components=1 -C $SERVER_DIR ./web-content
+   if [ -f "/tmp/igorweb.config.json" ]; then
+      mv /tmp/igorweb.config.json $SERVER_DIR/web-content/config.json
+   fi
+fi
+
+if [[ $INSTALL_ALL == true || $INSTALL_SERVER == true || $INSTALL_WEB == true ]]; then
+   mkdir $LOG_DIR && chown igor:igor $LOG_DIR
+   chown root:root -R /opt/igor/* && chmod 755 /opt/igor/*
+   chown igor:igor $ETC_DIR/igor-*.yaml && chmod 660 $ETC_DIR/igor-*.yaml && chmod 664 $ETC_DIR/igor-clusters.yaml
+   if [ $W_BLANK ]; then
+      chown igor:igor $ETC_DIR/igor-*.blank-orig && chmod 664 $ETC_DIR/igor-*.blank-orig
+   fi
+   tar -xzf igor2.tar.gz ./igor-extra
+fi
+
+if [[ $INSTALL_ALL == true || $INSTALL_CLI == true ]]; then
+   echo -e "Installing Igor CLI\n"
+   tar -xzf igor2.tar.gz --strip-components=1 -C $CLI_DIR ./igor
+   chown root:root "$CLI_DIR/igor" && chmod 755 "$CLI_DIR/igor"
+   if [ -f "$ETC_DIR/igor.yaml" ]; then
+      tar -xzvf igor2.tar.gz --transform='s|igor.yaml|igor.yaml.blank-orig|' --strip-components=2 -C $ETC_DIR ./etc/igor.yaml
+      echo "$ETC_DIR/igor.yaml already exists - writing out blank CLI yaml file for reference"
+      chown igor:igor $ETC_DIR/igor.yaml.blank-orig && chmod 664 $ETC_DIR/igor.yaml.blank-orig
+   else
+      tar -xzf igor2.tar.gz --strip-components=2 -C $ETC_DIR ./etc/igor.yaml
+      chown igor:igor $ETC_DIR/igor.yaml && chmod 664 $ETC_DIR/igor.yaml
+   fi
+   $CLI_DIR/igor completion bash >/etc/bash_completion.d/igor
+fi

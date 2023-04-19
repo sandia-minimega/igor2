@@ -1,0 +1,12 @@
+
+/var/log/igor/igor.log {
+   compress
+   delaycompress
+   daily
+   dateext
+   dateyesterday
+   copytruncate
+   rotate 365
+   missingok
+}
+

@@ -1,0 +1,178 @@
+body,
+html {
+  height: 100vh;
+}
+
+.buttonfocus {
+  outline: none !important;
+  border: none !important;
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+}
+
+#usermenu {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+
+a {
+  text-decoration: none;
+  cursor: pointer;
+  color: grey;
+}
+
+.thecontainer {
+  height: 100vh;
+}
+.h100 {
+  height: 100vh;
+}
+
+.rtable {
+  border-radius: 1px;
+  border-width: 3px !important;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: visible;
+}
+
+table.table-bordered {
+  border: 1px solid grey !important;
+  margin-top: 20px;
+}
+table.table-bordered > thead > tr > th {
+  border: 1px solid lightgrey !important;
+}
+table.table-bordered > tbody > tr > td {
+  border: 1px solid lightgrey !important;
+}
+
+.arrow-icon {
+  color: grey;
+}
+
+.theader {
+  background: mintcream;
+  color: grey;
+  font-weight: normal;
+}
+
+/* The side navigation menu */
+.sidebar {
+  position: relative;
+  overflow: auto;
+}
+
+/* Sidebar links */
+.sidebar a {
+  display: block;
+  color: black;
+  padding: 16px;
+  text-decoration: none;
+}
+
+/* Active/current link */
+.sidebar a.active {
+  color: grey;
+}
+
+/* Links on mouse-over */
+.sidebar a:hover:not(.active) {
+  color: grey;
+}
+
+.sidebar {
+  color: grey;
+}
+
+/* Required form field */
+.requiredField::after {
+  content: " * ";
+  color: red;
+}
+
+/* Style for motd banner */
+div.scrolling-limit {
+  width: 500px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: bold;
+  font-style: oblique;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+div.scrolling {
+  position: relative;
+  -webkit-animation: scroll 20s infinite linear;
+  -moz-animation: scroll 20s infinite linear;
+  -o-animation: scroll 20s infinite linear;
+  animation: scroll 20s infinite linear;
+}
+
+/* Top Navbar */
+.display-menu {
+  display: block;
+}
+.hide-menu {
+  display: none;
+}
+@keyframes scroll {
+  0% {
+    left: 500px;
+  }
+  100% {
+    left: -950px;
+  }
+}
+@-webkit-keyframes scroll {
+  0% {
+    left: 500px;
+  }
+  100% {
+    left: -950px;
+  }
+}
+
+/* Page content. The value of the margin-left property should match the value of the sidebar's width property */
+div.content {
+  margin-left: 20%;
+  padding: 100px 16px;
+  height: 100vh;
+}
+
+/* On screens that are less than 700px wide, make the sidebar into a topbar */
+@media screen and (max-width: 700px) {
+  body {
+    font-size: small;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+  .sidebar a {
+    float: left;
+  }
+  div.content {
+    margin-left: 0;
+  }
+  #motdMsg {
+    font-size: medium;
+  }
+}
+
+/* On screens that are less than 400px, display the bar vertically, instead of horizontally */
+@media screen and (max-width: 400px) {
+  .sidebar a {
+    text-align: center;
+    float: none;
+  }
+}

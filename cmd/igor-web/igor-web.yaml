@@ -1,0 +1,56 @@
+#
+# ---------------- IGOR-WEB SERVER CONFIGURATION FILE ----------------
+#
+# This configuration file is designed to get igor-web up and running quickly. If a field has a default indicated that is
+# the value that will be used if the field is left blank. Review carefully for required fields. At startup the server
+# will print all finalized config values to the igor log file for review. Password settings are masked in the log file
+# output for security.
+
+# -- SERVER SETTINGS --
+webserver:
+
+  # host (string) - igor-web server host name or IP. By default, the server will attempt to get this host's FQDN at startup
+  # if this field is left blank. Alternatively you can specify the host directly here or set to localhost.
+  # Default: FQDN, if available
+  host:
+
+  # port (uint) - igorweb port for accepting connections
+  # Default: 3000 (if left blank)
+  port:
+
+  # certFile/keyFile (string) - Paths to certificate and key files used by HTTPS. Igor requires HTTPS on its client
+  # API calls. A self-signed certificate is allowed. These paths must be absolute.
+  # REQUIRED. Cannot be left blank.
+  certFile: /path/to/host.crt
+  keyFile: /path/to/host.key
+
+  # fileDir (string) - the top-level directory where the igor-web VueJS app files are located. On a production system
+  # this should use an absolute URL. If using the un-edited installer script, this would be /opt/igor/web-content
+  # REQUIRED. Cannot be left blank. (In development will try to mount ../../web/dist if not set)
+  fileDir:
+
+# -- LOGGER SETTINGS --
+log:
+  # dir (string) - Specifies the logfile directory.
+  # Default: /var/log/igor
+  # If the log path is inaccessible, $IGOR_HOME will be used.
+  dir:
+
+  # file (string) - The name of the igorweb log file
+  # Default: igorweb.log
+  file:
+
+  # level (string) - The logging level
+  # Accepted values: debug, info, warn, error
+  # Default: info
+  level:
+
+  # syslog can be used to configure a syslog endpoint on the local machine or over a network
+  syslog:
+    # network (string) - Defines what kind of syslog endpoint to connect to.
+    # Accepted values: none, local, or see https://golang.org/pkg/net/#Dial for a list of acceptable values for network field.
+    network: none
+
+    # addr (string) - This field is only used if connecting over the network to a syslog daemon. See
+    # https://golang.org/pkg/net/#Dial for a list of acceptable values for addr field.
+    addr:

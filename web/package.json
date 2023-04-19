@@ -1,0 +1,68 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve --port 3000",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint",
+    "build-app": "npm install && npm run build",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^5.15.4",
+    "@fortawesome/fontawesome-free-solid": "^5.0.13",
+    "@fortawesome/fontawesome-svg-core": "^1.2.36",
+    "@fortawesome/free-solid-svg-icons": "^5.15.4",
+    "@vueform/multiselect": "^2.3.4",
+    "axios": "^0.22.0",
+    "bootstrap": "^4.5.3",
+    "bootstrap-icons-vue": "^1.8.1",
+    "bootstrap-vue": "^2.21.2",
+    "cors": "^2.8.5",
+    "moment": "^2.29.1",
+    "v-tooltip": "^2.1.3",
+    "vue": "^2.6.14",
+    "vue-bootstrap4-table": "^1.1.11",
+    "vue-reactive-storage": "github:ropbla9/vue-reactive-storage",
+    "vue-router": "^3.5.2",
+    "vue-step-wizard": "^0.1.17",
+    "vue-table-dynamic": "^0.4.10",
+    "vuejs-smart-table": "^0.0.8",
+    "vuex": "^3.6.2",
+    "vuex-persistedstate": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.8",
+    "@vue/cli-plugin-babel": "~4.5.0",
+    "@vue/cli-plugin-eslint": "^3.1.1",
+    "@vue/cli-service": "^3.12.1",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^6.7.2",
+    "eslint-plugin-vue": "^6.2.2",
+    "vue-template-compiler": "^2.6.11"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "node": true
+    },
+    "extends": [
+      "plugin:vue/essential",
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "parser": "babel-eslint"
+    },
+    "rules": {
+      "no-unused-vars": "off",
+      "no-unused-components": "off"
+    }
+  },
+  "proxy": "https://localhost:3000",
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

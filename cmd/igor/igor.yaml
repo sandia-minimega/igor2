@@ -1,0 +1,49 @@
+# -- SERVER SETTINGS --
+#
+# Settings for connecting to the igor server.
+server:
+
+  # host (string) - hostname or IP where igor-server is running
+  # REQUIRED field.
+  host:
+
+  # port (uint) - igor-server port for accepting connections from clients
+  # Default: 8443
+  port:
+
+# -- CLIENT SETTINGS --
+#
+# These are optional settings that tweak how the client works.
+client:
+
+  # certFile/keyFile (string) - Optional paths to a cert/key file pair if you have set up igor-server to only accept
+  # client connections from known installations. Self-signed certificates will work. This path must be absolute.
+  # Default: (blank)
+  certFile:
+  keyFile:
+
+  # caCert (string) - Optional location of CA Cert used to sign the cert and key files above. This path can be absolute
+  # or relative to the client executable.
+  # Default: (blank)
+  caCert:
+
+  # timezone (string) - Designates a specific timezone for this client to assist in display of reservation datetimes.
+  # The default is to use the machine's tz, but if that is set to UTC or a different zone than the user a local tz may
+  # be desired. Note that if the machine lacks an IANA TZ database it may not be possible for the client to use what is
+  # set here. Examples: US/Pacific, America/Denver, Zulu, Japan, Europe/London
+  # Default: (blank - uses client machine tz)
+  timezone:
+
+  # authLocal (true/false) - Set explicitly to false if igor's password authentication is being handled by an
+  # external service such as LDAP. This will save some time for users accidentally trying to change their password
+  # and have it denied in the client rather than waiting on a server denial response.
+  # Default: true
+  authLocal:
+
+  # passwordLabel (string) - This is a label reminder of what kind of password igor is expecting when the user is
+  # prompted for one. It prepends the provided text to " password". The default results in "igor password". If the
+  # server is authenticating with LDAP a different value is advised such as "LDAP", "Kerberos" or even a  company
+  # name. For example a more helpful label would be "School LDAP password".
+  # This is only a convenience label. It does NOT change how the client performs authentication.
+  # Default: igor
+  passwordLabel:

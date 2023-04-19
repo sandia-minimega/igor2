@@ -1,0 +1,91 @@
+
+# This is an example config for a cluster named 'krypton'.
+# IMPORTANT: Igor assumes that hostnames for cluster nodes are the cluster prefix followed by the hostmap index number.
+# In the below example this would mean the hostname list would start with "kn1" and end with "kn12".
+
+# The top-level param is the name of your cluster.
+krypton:
+
+  # prefix (string) - This is the 2-3 letter designator of the cluster and the first part of an individual node's hostname.
+  prefix: kn
+
+  # display-width/height (int) - These are the dimensions the igor CLI client will use when displaying the node
+  # map for this cluster. The product of these two values must be >= the total number of nodes in the cluster.
+  displayWidth: 6
+  displayHeight: 2
+
+  # Cluster host specification.
+  hostmap:
+
+    # hostnum: (required/int) - the sequence number and suffix of each node hostname.
+    #   mac:      (required) mac address for this host
+    #   hostname: (required if different from convention) Igor assumes the hostname follows the convention <prefix><seq#>
+    #             ex. with cluster prefix 'kn', the host entered in position 1 has the hostname kn1, position 2 = kn2, etc.
+    #             If the actual hostname is different with no alias that fulfils Igor's convention, it must be specified here.
+    #   eth:      (required if using vlan segmentation) the mapping from hostname to switch reference
+    #   ip:       (required) - the ip address for this host. Can be IPv4 or IPv6
+    #   policy:   (requried if not 'default') Name of a host policy that should be applied to this host. Default policy is
+    #             used if none specified. It is not required to provide this field when first setting up igor. Subsequent
+    #             use of host policies will update your cluster configuration file with the correct policy applied to each node.
+    1:
+      mac: 00:00:00:00:00:00
+      eth: Et4/1/1
+      ip: 192.168.0.1
+      policy: default
+    2:
+      mac: 00:00:00:00:00:00
+      hostname: zod          # notice here we use the optional 'hostname' field. Igor still presents the node as 'kn2' to
+                             # users, but any network communication with the node will use this hostname instead.
+      eth: Et4/2/1
+      ip: 192.168.0.2
+      policy: default
+    3:
+      mac: 00:00:00:00:00:00
+      eth: Et4/3/1
+      ip: 192.168.0.3
+      policy: default
+    4:
+      mac: 00:00:00:00:00:00
+      eth: Et4/4/1
+      ip: 192.168.0.4
+      policy: default
+    5:
+      mac: 00:00:00:00:00:00
+      eth: Et4/5/1
+      ip: 192.168.0.5
+      policy: default
+    6:
+      mac: 00:00:00:00:00:00
+      eth: Et4/6/1
+      ip: 192.168.0.6
+      policy: default
+    7:
+      mac: 00:00:00:00:00:00
+      eth: Et4/7/1
+      ip: 192.168.0.7
+      policy: default
+    8:
+      mac: 00:00:00:00:00:00
+      eth: Et4/8/1
+      ip: 192.168.0.8
+      policy: default
+    9:
+      mac: 00:00:00:00:00:00
+      eth: Et4/9/1
+      ip: 192.168.1.9
+      policy: default
+    10:
+      mac: 00:00:00:00:00:00
+      eth: Et4/10/1
+      ip: 192.168.0.10
+      policy: default
+    11:
+      mac: 00:00:00:00:00:00
+      eth: Et4/11/1
+      ip: 192.168.0.11
+      policy: default
+    12:
+      mac: 00:00:00:00:00:00
+      eth: Et4/12/1
+      ip: 192.168.0.12
+      policy: default

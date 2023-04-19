@@ -1,0 +1,466 @@
+/* General Style */
+
+/* Links */
+ul,
+li {
+  list-style-type: none;
+  color: grey;
+}
+
+a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.title-brand {
+  color: orange;
+  font-weight: bold;
+}
+
+/* Style for Node Grid */
+.node-grid {
+  background-color: mintcream;
+  border-radius: 4px;
+  border-color: mintcream;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.card-list {
+  display: grid;
+  grid-gap: 0.2em;
+  border-radius: 4px;
+  font-size: small;
+}
+
+.card-item {
+  background-color: black;
+  color: white;
+  font-weight: bold;
+ border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.card-item:hover {
+  background-color: grey;
+  color: white;
+  font-weight: bold;
+}
+
+.card-reserved-powered {
+  background-color: green;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-grp-reserved-powered:hover {
+  background-color: green;
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}
+.card-reserved-off {
+  background-color: green;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-reserved-off:hover {
+  background-color: green;
+  color: red;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-reserved-unknown {
+  background-color: green;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-reserved-unknown:hover {
+  background-color: green;
+  color: orange;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-grp-reserved-powered {
+  background-image: repeating-linear-gradient(
+    45deg,
+    green,
+    green 10px,
+    darkgreen 10px,
+    darkgreen 20px
+  );
+  background-color: green;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-grp-reserved-powered:hover {
+  background-color: green;
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-grp-reserved-off {
+  background-image: repeating-linear-gradient(
+    45deg,
+    green,
+    green 10px,
+    darkgreen 10px,
+    darkgreen 20px
+  );
+  background-color: green;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-grp-reserved-off:hover {
+  background-color: green;
+  color: red;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-grp-reserved-unknown {
+  background-image: repeating-linear-gradient(
+    45deg,
+    green,
+    green 10px,
+    darkgreen 10px,
+    darkgreen 20px
+  );
+  background-color: green;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-grp-reserved-unknown:hover {
+  background-color: green;
+  color: orange;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-other-reserved-powered {
+  background-color: rebeccapurple;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-other-reserved-powered:hover {
+  background-color: rebeccapurple;
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-other-reserved-off {
+  background-color: rebeccapurple;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-other-reserved-off:hover {
+  background-color: rebeccapurple;
+  color: red;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-other-reserved-unknown {
+  background-color: rebeccapurple;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-other-reserved-unknown:hover {
+  background-color: rebeccapurple;
+  color: orange;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-available-off {
+  background-color: black;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.card-available-off:hover {
+  background-color: black;
+  color: red;
+  font-weight: bold;
+}
+
+.card-available-unknown {
+  background-color: black;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.card-available-unknown:hover {
+  background-color: grey !important;
+  color: orange;
+  font-weight: bold;
+}
+.card-available-unknown:active {
+  background-color: grey !important;
+  color: orange;
+  font-weight: bold;
+}
+
+.card-blocked-powered {
+  background-color: rgb(160, 137, 4);
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-blocked-powered:hover {
+  background-color: rgb(160, 137, 4);
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-blocked-off {
+  background-color: rgb(160, 137, 4);
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-blocked-off:hover {
+  background-color: rgb(160, 137, 4);
+  color: red;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-blocked-unknown {
+  background-color: rgb(160, 137, 4);
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-blocked-unknown:hover {
+  background-color: rgb(160, 137, 4);
+  color: orange;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-restricted-powered {
+  background-color: violet;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-restricted-powered:hover {
+  background-color: violet;
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-restricted-off {
+  background-color: violet;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-restricted-off:hover {
+  background-color: violet;
+  color: red;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-restricted-unknown {
+  background-color: violet;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-restricted-unknown:hover {
+  background-color: violet;
+  color: orange;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-insterr-powered {
+  background-color: lightskyblue;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-insterr-powered:hover {
+  background-color: lightskyblue;
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-insterr-off {
+  background-color: lightskyblue;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-insterr-off:hover {
+  background-color: lightskyblue;
+  color: red;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-insterr-unknown {
+  background-color: lightskyblue;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  pointer-events: none;
+}
+.card-insterr-unknown:hover {
+  background-color: lightskyblue;
+  color: orange;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card-selected-powered {
+  background-color: lightgreen;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.card-selected-off {
+  background-color: lightgreen;
+  color: red;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.card-selected-unknown {
+  background-color: lightgreen;
+  color: orange;
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+
+.card-expiring {
+  background-color: rgb(234, 206, 241);
+  padding: 1em;
+  animation: blinker 1s infinite;
+}
+
+.expiring {
+  background-color: rgb(244, 231, 248) !important;
+}
+
+@keyframes blinker {
+  from {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.node-label {
+  padding: 1em;
+}
+.tooltip-wrap {
+  position: relative;
+}
+.tooltip-wrap .tooltip-content {
+  display: none;
+  position: absolute;
+  padding: 0.1em;
+  z-index: 1;
+  border-radius: 15px;
+  background-image: linear-gradient(rgb(223, 234, 245), rgb(184, 211, 238));
+}
+.tooltip-wrap:hover .tooltip-content {
+  display: block;
+}
+
+@media screen and (max-width: 700px) {
+  .card-list {
+    font-size: x-small;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Igor's VueJS front-end
+Wants=network-online.target
+After=network-online.target igor-server.service
+StartLimitIntervalSec=0
+
+[Service]
+# Server req env where executable lives
+Environment=IGOR_HOME=/home/igor
+Type=simple
+ExecStart=/opt/igor/igor-web
+Restart=always
+RestartSec=1
+User=igor
+
+[Install]
+WantedBy=multi-user.target

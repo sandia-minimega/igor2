@@ -1,0 +1,239 @@
+#!/bin/bash
+
+BUILD_ALL=true
+bold=$(tput bold)
+normal=$(tput sgr0)
+
+USAGE="Usage: build.sh [-server] [-cli] [-web] [-n] [-z] [-h|-help]"
+HELP="
+This script will build Igor apps. By default all apps are built, otherwise
+specify ${bold}-server${normal}, ${bold}-cli${normal} and/or ${bold}-web${normal} flags to build the apps of your choice.
+
+Use the ${bold}-n${normal} flag to run npm install and update prior to building the web app.
+Note the script will always act as though the -n flag is present if the folder
+web/node_modules or the file web/package-lock.json doesn't exist.
+
+The ${bold}-z${normal} flag can be included to create a tar archive of the resulting build."
+
+while [[ $# -gt 0 ]]; do
+   case $1 in
+   -n)
+      FULL_NPM=true
+      shift
+      ;;
+   -z)
+      ARCHIVE=true
+      shift
+      ;;
+   -cli)
+      BUILD_CLI=true
+      BUILD_ALL=false
+      shift
+      ;;
+   -server)
+      BUILD_SERVER=true
+      BUILD_ALL=false
+      shift
+      ;;
+   -web)
+      BUILD_WEB=true
+      BUILD_ALL=false
+      shift
+      ;;
+   -all)
+      BUILD_ALL=true
+      shift
+      ;;
+   -h | -help)
+      echo "$USAGE"
+      echo "$HELP"
+      exit 0
+      ;;
+   -*)
+      echo "... unknown flag $1"
+      echo "$USAGE"
+      exit 1
+      ;;
+   *)
+      echo "... unknown argument $1"
+      echo "$USAGE"
+      exit 1
+      ;;
+   esac
+done
+
+if [[ "$BUILD_WEB" == true && "$BUILD_CLI" == true && "$BUILD_SERVER" == true ]]; then
+   BUILD_ALL=true
+fi
+
+if ! command -v go version &>/dev/null; then
+   echo "Golang not installed on this machine. Please install v1.19.x (or higher) and try again."
+   exit
+else
+   go_v=$(go version | {
+      read _ _ v _
+      echo "${v#go}"
+   })
+   goIN=(${go_v//./ })
+   if [ "${goIN[1]}" -lt 19 ]; then
+      echo "Go version needs a minimum of 1.19.x, found $go_v"
+      exit 1
+   else
+      echo "Go version found $go_v"
+   fi
+fi
+
+if [[ "$BUILD_ALL" == true || "$BUILD_WEB" == true ]]; then
+
+   if ! command -v npm -v &>/dev/null; then
+      echo "NPM not installed on this machine. Please install v8.x and try again."
+      exit 1
+   else
+      npm_v=$(npm -v)
+      npmIN=(${npm_v//./ })
+      if [ "${npmIN[0]}" -lt 8 ]; then
+         echo "NPM version needs a minimum of 8.x, found $npm_v"
+         exit 1
+      else
+         echo "NPM version found $npm_v"
+      fi
+   fi
+
+   if ! command -v node -v &>/dev/null; then
+      echo "NodeJS not installed on this machine. Please install v16.x and try again."
+      exit 1
+   else
+      node_version=$(node -v)
+      node_v="${node_version#v}"
+      nodeIN=(${node_v//./ })
+      if [ "${nodeIN[0]}" -lt 16 ]; then
+         echo "NodeJS version needs a minimum of 16.x, found $node_v"
+         exit 1
+      else
+         echo "NodeJS version found $node_v"
+      fi
+   fi
+fi
+
+if [ -d "build" ]; then rm -rf "build"; fi
+
+mkdir -p "build/etc"
+mkdir -p "build/igor-extra"
+mkdir -p "build/other"
+cp igor-extra/README-certs.txt build/other/README-certs.txt
+
+DATE=$(date -u +%d-%b-%Y\ %T\ %Z)
+GIT_TAG="unknown build"
+if [ $(git describe --dirty) ]; then
+  GIT_TAG=$(git describe --dirty)
+fi
+VERSION_PKG="igor2/internal/pkg/common"
+LDFLAGS="-X $VERSION_PKG.GitTag=${GIT_TAG}"
+LDFLAGS="$LDFLAGS -X \"$VERSION_PKG.Date=${DATE}\""
+LDFLAGS="$LDFLAGS -X $VERSION_PKG.GoVersion=${go_v}"
+
+if [ $BUILD_ALL == true ]; then
+   echo "Building all Igor apps..."
+fi
+
+if [[ $BUILD_ALL == true || $BUILD_SERVER == true ]]; then
+   echo -n "Building Igor server... "
+   go_server=$(go build -ldflags "$LDFLAGS" -o build ./cmd/igor-server 2>&1 >/dev/null)
+   if [ $? -ne 0 ]; then
+      echo "$go_server"
+      echo "Go encountered an error... Igor server build aborted."
+      exit 1
+   fi
+   cp cmd/igor-server/*.yaml build/etc
+   cp igor-extra/igor.logrotate build/igor-extra
+   cp igor-extra/igor-server.service build/igor-extra
+   echo "done."
+fi
+
+if [[ $BUILD_ALL == true || $BUILD_CLI == true ]]; then
+   echo -n "Building Igor CLI... "
+   go_cli=$(go build -ldflags "$LDFLAGS" -o build ./cmd/igor 2>&1 >/dev/null)
+   if [ $? -ne 0 ]; then
+      echo "$go_cli"
+      echo "Go encountered an error... Igor CLI build aborted."
+      exit 1
+   fi
+   cp cmd/igor/*.yaml build/etc
+   echo "done."
+fi
+
+if [[ $BUILD_ALL == true || $BUILD_WEB == true ]]; then
+   echo -n "Building Igorweb server... "
+   mkdir -p "build/web-content"
+   go_web=$(go build -ldflags "$LDFLAGS" -o build ./cmd/igor-web 2>&1 >/dev/null)
+   if [ $? -ne 0 ]; then
+      echo "$go_web"
+      echo "Go encountered an error... Igorweb server build aborted."
+      exit 1
+   fi
+   cp cmd/igor-web/*.yaml build/etc
+   echo "done."
+
+   pushd web >/dev/null || {
+      echo "web folder not found... build aborted."
+      exit 1
+   }
+
+   if [[ ! -d "./node_modules" || ! -f "package.json" || $FULL_NPM == true ]]; then
+      npm_full_echo="Running npm install and update..."
+      echo "$npm_full_echo"
+      npm_i=$(npm install)
+      if [ $? -ne 0 ]; then
+         echo "$npm_i"
+         echo "'npm install' encountered an error... build aborted."
+         exit 1
+      fi
+      npm_u=$(npm update)
+      if [ $? -ne 0 ]; then
+         echo "$npm_u"
+         echo "'npm update' encountered an error... build aborted."
+         exit 1
+      fi
+      echo -e "\e[1A\e[K$npm_full_echo done."
+   else
+      echo "Skipping npm install & update."
+   fi
+
+   web_build_echo="Building Igorweb VueJS app with npm..."
+   echo "$web_build_echo"
+   npm_b=$(npm run build)
+   if [ $? -ne 0 ]; then
+      echo "$npm_b"
+      echo "'npm run build' encountered an error... build aborted."
+      exit 1
+   fi
+
+   popd >/dev/null || {
+      echo "error navigating back to root project folder... build aborted."
+      exit 1
+   }
+
+   cp -r web/dist/* build/web-content/
+   cp igor-extra/igor-web.service build/igor-extra
+   echo -e "\e[1A\e[K$web_build_echo done."
+fi
+
+echo "Build: success!"
+
+if [ "$ARCHIVE" == true ]; then
+   if [ "$BUILD_ALL" == false ]; then
+      red=$(tput setaf 1)
+      echo "${bold}${red}WARNING:${normal} tar archive will not contain all Igor apps."
+   fi
+   if [ -f "igor2.tar.gz" ]; then
+      echo "Deleting old igor2.tar.gz file."
+      rm igor2.tar.gz
+   fi
+   echo -n "Creating new archive igor2.tar.gz... "
+   if [ ! -d "build" ]; then
+      echo "build folder not found... archive step aborted."
+      exit 1
+   fi
+   tar -czf igor2.tar.gz --owner=0 --group=0 -C build . &>/dev/null
+   echo "done."
+fi

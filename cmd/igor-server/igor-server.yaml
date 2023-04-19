@@ -1,0 +1,434 @@
+#
+# ---------------- IGOR SERVER CONFIGURATION FILE ----------------
+#
+# This configuration file is designed to get igor up and running quickly. If a field has a default indicated that is
+# the value that will be used if the field is left blank. Review carefully for required fields. At startup the server 
+# will print all finalized config values to the igor log file for review. Password settings are masked in the log file 
+# output for security.
+
+
+# -- ENVIRONMENT SETTINGS --
+
+# instanceName (string) - Specifies the name of this igor instance. This is an optional label that helps distinguish
+# which igor server is emailing users. It is highly recommended setting this label if multiple igor servers are
+# reachable within the same organization. Ex: R&D Cluster Lab
+# Default: igor
+instanceName:
+
+
+# -- SERVER SETTINGS -- 
+# Server setup. The relevant settings will make connections to the REST API available at https://[host]:[port]/igor
+server:
+
+  # host (string) - Igor server host name or IP. If left blank will call 'hostname -f' at startup to get the FQDN for
+  # use in this field. Alternatively you can specify the hostname or an IP directly, including 0.0.0.0 or localhost.
+  # Default: FQDN, if available
+  host:
+
+  # port (int) - Igor server port for accepting connections from clients. Change this if the default is not suitable
+  # for your cluster head node.
+  # Default: 8443
+  port:
+
+  # cbHost (string) - Igor server host name or IP for the callback/fileserver. If left blank will call 'hostname -f'
+  # at startup to get the FQDN for use in this field. Alternatively you can specify the hostname or an IP directly,
+  # including 0.0.0.0 or localhost.
+  # Default: FQDN, if available
+  cbHost:
+
+  # cbPort (int) - Igor server port for accepting connections from cluster nodes. If left blank it will use the next
+  # highest value defined by the 'port' setting above. Otherwise, set its value to something else.
+  # Default: port+1 (8444 if using port default)
+  cbPort:
+
+  # certFile/keyFile (string) - Paths to certificate and key files used by HTTPS. Igor requires HTTPS on its client
+  # API calls. A self-signed certificate is allowed. These paths must be absolute.
+  # REQUIRED. Cannot be left blank.
+  certFile: /path/to/host.crt
+  keyFile: /path/to/host.key
+
+  # cbUseTLS (bool) - If true, callback/file server accepts connections from cluster nodes over HTTPS using the same
+  # certs as the API server. Otherwise it uses the plain HTTP protocol.
+  # Default: true
+  cbUseTLS:
+
+  # allowedOrigins (string list) - A list of acceptable origins for igorweb connecting to the server. This should
+  # include any remote node where the igorweb server is installed and include the port number it uses. If an
+  # igorweb server is running on the same node as this server it must still be included in origin list since CORS
+  # treats the different port as a cross-site origin. The HTTPS scheme will be applied to each entry.
+  # Example:
+  #    - head1.myclustersite.com:3000
+  #    - head2.myclustersite.com:3050
+  # Default: (blank -- but REQURIED if igorweb is being used!)
+  allowedOrigins:
+    - localhost:3000
+    
+  # allowPublicShow (true|false) - Enables an API call at GET https://[host]:[port]/igor/public that can be reached
+  # without the need to authenticate the requester. The information returned is a plain text message in CSV format
+  # with a header row summarizing the reservations on the cluster similar to 'igor show'. This is a handy way to let
+  # user scripts poll for info without needing to be logged in. If false, the URL returns a 403 Forbidden status and
+  # message.
+  # Default: false
+  allowPublicShow:
+
+  # dnsServer (string) - The host or IP address of the DNS server that can resolve cluster node hostnames.
+  # This setting is not required if the hostname lookup is available in /etc/hosts
+  # Default: (blank)
+  dnsServer:
+
+  # tftpRoot (string) - the location where igor should store PXE boot files (same path as pxelinux.cfg, exclusive).
+  # If the path is empty or inaccessible, $IGOR_HOME will be used.
+  # Default: $IGOR_HOME/pxelinux.cfg
+  tftpRoot:
+
+  # imageStagePath is the filepath where the server will create the 'igor_staged_images' folder as the image stage path
+  # KI pair files should be placed in the imageStagePath/igor_staged_images directory to register or create a distro with.
+  # When -kstaged/-istaged flags are used when creating a Distro, Igor will use this path to look for those files.
+  # If the path is inaccessible or config is blank, $IGOR_HOME/igor_staged_images will be used instead.
+  # Default: $IGOR_HOME/igor_staged_images
+  imageStagePath:
+
+  # scriptDir (string) - The filepath where the server will create the 'scripts' folder where Kickstarter and other scripts
+  # and templates reside that are needed to support booting certain OS images.
+  # If the path is inaccessible or config is blank, $IGOR_HOME/scripts will be used instead.
+  # Default: $IGOR_HOME/scripts
+  scriptDir:
+
+  # allowImageUpload (true|false) - Specify whether to allow a user to upload a KI pair directly through the cli/web
+  # interface to build a new distro. If false, igor will only create distros from KI pairs placed in the
+  # imageStageDir/igor_staged_images path. This would normally be something only a sysadmin could do.
+  # Default: false
+  allowImageUpload:
+
+  # userLocalBootDC (true|false) - Restrict Local Boot Distro creation. If false, restricts the creation of 
+  # local boot distros to be admin only. If true, any user can create a distro using a local-boot-only image.
+  # Distros with images intended for local boot require a kickstart script to be associated with the distro.
+  # Default: false
+  userLocalBootDC:
+
+
+# -- AUTHENTICATION SETTINGS -- 
+# Parameters for how users identify themselves to igor and for how long.
+auth:
+
+  # scheme (string) - Determines authentication mechanism for igor users.
+  # Accepted values: local, ldap, ldaps or ldapi.
+  # Default: local 
+  scheme: 
+
+  # defaultUserPassword (string) - Specifies the password that is set when a new user is created or a user's password
+  # is reset by an admin. It is advised to set this in accordance with your organization's recommended security practices.
+  # This value is only used when authScheme = local. Does not affect the igor-admin account default password.
+  # Default: changeMe$1 
+  defaultUserPassword:
+
+  # tokenDuration (integer) - Specifies the duration (in hours) a generated authentication token is valid for a
+  # given user. When the token expires the user must re-authenticate. Applies both to igorweb and CLI client.
+  # Accepted values: 1-720 (1 hour to 30 days)
+  # Default: 72 
+  tokenDuration:
+
+  # elevateTimeout (int) - The number of minutes that a member of the admin group will be able to issue admin commands
+  # after executing the elevate command.
+  # Accepted values: 1 - 1440 (1 min to 24 hours)
+  # Default: 10
+  elevateTimeout:
+
+  # -- (OPTIONAL) LDAP SETTINGS --
+  # If scheme is set to an LDAP option, igor will use it as an enhanced authentication strategy. LDAP at a minimum
+  # requires a host (server address) and baseDN depending on your LDAP service configuration. If LDAP isn't being
+  # used then settings in this section are ignored.
+  ldap:
+
+    # Host (string) - LDAP server hostname.
+    # REQUIRED. Cannot be left blank.
+    host: example.ldap.com
+
+    # Port (int) - LDAP server port number.
+    # Default: Igor will auto-configure well-known ports based on auth.scheme settings (ldap = 389, ldaps = 636)
+    # If you use a different port for LDAP set it here.
+    # Default: (attempts to set automatically)
+    port:
+
+    # useTLS (true|false) - Sets the useTLS flag in ldap connection config. This setting is ignored if using ldaps.
+    # Default: false
+    useTLS:
+
+    # tlsConfig: is used for either SSL connection (LDAPS) or tls connection, whichever is chosen.
+    # If a cert is not specified, InsecureSkipVerify: true will be used
+    tlsConfig:
+
+      # tlsCheckPeer (true|false) - Set false to use InsecureSkipVerify: true
+      # Default: false
+      tlsCheckPeer:
+
+      # cert (string) - Path to the cert used for TLS.
+      # Uses the host's root CA. If ldap cert cannot be included there or no root set exists,
+      # a cert.pem path can be specified that will be read and added to a root CA set.
+      # Default: (blank)
+      cert:
+
+    # bindDN (string) - LDAP DN for searching for the user DN. This is typically a read-only user DN.
+    # Ex: cn=value,ou=value2,dc=value3
+    # Default: (blank)
+    bindDN:
+
+    # bindPassword (string) - LDAP password for searching for the user DN. This is typically a read-only user password.
+    # Default: (blank)
+    bindPassword:
+
+    # attributes ([]string) - Extra attributes for user search.
+    # Ex: [ att ]
+    # Default: (blank)
+    attributes:
+
+    # baseDN (string) - LDAP domain to use for users.
+    # Ex: ou=value4,dc=value5
+    # Default: (blank)
+    baseDN:
+
+    # filter (string) - for the User Object Filter. If username is needed more than once use fmt index pattern (%[1]s).
+    # Otherwise use %s.
+    # Ex: uid=%s
+    # Default: (blank)
+    filter:
+
+
+# -- DATABASE SETTINGS --
+database:
+
+  # adapter (string) - the database type to be used. Only 'sqlite' is a valid option at this time.
+  # Accepted values: sqlite
+  # REQUIRED. Cannot be left blank.
+  adapter: sqlite
+
+  # dbFolderPath (string) - is only used with the sqlite adapter.
+  # Accepted values: absolute folder path that will hold the igor DB file when it is created
+  # Default: $IGOR_HOME/.database
+  dbFolderPath:
+
+
+# -- LOGGER SETTINGS --
+# Igor has a configurable logger that can be adjusted for organizational requirements. See the file
+# init/igor.logrotate for an example of how to set up igor using the Linux logrotate utility.
+log:
+
+  # level (string) - The logging level
+  # Accepted values: debug, info, warn, error
+  # Default: info 
+  level:
+
+  # dir (string) - Specifies the logfile directory. If the log path is inaccessible, $IGOR_HOME will be used.
+  # Default: /var/log/igor (fallback to IGOR_HOME)
+  dir:
+
+  # file (string) - The name of the igor log file
+  # Default: igor.log 
+  file:
+
+  # Igor supports optional writing to a syslog endpoint on the local machine or over a network.
+  # Note that if this option is enabled it is best to keep the logging level at 'info' or above to avoid extremely
+  # verbose output in syslog files.
+  syslog:
+
+    # network (string) - Defines what kind of syslog endpoint to connect to.
+    # Accepted values: none, local, or see https://golang.org/pkg/net/#Dial for a list of acceptable values for network field.
+    # Default: none
+    network:
+
+    # addr (string) - This field is only used if connecting over the network to a syslog daemon. See
+    # https://golang.org/pkg/net/#Dial for a list of acceptable values for addr field.
+    # Default: (blank)
+    addr:
+
+
+# -- VLAN SETTINGS --
+# These settings configure a VLAN service provided by a network switch allowing reservation nodes to communicate with
+# each other on a private LAN.
+vlan:
+
+  # network (string) - The name of the switch/service you wish to use. Leaving this setting blank turns off VLAN service
+  # and ignores all other settings in this section.
+  # Accepted values: arista
+  # Default: (blank)
+  network:
+
+  # networkUser (string) - Network service username. Fill in with the appropriate name if the igor user doesn't have
+  # permission to access this service.
+  # Default: igor
+  networkUser:
+
+  # networkPassword (string) - The service password for the user specified above. Leave blank if no password is needed.
+  # Default: (blank)
+  networkPassword:
+
+  # networkURL (string) - Network service URL.
+  # Ex: arista.mysite.com:80/command-api
+  # REQUIRED. Cannot be left blank if VLAN service is enabled.
+  networkURL:
+
+  # rangeMin/Max (int) - specify a numerical range of assignable VLAN ids. Cannot include 0. Check your service's documentation
+  # for allowable ranges.
+  # REQUIRED. Cannot be left blank if VLAN service is enabled.
+  rangeMin: 100
+  rangeMax: 200
+
+
+# -- EMAIL SETTINGS --
+email:
+
+  # smtpServer (string) - The hostname of the SMTP mail server igor will use to send messages to users.
+  # If left blank then email from igor is completely disabled.
+  # Default: (blank)
+  smtpServer:
+
+  # smtpPort (int) - The SMTP server port. Will default to 587 if not set, but some older systems might still use
+  # port 25. Fill in a port number to override the default.
+  # Default: 587
+  smtpPort:
+
+  # smtpUser (string) - Username if your SMTP server requires authentication to send email. Note that this may require
+  # you to create a real email service account for igor. A real user account is not recommended for this purpose.
+  # Leave blank if not required.
+  # Default: (blank)
+  smtpUsername:
+
+  # smtpPassword (string) - Password if your SMTP server requires authentication to send email. Note that this may require
+  # you to create a real email service account for igor. A real user account is not recommended for this purpose.
+  # Leave blank if not required.
+  # Default: (blank)
+  smtpPassword:
+
+  # replyTo (string) - The Reply-To email address that will be applied to outgoing emails from this igor server. If you wish
+  # to not have a direct reply option to emails generated by igor then leave this blank.
+  # Default: (blank)
+  replyTo:
+
+  # helpLink (string) - An optional link that points to a cluster admin team's FAQ/support page or other help resource.
+  # If provided it will be embedded in emails that are sent by igor to users.
+  # Default: (blank)
+  helpLink:
+
+  # defaultSuffix (string) - The domain name for emails generated by igor. The 'From' address will be igor-admin@{defaultSuffix}.
+  # Note that this address is not expected to be a reply email unless you also specify it in the replyTo setting and have
+  # an email account set up in that name.
+  # REQUIRED. Cannot be left blank.
+  defaultSuffix: mydomain.com
+
+  # resNotifyOn (true|false) - Determines if email notifications about reservations starting and stopping are sent. This
+  # setting does not affect any other kind of email igor sends (password changes, etc.).
+  # Default: true
+  resNotifyOn:
+
+  # resNotifyTimes (string) - A comma-delimited list of time values indicating the instance at which an email will be
+  # sent to notify about a pending reservation expiring. (ex. 1d,12h would sent emails at one day prior to expiration
+  # and 12 hours prior). The smallest value possible is 1 hour. The last notification will always be sent with high
+  # priority to make it easier for users to see in their inbox. You can configure as many as you like but consider the
+  # impact of overwhelming users with unnecessary emails. This setting is ignored if resNotifyOn is set to false.
+  # Default: 3d,1d
+  resNotifyTimes:
+
+
+# -- RESERVATION SCHEDULER SETTINGS --
+# These settings define global limits on how reservations can be made and extended.
+scheduler:
+
+  # nodeReserveLimit (int) - The maximum number of public nodes a user can be granted per reservation. This setting does
+  # NOT affect reserving restricted nodes if the owner belongs to an allowed access group.
+  # Elevated admins ignore this setting and can always make a reservation using as many nodes as are available.
+  # Default: 0
+  nodeReserveLimit:
+
+  # maxScheduleDays (int) - The amount of time (in days) from today that defines the period during which reservations can
+  # be made. For example, assuming today's date is Jan 1, 2022 @ 5PM, a value of 90 days would disallow reservations whose
+  # end date was later than March 31, 2022 @ 5PM.
+  # This setting differs from maxReserveTime which sets the maximum duration a reservation can last.
+  # If left blank or > 1457 then the maximum of 1457 is used (4 years including 1 leap day)
+  # Elevated admins ignore this setting and can always use the maximum possible value.
+  # Default: 1457
+  maxScheduleDays:
+
+  # minReserveTime (int) - The smallest amount of time (in minutes) a create reservation request is allowed. This cannot
+  # be set to less than 10 minutes. Care should be taken in setting this value too low if nodes on the cluster take a long
+  # time to spin up.
+  # Accepted values: >= 10, <= defaultReserveTime, or blank for default
+  # Default: 30
+  minReserveTime:
+
+  # defaultReserveTime (int) - The amount of time (in minutes) a reservation lasts if no duration value is specified in a
+  # reservation create request. This value cannot be less than minReserveTime.
+  # Default: 60
+  # Accepted values: >= minReserveTime, <= maxReserveTime, or blank for default
+  defaultReserveTime:
+
+  # maxReserveTime (int) - The maximum amount of time (in minutes) a reservation can last from current wall clock time to
+  # expiration. Example: 30 days = 60*24*30 = 43200. If a reservation is made for 30 days and is extended 7 days later by
+  # the maximum allowable then the reservation's new expiration time will be 30 days from that moment, effectively adding
+  # 7 more days to the reservation.
+  #
+  # The max possible value is 2098080 minutes (4 years including 1 leap day). However, setting this to the max possible
+  # value is probably not a good idea.
+  #
+  # This value is meant to apply to normal igor users. Elevated admins can make/extend reservations of any length up to
+  # the maximum defined in maxScheduleDays.It cannot be set to a number in the range [1,defaultReserveTime).
+  # Accepted values: >= defaultReserveTime, <= 2098080, or blank for default
+  # Default: 43200
+  maxReserveTime:
+
+  # extendWithin (int) - The number of minutes prior to the end of a reservation during which a user can run the extend
+  # command. This value is bounded by maxReserveTime; setting it the same or higher will mean the user can extend
+  # immediately after reservation create, but the amount of extension time granted is still no greater than maxReserveTime.
+  #
+  # It is good to set a reasonable window of time during which extend can be run as this helps other users to reserve
+  # nodes in the future when the cluster is busy. Setting this param to maxReserveTime would allow someone running a
+  # script every minute to keep pushing out the end time of their reservation and effectively hog access to those nodes.
+  #
+  # IMPORTANT! --- If set to -1, reservation extensions are disabled and users may only get them through admin intervention.
+  #
+  # Example: 4320 would allow the extend command to be run up to 3 days before a reservation is set to expire.
+  # Default: 4320
+  extendWithin:
+
+
+# -- RESERVATION MAINTENANCE SETTINGS --
+# These settings define features for how reservations can be padded with maintenance times and hosts can be booted with a 
+# default image when not in use. You can register an image to Igor with a special flag to indicate it as a default image which
+# Igor should install to a host once a reservation it's associated with ends. See the admin guide for details on registering
+# a default image.
+maintenance:
+
+  # hostMaintenanceDuration (int) - The maximum number of minutes the host(s) of a reservation will be made unavailable after
+  # the reservation has ended. A value greater than 0 is required if using Igor to install a default image to a host after
+  # a reservation ends. You should put a sufficient amount of time to allow Igor to install the image to the host to avoid  
+  # colliding with the start time of a new reservation. This may lead to an incomplete overwrite of the host.
+  # Default: 0
+  hostMaintenanceDuration:
+
+  
+# -- EXTERNAL COMMAND SETTINGS --
+# Specifies parameters and commands that igor will use when calling other apps to perform actions on cluster nodes.
+externalCmds:
+  # concurrencyLimit (int) - the number of concurrent instances an external command is executed. This is normally
+  # associated with running the same command using a different hostname in the cluster.
+  # Default: 1
+  concurrencyLimit:
+  # commandRetries (int) - the number of times an external command will be retried if it reports an error
+  # Default: 0
+  commandRetries:
+
+  # powerOff (string) - the command used to turn off nodes in the cluster. This is executed as bash command to whichever
+  # service is being used for this purpose.
+  # Default: (blank)
+  powerOff:
+
+  # powerOn (string) - the command used to turn on/boot nodes in the cluster. This is executed as bash command to whichever
+  # service is being used for this purpose.
+  # Default: (blank)
+  powerOn:
+
+  # powerCycle (string) - the command used to cycle power to nodes in the cluster. This is executed as bash command to whichever
+  # service is being used for this purpose. If powerOff and powerOn are specified but powerCycle is blank, Igor will send
+  # an off command, then on command in sequence instead.
+  # Default: (blank)
+  powerCycle:
+
