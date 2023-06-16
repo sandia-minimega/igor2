@@ -177,11 +177,6 @@ auth:
     # Default: (blank)
     bindPassword:
 
-    # attributes ([]string) - Extra attributes for user search.
-    # Ex: [ att ]
-    # Default: (blank)
-    attributes:
-
     # baseDN (string) - LDAP domain to use for users.
     # Ex: ou=value4,dc=value5
     # Default: (blank)
@@ -192,6 +187,57 @@ auth:
     # Ex: uid=%s
     # Default: (blank)
     filter:
+
+    # attributes ([]string) - Extra attributes for user search.
+    # Ex: [ att ]
+    # Default: (blank)
+    attributes:
+
+    # GROUP_SYNC - Igor can syncronize its user list with a provided group in LDAP. With this feature enabled, Igor 
+    # will start with a worker that will regularly connect to LDAP using the settings provided above, then pull a 
+    # list of all members of the given group. Igor will compare the list of members with its user table. Any member 
+    # of the group that is not a member of Igor will be created as a new Igor user. Conversely, if there is an existing 
+    # Igor user that is not found in the group member list, the user will be disabled. 
+    groupSync:
+
+      # enableGroupSync (bool) - If true, Igor will launch a worker that periodically syncs its user list with the
+      # members of the specified group using LDAP. Default: false
+      # NOTE: In order to use this feature, you must:
+      #  1. Be using the LDAP scheme for Igor login and provide connection information above
+      #  2. Be using the email notification features or have a value entered in Email: defaultSuffix below.
+      #  3. Have already changed the Admin password from initial default
+      #  4. Have already created a cluster.
+      enableGroupSync:
+
+      # syncFrequency (int) - number in minutes Igor will wait before syncing the user list with group membership in LDAP
+      # Default: 60
+      syncFrequency: 
+
+      # groupFilter (string) - for the Group Object Filter. Only 1 group name can be used at this time.
+      # Ex: cn=working_group_name
+      # REQUIRED. Cannot be left blank if enableGroupSync is true.
+      # Default: (blank)
+      groupFilter:
+
+      # groupAttribute (string) - the key for the Entity Attribute value which holds the usernames for all members of the group
+      # Ex: memberUid
+      # REQUIRED. Cannot be left blank if enableGroupSync is true.
+      # Default: (blank)
+      groupAttribute:
+
+      # groupAttributeEmail (string) - the key for the Entity Attribute email Value. This is needed for Igor to know
+      # what key to use to extract the user's email from an LDAP response entry. If email is not kept in the LDAP user
+      # attributes, leave blank and Igor will reconstruct the user's email using the defaultDomain config value 
+      # from the email section above.
+      # Default: (blank)
+      groupMemberAttributeEmail:
+
+      # groupAttributeDisplayName (string) - the key for the Entity Attribute display name Value. This is needed for Igor 
+      # to know what key to use to extract the user's full/display from an LDAP response entry. If a display name is not 
+      # kept in the LDAP user attributes, leave blank and Igor will ignore. (a display name is optional when registering
+      # a new user)
+      # Default: (blank)
+      groupMemberAttributeDisplayName:
 
 
 # -- DATABASE SETTINGS --

@@ -5,11 +5,12 @@
 package igorserver
 
 import (
-	"fmt"
-	"github.com/rs/zerolog/hlog"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/hlog"
+	"gorm.io/gorm"
 )
 
 // doCreateUser creates a new Igor user. It steps through the process of checking to make sure
@@ -26,26 +27,26 @@ func doCreateUser(userParams map[string]interface{}, r *http.Request) (user *Use
 	}
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 
-	if err = performDbTx(func(tx *gorm.DB) error {
-		clog.Debug().Msgf("creating new igor user '%s'", username)
-		exists, ueErr := userExists(username, tx)
-		if ueErr != nil {
-			return ueErr // uses default err status
-		}
-		if exists {
-			status = http.StatusConflict
-			return fmt.Errorf("user '%s' already exists", username)
-		} else {
-			emailList, emErr := dbReadUsers(map[string]interface{}{"email": email}, tx)
-			if emErr != nil {
-				return emErr // uses default err status
-			}
-			if len(emailList) > 0 {
-				status = http.StatusConflict
-				return fmt.Errorf("email '%s' already used by '%s'", email, emailList[0].Name)
-			}
+	if ok, status, err := checkUniqueUserAttributes(username, email); !ok {
+		return nil, status, err
+	}
+	clog.Debug().Msgf("creating new igor user '%s'", username)
+	if user, status, err = createNewUser(username, email, fullName, clog); err == nil {
+		clog.Debug().Msg("new user creation complete")
+		status = http.StatusCreated
+
+		acctCreatedMsg := makeAcctNotifyEvent(EmailAcctCreated, user)
+		if acctCreatedMsg != nil {
+			acctNotifyChan <- *acctCreatedMsg
 		}
 
+	}
+	return
+}
+
+func createNewUser(username, email, fullName string, clog *zerolog.Logger) (user *User, status int, err error) {
+	status = http.StatusInternalServerError // default status, overridden at end if no errors
+	err = performDbTx(func(tx *gorm.DB) error {
 		clog.Debug().Msg("setting default user password")
 		hash, hashErr := getPasswordHash(igor.Auth.DefaultUserPassword)
 		if hashErr != nil {
@@ -101,15 +102,6 @@ func doCreateUser(userParams map[string]interface{}, r *http.Request) (user *Use
 		editParams := map[string]interface{}{"add": []User{*user}}
 		return dbEditGroup(gAll, editParams, tx) // uses default err status
 
-	}); err == nil {
-		clog.Debug().Msg("new user creation complete")
-		status = http.StatusCreated
-
-		acctCreatedMsg := makeAcctNotifyEvent(EmailAcctCreated, user)
-		if acctCreatedMsg != nil {
-			acctNotifyChan <- *acctCreatedMsg
-		}
-
-	}
-	return
+	})
+	return user, status, err
 }
