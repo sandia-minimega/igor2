@@ -605,7 +605,7 @@ func sendExpirationWarnings(checkTime *time.Time) error {
 
 		now := time.Now()
 		for _, r := range resList {
-			for i := 0; i < len(ResNotifyTimes)-1; i++ {
+			for i := 0; i < len(ResNotifyTimes); i++ {
 
 				var resWarnEvent *ResNotifyEvent
 				timeLeft := r.End.Sub(now) // amount of time left in res
