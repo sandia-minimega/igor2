@@ -48,7 +48,7 @@ server:
   keyFile: /path/to/host.key
 
   # cbUseTLS (bool) - If true, callback/file server accepts connections from cluster nodes over HTTPS using the same
-  # certs as the API server. Otherwise it uses the plain HTTP protocol.
+  # certs as the API server. Otherwise, it uses the plain HTTP protocol.
   # Default: true
   cbUseTLS:
 
@@ -59,7 +59,7 @@ server:
   # Example:
   #    - head1.myclustersite.com:3000
   #    - head2.myclustersite.com:3050
-  # Default: (blank -- but REQURIED if igorweb is being used!)
+  # Default: (blank -- but REQUIRED if igorweb is being used!)
   allowedOrigins:
     - localhost:3000
     
@@ -145,7 +145,7 @@ auth:
     host: example.ldap.com
 
     # Port (int) - LDAP server port number.
-    # Default: Igor will auto-configure well-known ports based on auth.scheme settings (ldap = 389, ldaps = 636)
+    # Default: Igor will autoconfigure well-known ports based on auth.scheme settings (ldap = 389, ldaps = 636)
     # If you use a different port for LDAP set it here.
     # Default: (attempts to set automatically)
     port:
@@ -193,7 +193,7 @@ auth:
     # Default: (blank)
     attributes:
 
-    # GROUP_SYNC - Igor can syncronize its user list with a provided group in LDAP. With this feature enabled, Igor 
+    # GROUP_SYNC - Igor can synchronize its user list with a provided group in LDAP. With this feature enabled, Igor
     # will start with a worker that will regularly connect to LDAP using the settings provided above, then pull a 
     # list of all members of the given group. Igor will compare the list of members with its user table. Any member 
     # of the group that is not a member of Igor will be created as a new Igor user. Conversely, if there is an existing 
@@ -201,12 +201,13 @@ auth:
     groupSync:
 
       # enableGroupSync (bool) - If true, Igor will launch a worker that periodically syncs its user list with the
-      # members of the specified group using LDAP. Default: false
-      # NOTE: In order to use this feature, you must:
+      # members of the specified group using LDAP.
+      # In order to use this feature, you must:
       #  1. Be using the LDAP scheme for Igor login and provide connection information above
       #  2. Be using the email notification features or have a value entered in Email: defaultSuffix below.
       #  3. Have already changed the Admin password from initial default
       #  4. Have already created a cluster.
+      # Default: false
       enableGroupSync:
 
       # syncFrequency (int) - number in minutes Igor will wait before syncing the user list with group membership in LDAP
@@ -367,7 +368,7 @@ email:
   resNotifyOn:
 
   # resNotifyTimes (string) - A comma-delimited list of time values indicating the instance at which an email will be
-  # sent to notify about a pending reservation expiring. (ex. 1d,12h would sent emails at one day prior to expiration
+  # sent to notify about a pending reservation expiring. (ex. 1d,12h would send emails at one day prior to expiration
   # and 12 hours prior). The smallest value possible is 1 hour. The last notification will always be sent with high
   # priority to make it easier for users to see in their inbox. You can configure as many as you like but consider the
   # impact of overwhelming users with unnecessary emails. This setting is ignored if resNotifyOn is set to false.
@@ -421,8 +422,8 @@ scheduler:
   # Default: 43200
   maxReserveTime:
 
-  # extendWithin (int) - The number of minutes prior to the end of a reservation during which a user can run the extend
-  # command. This value is bounded by maxReserveTime; setting it the same or higher will mean the user can extend
+  # extendWithin (int) - The number of minutes prior to the end of a reservation during which a user can specify a new
+  # end time. This value is bounded by maxReserveTime; setting it the same or higher will mean the user can extend
   # immediately after reservation create, but the amount of extension time granted is still no greater than maxReserveTime.
   #
   # It is good to set a reasonable window of time during which extend can be run as this helps other users to reserve
@@ -431,7 +432,7 @@ scheduler:
   #
   # IMPORTANT! --- If set to -1, reservation extensions are disabled and users may only get them through admin intervention.
   #
-  # Example: 4320 would allow the extend command to be run up to 3 days before a reservation is set to expire.
+  # Example: 4320 would allow up to 3 days before a reservation is set to expire for an extension to be requested.
   # Default: 4320
   extendWithin:
 

@@ -130,21 +130,21 @@ func syncUsers() {
 	bindPW := igor.Auth.Ldap.BindPassword
 	gcConf := igor.Auth.Ldap.GroupSync
 	filter := "(" + gcConf.GroupFilter + ")"
-	group_search_attribute := []string{gcConf.GroupAttribute}
+	groupSearchAttribute := []string{gcConf.GroupAttribute}
 
 	// build member_attributes if present
-	member_attributes := []string{}
+	memberAttributes := []string{}
 	if gcConf.GroupMemberAttributeEmail != "" {
-		member_attributes = append(member_attributes, gcConf.GroupMemberAttributeEmail)
+		memberAttributes = append(memberAttributes, gcConf.GroupMemberAttributeEmail)
 	}
 	if gcConf.GroupMemberAttributeDisplayName != "" {
-		member_attributes = append(member_attributes, gcConf.GroupMemberAttributeDisplayName)
+		memberAttributes = append(memberAttributes, gcConf.GroupMemberAttributeDisplayName)
 	}
 
 	// get LDAP connection
 	conn, err := getLDAPConnection()
 	if err != nil {
-		logger.Error().Msgf(actionPrefix+" - unable to get LDAP connection during user sync - %s - user sync aborted", err.Error())
+		logger.Error().Msgf("%s failed - unable to get LDAP connection during user sync - %w - user sync aborted", actionPrefix, err.Error())
 		return
 	}
 	defer conn.Close()
@@ -152,14 +152,14 @@ func syncUsers() {
 	err = conn.Bind(bindDN, bindPW)
 	if err != nil {
 		errLine := actionPrefix + " - Bind read-only failed: "
-		logger.Error().Msgf("%s - %v - user sync aborted", errLine, err.Error())
+		logger.Error().Msgf("%s - %w - user sync aborted", errLine, err.Error())
 		return
 	}
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN:     baseDN,
 		Scope:      ldap.ScopeWholeSubtree,
 		Filter:     filter,
-		Attributes: group_search_attribute,
+		Attributes: groupSearchAttribute,
 	})
 
 	if err != nil {
@@ -174,8 +174,8 @@ func syncUsers() {
 		return
 	}
 
-	group_members := result.Entries[0].GetAttributeValues(gcConf.GroupAttribute)
-	if len(group_members) == 0 {
+	groupMembers := result.Entries[0].GetAttributeValues(gcConf.GroupAttribute)
+	if len(groupMembers) == 0 {
 		logger.Error().Msgf(actionPrefix + " failed - group retrieved from LDAP but contained no members - user sync aborted")
 		return
 	}
@@ -187,8 +187,8 @@ func syncUsers() {
 		return
 	}
 
-	// filter out non members so we can register them
-	newMembers := filterNonMembers(igorUsers, group_members)
+	// filter out non-members so we can register them
+	newMembers := filterNonMembers(igorUsers, groupMembers)
 
 	// stop if no new members need to be registered
 	if len(newMembers) == 0 {
@@ -198,40 +198,40 @@ func syncUsers() {
 
 	// register each new member
 	for _, member := range newMembers {
-		user_filter := fmt.Sprintf("(uid=%s)", member)
-		user_result, err := conn.Search(&ldap.SearchRequest{
+		userFilter := fmt.Sprintf("(uid=%s)", member)
+		userResult, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:     baseDN,
 			Scope:      ldap.ScopeWholeSubtree,
-			Filter:     fmt.Sprintf(user_filter),
-			Attributes: member_attributes,
+			Filter:     fmt.Sprintf(userFilter),
+			Attributes: memberAttributes,
 		})
 		if err != nil {
 			errLine := fmt.Sprintf("%s - failed searching for user %s in LDAP: ", actionPrefix, member)
 			logger.Error().Msgf("%s - %v - user sync aborted", errLine, err.Error())
 			return
 		}
-		if len(user_result.Entries) == 0 {
+		if len(userResult.Entries) == 0 {
 			logger.Warn().Msgf(actionPrefix+" - failed to retrieve user %s from LDAP, skipping user creation", member)
 			continue
 		}
-		entry := user_result.Entries[0]
-		member_email := ""
+		entry := userResult.Entries[0]
+		memberEmail := ""
 		if gcConf.GroupMemberAttributeEmail != "" {
 			if len(entry.GetAttributeValues(gcConf.GroupMemberAttributeEmail)) > 0 {
-				member_email = entry.GetAttributeValues(gcConf.GroupMemberAttributeEmail)[0]
+				memberEmail = entry.GetAttributeValues(gcConf.GroupMemberAttributeEmail)[0]
 			}
 		}
-		if member_email == "" {
-			member_email = fmt.Sprintf("%s@%s", member, igor.Email.DefaultSuffix)
+		if memberEmail == "" {
+			memberEmail = fmt.Sprintf("%s@%s", member, igor.Email.DefaultSuffix)
 		}
-		member_display_name := ""
+		memberDisplayName := ""
 		if gcConf.GroupMemberAttributeDisplayName != "" {
 			if len(entry.GetAttributeValues(gcConf.GroupMemberAttributeDisplayName)) > 0 {
-				member_display_name = entry.GetAttributeValues(gcConf.GroupMemberAttributeDisplayName)[0]
+				memberDisplayName = entry.GetAttributeValues(gcConf.GroupMemberAttributeDisplayName)[0]
 			}
 		}
 
-		if user, _, err := createNewUser(member, member_email, member_display_name, &logger); err == nil {
+		if user, _, err := createNewUser(member, memberEmail, memberDisplayName, &logger); err == nil {
 			logger.Debug().Msg("new user creation complete")
 			logger.Info().Msgf("New user %s created with group sync manager", member)
 			acctCreatedMsg := makeAcctNotifyEvent(EmailAcctCreated, user)
@@ -261,9 +261,9 @@ func getLDAPConnection() (*ldap.Conn, error) {
 		}
 		// If cert path was included in TLSConfig, add to rootCA
 		if ldapConf.TLSConfig.Cert != "" {
-			ldapCert, err := os.ReadFile(ldapConf.TLSConfig.Cert)
-			if err != nil {
-				e := fmt.Sprintf("%s failed - Failed to read ad cert: %v", actionPrefix, err)
+			ldapCert, rfErr := os.ReadFile(ldapConf.TLSConfig.Cert)
+			if rfErr != nil {
+				e := fmt.Sprintf("%s failed - failed to read added cert: %v", actionPrefix, rfErr)
 				return nil, fmt.Errorf(e)
 			}
 			ok := rootCA.AppendCertsFromPEM(ldapCert)
@@ -280,17 +280,13 @@ func getLDAPConnection() (*ldap.Conn, error) {
 	// connect to ldap server - ldaps scheme connects using SSL, unsecured otherwise
 	c, err := ldap.DialURL(ldapServer, ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
-		errLine := actionPrefix + " (DialURL) - failed: "
-		logger.Error().Msg(errLine + err.Error())
-		return nil, err
+		return nil, fmt.Errorf("%s (DialURL) - failed: %v", actionPrefix, err)
 	}
 	// upgrade connection to TLS if configured
 	if igor.Auth.Scheme != "ldaps" && ldapConf.UseTLS {
 		err = c.StartTLS(tlsConfig)
 		if err != nil {
-			errLine := actionPrefix + " (startTLS) - failed: "
-			logger.Error().Msg(errLine + err.Error())
-			return nil, err
+			return nil, fmt.Errorf("%s (startTLS) - failed: %v", actionPrefix, err)
 		}
 	}
 	return c, nil
