@@ -73,6 +73,7 @@ to turn off color, set the NO_COLOR environment variable in your shell or use
 	rootCmd.AddCommand(newServerConfigCmd())
 	rootCmd.AddCommand(newShowCmd())
 	rootCmd.AddCommand(newLastCmd())
+	rootCmd.AddCommand(newLoginCmd())
 	rootCmd.AddCommand(newLogoutCmd())
 	rootCmd.AddCommand(newUserCmd())
 	rootCmd.AddCommand(newGroupCmd())
