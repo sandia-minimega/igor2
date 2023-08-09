@@ -489,7 +489,7 @@ export default new Vuex.Store({
     },
     SELECTED_RESVHOSTS(state, payload) {
       state.selectedHosts = [];
-      state.selectedHosts = payload;
+      state.selectedHosts = payload.split(",");
       state.selectedHosts = [...new Set(state.selectedHosts)];
       
     },

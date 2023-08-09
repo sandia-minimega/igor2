@@ -238,7 +238,7 @@ export default {
       selectedNodes.forEach(element => {
         nodeNames.push(this.hostNames[element]);
       });
-      this.$store.dispatch('selectedResvHosts', nodeNames);
+      this.$store.dispatch('selectedResvHosts', nodeNames.join());
     },
 
     nodeClickedListener(clickedNode) {
@@ -262,7 +262,7 @@ export default {
       selectedNodes.forEach(element => {
         nodeNames.push(this.hostNames[element]);
       });
-      this.$store.dispatch('selectedResvHosts', nodeNames);      
+      this.$store.dispatch('selectedResvHosts', nodeNames.join());      
     },
 
     nodeCtrlClickedListener(clickedNode) {
@@ -280,8 +280,8 @@ export default {
       selectedNodes.forEach(element => {
         nodeNames.push(this.hostNames[element]);
       });
-      this.$store.dispatch('selectedResvHosts', nodeNames);
-      console.log(this.$store.getters.selectedHosts);
+      this.$store.dispatch('selectedResvHosts', nodeNames.join());
+      //console.log(this.$store.getters.selectedHosts);
     },
     
     hostStatus(host) {

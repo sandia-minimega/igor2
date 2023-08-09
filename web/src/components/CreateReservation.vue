@@ -441,31 +441,37 @@ export default {
     hostsFromGrid: {
       get () {
         if(this.$store.getters.selectedHosts != []) {
-          if(this.$store.getters.selectedHosts.length > 1){
-            return this.$store.getters.selectedHosts.join(",");  
-          }
-          return this.$store.getters.selectedHosts.join("");
+          return this.$store.getters.selectedHosts.join();  
         }
         else {
           return "";
         }
       },
       set (value) {
-        if(value.includes(",")){
-          this.$store.dispatch('selectedResvHosts', value.split(","));
-        }
-        if(value.includes("-")){
-          let parseHostList = value.substr(value.indexOf("[")+1);
-          let hostRange = parseHostList.substr(0, parseHostList.indexOf("]"));
-          let prefix = this.$store.getters.clusterPrefix;
-          let str = hostRange.split("-");
-          let hostList = [];
-          for(let count = str[0]; count < parseInt(str[1])+1; count++){
-            hostList.push(prefix+count);
+        if(value != ""){
+          //if(value.includes(",")){
+          //  this.$store.dispatch('selectedResvHosts', value.split(","));
+          //}
+          if(value.includes("-")){
+            let parseHostList = value.substr(value.indexOf("[")+1);
+            let hostRange = parseHostList.substr(0, parseHostList.indexOf("]"));
+            let prefix = this.$store.getters.clusterPrefix;
+            let str = hostRange.split("-");
+            let hostList = [];
+            for(let count = str[0]; count < parseInt(str[1])+1; count++){
+              hostList.push(prefix+count);
+            }
+            this.$store.dispatch('selectedResvHosts', hostList.join());
           }
-          this.$store.dispatch('selectedResvHosts', hostList);
-        }
-        if(value == ""){
+          //if(!value.includes(",")){
+          //  if(!value.includes("-")){
+          //    let hostArray = [];
+          //    hostArray.push(value);
+          //   this.$store.dispatch('selectedResvHosts', hostArray);
+          //  }
+          //}
+          this.$store.dispatch('selectedResvHosts', value);
+        } else{
           this.$store.dispatch('selectedResvHosts', []);
         }
       }  
