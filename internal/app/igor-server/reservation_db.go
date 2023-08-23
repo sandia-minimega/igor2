@@ -89,6 +89,8 @@ func dbReadReservations(queryParams map[string]interface{}, timeParams map[strin
 			case []int:
 				if strings.ToLower(key) == "hosts" {
 					tx = tx.Joins("JOIN reservations_hosts ON reservations_hosts.reservation_id = ID AND host_id IN ?", val)
+				} else if strings.ToLower(key) == "distro_id" {
+					tx = tx.Joins("JOIN profiles ON reservations.profile_id = profiles.id").Where("profiles.distro_id IN ?", val)
 				} else {
 					tx = tx.Where(key+" IN ?", val)
 				}

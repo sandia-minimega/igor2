@@ -53,6 +53,13 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 			} else {
 				queryParams["owner_id"] = userIDsOfUsers(ownerList)
 			}
+		case "distro":
+			distroQuery := map[string]interface{}{"name": val}
+			if distroList, status, err := doReadDistros(distroQuery, r); err != nil {
+				return nil, nil, status, err
+			} else {
+				queryParams["distro_id"] = distroIDsOfDistros(distroList)
+			}
 		case "profile":
 			profileQuery := map[string]interface{}{"name": val}
 			if profileList, status, err := doReadProfiles(profileQuery); err != nil {
