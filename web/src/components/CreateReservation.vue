@@ -761,12 +761,7 @@ export default {
 
     onSubmit(event) {
       event.preventDefault();
-      if(this.hostsFromGrid.includes(",")) {
-        this.form.nodeListTextValue = this.hostsFromGrid.split(", ").toString();
-      } else {
-        this.form.nodeListTextValue = this.hostsFromGrid.toString();  
-      }
-      
+      this.form.nodeListTextValue = this.hostsFromGrid.split(", ").toString();
       this.form.nodeCount = this.nodeCountFromGrid;
       this.validateFlag = true;
       this.getStartTime();
