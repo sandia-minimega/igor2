@@ -96,7 +96,7 @@ func (l *LdapAuth) authenticate(r *http.Request) (*User, error) {
 }
 
 func syncUsers() {
-	actionPrefix := "ldap group sync"
+	actionPrefix := "ldap user sync"
 
 	// make sure cluster has been created and admin password is not default
 	clusters, _, err := doReadClusters(map[string]interface{}{})
@@ -109,18 +109,18 @@ func syncUsers() {
 		return
 	}
 
-	if err := performDbTx(func(tx *gorm.DB) error {
+	if err = performDbTx(func(tx *gorm.DB) error {
 		ia, _, iaErr := getIgorAdmin(tx)
 		if iaErr != nil {
 			return iaErr
 		}
 		authErr := bcrypt.CompareHashAndPassword(ia.PassHash, []byte(IgorAdmin))
 		if authErr == nil {
-			return fmt.Errorf("Admin pw curently set to default value")
+			return fmt.Errorf("admin password currently set to default value!")
 		}
 		return nil
 	}); err != nil {
-		logger.Warn().Msgf("%s - failed Igor Admin condition check - %v - user sync aborted", actionPrefix, err)
+		logger.Warn().Msgf("%s - failed igor admin condition check - %v - user sync aborted", actionPrefix, err)
 		return
 	}
 
@@ -142,27 +142,27 @@ func syncUsers() {
 	}
 
 	// get LDAP connection
-	conn, err := getLDAPConnection()
-	if err != nil {
+	conn, connErr := getLDAPConnection()
+	if connErr != nil {
 		logger.Error().Msgf("%s failed - unable to get LDAP connection during user sync - %w - user sync aborted", actionPrefix, err.Error())
 		return
 	}
 	defer conn.Close()
 
-	err = conn.Bind(bindDN, bindPW)
-	if err != nil {
-		errLine := actionPrefix + " - Bind read-only failed: "
+	connErr = conn.Bind(bindDN, bindPW)
+	if connErr != nil {
+		errLine := actionPrefix + " - bind read-only failed: "
 		logger.Error().Msgf("%s - %w - user sync aborted", errLine, err.Error())
 		return
 	}
-	result, err := conn.Search(&ldap.SearchRequest{
+	result, searchErr := conn.Search(&ldap.SearchRequest{
 		BaseDN:     baseDN,
 		Scope:      ldap.ScopeWholeSubtree,
 		Filter:     filter,
 		Attributes: groupSearchAttribute,
 	})
 
-	if err != nil {
+	if searchErr != nil {
 		errLine := actionPrefix + " failed: "
 		logger.Error().Msgf("%s - %v - user sync aborted", errLine, err.Error())
 		return
@@ -181,8 +181,8 @@ func syncUsers() {
 	}
 
 	// get all Igor users
-	igorUsers, err := dbReadUsersTx(map[string]interface{}{})
-	if err != nil {
+	igorUsers, ruErr := dbReadUsersTx(map[string]interface{}{})
+	if ruErr != nil {
 		logger.Error().Msgf("%s failed - %v - user sync aborted", actionPrefix, err.Error())
 		return
 	}
@@ -199,13 +199,13 @@ func syncUsers() {
 	// register each new member
 	for _, member := range newMembers {
 		userFilter := fmt.Sprintf("(uid=%s)", member)
-		userResult, err := conn.Search(&ldap.SearchRequest{
+		userResult, srErr := conn.Search(&ldap.SearchRequest{
 			BaseDN:     baseDN,
 			Scope:      ldap.ScopeWholeSubtree,
 			Filter:     fmt.Sprintf(userFilter),
 			Attributes: memberAttributes,
 		})
-		if err != nil {
+		if srErr != nil {
 			errLine := fmt.Sprintf("%s - failed searching for user %s in LDAP: ", actionPrefix, member)
 			logger.Error().Msgf("%s - %v - user sync aborted", errLine, err.Error())
 			return
@@ -231,13 +231,10 @@ func syncUsers() {
 			}
 		}
 
-		if user, _, err := createNewUser(member, memberEmail, memberDisplayName, &logger); err == nil {
-			logger.Debug().Msg("new user creation complete")
-			logger.Info().Msgf("New user %s created with group sync manager", member)
-			acctCreatedMsg := makeAcctNotifyEvent(EmailAcctCreated, user)
-			if acctCreatedMsg != nil {
-				acctNotifyChan <- *acctCreatedMsg
-			}
+		if user, _, cuErr := doCreateUser(map[string]interface{}{"name": member, "email": memberEmail, "fullName": memberDisplayName}, nil); cuErr != nil {
+			logger.Error().Msgf("failed to create new user '%s' via group sync manager: %v", member, cuErr)
+		} else {
+			logger.Info().Msgf("created new user '%s' via with group sync manager", user.Name)
 		}
 	}
 }
@@ -271,10 +268,9 @@ func getLDAPConnection() (*ldap.Conn, error) {
 				logger.Warn().Msgf("%s failed - AD cert at %s not added.", actionPrefix, ldapConf.TLSConfig.Cert)
 			}
 		}
-		tlsConfig = &tls.Config{
-			ServerName: ldapConf.Host,
-			RootCAs:    rootCA,
-		}
+		tlsConfig.InsecureSkipVerify = false
+		tlsConfig.ServerName = ldapConf.Host
+		tlsConfig.RootCAs = rootCA
 	}
 
 	// connect to ldap server - ldaps scheme connects using SSL, unsecured otherwise

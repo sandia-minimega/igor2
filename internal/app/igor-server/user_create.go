@@ -18,16 +18,21 @@ import (
 // permissions, and adding the user to the 'all' group.
 func doCreateUser(userParams map[string]interface{}, r *http.Request) (user *User, status int, err error) {
 
-	clog := hlog.FromRequest(r)
+	clog := &logger
+	if r != nil {
+		clog = hlog.FromRequest(r)
+	}
+
 	username := strings.ToLower(strings.TrimSpace(userParams["name"].(string)))
 	email := strings.ToLower(strings.TrimSpace(userParams["email"].(string)))
 	fullName, fnOK := userParams["fullName"].(string)
 	if fnOK {
 		fullName = strings.TrimSpace(fullName)
 	}
-	status = http.StatusInternalServerError // default status, overridden at end if no errors
 
-	if ok, status, err := checkUniqueUserAttributes(username, email); !ok {
+	status = http.StatusInternalServerError // default status, overridden if no errors
+	ok := false
+	if ok, status, err = checkUniqueUserAttributes(username, email); !ok {
 		return nil, status, err
 	}
 	clog.Debug().Msgf("creating new igor user '%s'", username)
