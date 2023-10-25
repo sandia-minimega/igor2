@@ -53,7 +53,7 @@ func createNewUser(username, email, fullName string, clog *zerolog.Logger) (user
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 	err = performDbTx(func(tx *gorm.DB) error {
 		clog.Debug().Msg("setting default user password")
-		hash, hashErr := getPasswordHash(igor.Auth.DefaultUserPassword)
+		hash, hashErr := createPasswordHash(igor.Auth.DefaultUserPassword)
 		if hashErr != nil {
 			return hashErr // uses default err status
 		}
@@ -87,8 +87,9 @@ func createNewUser(username, email, fullName string, clog *zerolog.Logger) (user
 			Description:   username + " private group",
 			IsUserPrivate: true,
 			Permissions:   []Permission{*p},
-			OwnerID:       igorAdmin.ID,
+			Owners:        []User{*igorAdmin},
 			Members:       []User{*user},
+			IsLDAP:        false,
 		}
 
 		clog.Debug().Msgf("creating private user group for '%s'", username)

@@ -34,21 +34,27 @@ type Group struct {
 	Name          string `gorm:"unique; notNull"`
 	Description   string
 	IsUserPrivate bool
-	OwnerID       int
-	Owner         User          // Group belongs-to Owner
-	Members       []User        `gorm:"many2many:groups_users;"`
-	Permissions   []Permission  // Group has-many permissions
-	Reservations  []Reservation // Group has-many reservations
-	Distros       []Distro      `gorm:"many2many:distros_groups;"`
-	Policies      []HostPolicy  `gorm:"many2many:groups_policies;"`
+	IsLDAP        bool `gorm:"default:false"`
+	//OwnerID       []int
+	Owners       []User        `gorm:"many2many:groups_owners;"`
+	Members      []User        `gorm:"many2many:groups_users;"`
+	Permissions  []Permission  // Group has-many permissions
+	Reservations []Reservation // Group has-many reservations
+	Distros      []Distro      `gorm:"many2many:distros_groups;"`
+	Policies     []HostPolicy  `gorm:"many2many:groups_policies;"`
 }
 
 func (g *Group) getGroupData() *common.GroupData {
 
+	owners := make([]string, 0, len(g.Owners))
+	for _, o := range g.Owners {
+		owners = append(owners, o.Name)
+	}
+
 	gd := &common.GroupData{
 		Name:        g.Name,
 		Description: g.Description,
-		Owner:       g.Owner.Name,
+		Owners:      owners,
 	}
 
 	if len(g.Members) > 0 {

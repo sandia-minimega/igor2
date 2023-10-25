@@ -16,6 +16,6 @@ func TestAddToSet(t *testing.T) {
 	expHobbits := []string{"Frodo", "Merry", "Pippin", "Sam"}
 	s.Add(hobbits...)
 	assert.Equal(t, 4, s.Size(), "should have 4 members")
-	assert.Equal(t, expHobbits, s.GetVals())
+	assert.Equal(t, expHobbits, s.Elements())
 
 }

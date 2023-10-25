@@ -54,11 +54,11 @@ func runServer() {
 	}
 
 	// the group sync manager will not run if disabled in config
-	if igor.Auth.Ldap.GroupSync.EnableGroupSync {
+	if igor.Auth.Ldap.Sync.EnableUserSync || igor.Auth.Ldap.Sync.EnableGroupSync {
 		wg.Add(1)
-		go groupSyncManager()
+		go ldapSyncManager()
 	} else {
-		logger.Warn().Msg("group sync manager is disabled")
+		logger.Warn().Msg("LDAP sync manager is disabled")
 	}
 
 	cert, err := tls.LoadX509KeyPair(igor.Server.CertFile, igor.Server.KeyFile)
@@ -290,26 +290,38 @@ func maintenanceManager() {
 	}
 }
 
-// groupSyncManager uses a configurable timer to fire every given interval. When this happens, the syncUsers()
+// ldapSyncManager uses a configurable timer to fire every given interval. When this happens, the syncLdapUsers()
 // function is called. The function uses configured settings to get a list of members for a given group from
 // LDAP. It then compares the list of members to Igor's user list. Any group members who do not currently have
 // a User profile in Igor will have one created for them. If notifications is enabled, the user will receive
 // one to inform them they can use Igor.
-func groupSyncManager() {
+func ldapSyncManager() {
 	defer wg.Done()
-	timer := time.Minute * time.Duration(igor.Auth.Ldap.GroupSync.SyncFrequency)
+	timer := time.Minute * time.Duration(igor.Auth.Ldap.Sync.SyncFrequency)
 	countdown := NewScheduleTimer(timer)
 	for {
 		select {
 		case <-shutdownChan:
-			logger.Info().Msg("stopping group sync management background worker")
+			logger.Info().Msg("stopping LDAP sync management background worker")
 			if !countdown.t.Stop() {
 				<-countdown.t.C
 			}
 			return
 		case checkTime := <-countdown.t.C:
-			logger.Debug().Msgf("doing group sync management - %v", checkTime.Format(time.RFC3339))
-			syncUsers()
+			logger.Info().Msg("attempting to start LDAP sync management background worker")
+			if adErr := syncPreCheck(); adErr != nil {
+				logger.Warn().Msgf("%v", adErr)
+				continue
+			}
+			dbAccess.Lock()
+			logger.Debug().Msgf("doing LDAP sync management - %v", checkTime.Format(time.RFC3339))
+			if igor.Auth.Ldap.Sync.EnableUserSync {
+				executeLdapUserSync()
+			}
+			if igor.Auth.Ldap.Sync.EnableGroupSync {
+				executeLdapGroupSync()
+			}
+			dbAccess.Unlock()
 			countdown.reset()
 		}
 	}

@@ -6,11 +6,9 @@ package igorserver
 
 import (
 	"fmt"
+	"igor2/internal/pkg/common"
 	"regexp"
 	"strings"
-	"unicode"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // This matches most cases but can be more robust. All email strings should be forced to use lower case.
@@ -19,10 +17,10 @@ var nameCheckPattern = regexp.MustCompile(`^[a-z_]([a-z0-9_\-]){0,31}$`)
 var fullNameCheckPattern = regexp.MustCompile(`^[a-zA-Z. -]{0,32}$`)
 
 // checkUsernameRules determines if the input string meets the criteria for
-// a valid user name on igor. Igor follows general username rules for Linux: can
+// a valid username. Igor follows general username rules for Linux: can
 // only begin with a letter or underscore and can include numbers
-// and hyphen afterwards. It has a limit of 32 characters.
-func checkFullnameRules(name string) error {
+// and hyphen afterward. It has a limit of 32 characters.
+func checkFullNameRules(name string) error {
 	if !fullNameCheckPattern.MatchString(name) {
 		return fmt.Errorf("%s is not allowed for full name field", name)
 	}
@@ -48,73 +46,6 @@ func checkEmailRules(email string) error {
 	return nil
 }
 
-// checkLocalPasswordRules determines if the input string meets the criteria for
-// a user password that is locally maintained by igor. These rules require the password
-// to be 8-16 characters in length and must be composed of letters, numbers and punctuation/symbols with
-// at least one from each category. All other types including whitespace are not allowed.
-func checkLocalPasswordRules(password string) error {
-	// Go's regex support doesn't include lookahead ... making this a more manual process
-	var letterFound bool
-	var numberFound bool
-	var specialFound bool
-	minLength := 8
-	maxLength := 16
-	legalChars := 0
-
-	for _, c := range password {
-		switch {
-		case unicode.IsNumber(c):
-			numberFound = true
-			legalChars++
-		case unicode.IsLetter(c):
-			letterFound = true
-			legalChars++
-		case unicode.IsPunct(c) || unicode.IsSymbol(c):
-			specialFound = true
-			legalChars++
-		}
-	}
-
-	if legalChars != len(password) {
-		return fmt.Errorf("password contains characters that are not allowed")
-	}
-
-	if legalChars < minLength {
-		return fmt.Errorf("password must have minimum length of 8 characters")
-	} else if legalChars > maxLength {
-		return fmt.Errorf("password cannot exceed maximum length of 16 characters")
-	}
-
-	var missingStuff string
-	if !numberFound {
-		missingStuff += "at least 1 number"
-	}
-
-	if !letterFound {
-		if !numberFound {
-			missingStuff += ", "
-		}
-		missingStuff += "at least 1 letter"
-	}
-
-	if !specialFound {
-		if !numberFound || !letterFound {
-			missingStuff += ", "
-		}
-		missingStuff += "at least 1 special character"
-	}
-
-	if missingStuff != "" {
-		return fmt.Errorf("new password is missing %s", missingStuff)
-	}
-
-	return nil
-}
-
-func getPasswordHash(password string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(password), 13)
-}
-
 func userSliceContains(users []User, name string) bool {
 	for _, u := range users {
 		if u.Name == name {
@@ -124,8 +55,7 @@ func userSliceContains(users []User, name string) bool {
 	return false
 }
 
-// userNamesOfUsers returns a list of User names from
-// the provided list of users.
+// userNamesOfUsers returns a list of usernames from the provided User list.
 func userNamesOfUsers(users []User) []string {
 	userNames := make([]string, len(users))
 	for i, u := range users {
@@ -134,8 +64,41 @@ func userNamesOfUsers(users []User) []string {
 	return userNames
 }
 
-// userIDsOfUsers returns a list of User IDs from
-// the provided list of users.
+// usersFromNames returns a subset of User objects from the supplied User slice
+// whose usernames match those in the provided string slice. It will silently
+// ignore names in the string slice that have no match.
+func usersFromNames(users []User, names []string) []User {
+
+	var foundUsers []User
+	for _, v := range names {
+		for _, u := range users {
+			if v == u.Name {
+				foundUsers = append(foundUsers, u)
+				continue
+			}
+		}
+	}
+	return foundUsers
+}
+
+// usernamesFromNames returns a subset of username strings from the supplied
+// User slice whose usernames match those in the provided string slice. It will
+// silently ignore names in the string slice that have no match.
+func usernamesFromNames(users []User, names []string) []string {
+
+	var foundUsers []string
+	for _, v := range names {
+		for _, u := range users {
+			if v == u.Name {
+				foundUsers = append(foundUsers, u.Name)
+				continue
+			}
+		}
+	}
+	return foundUsers
+}
+
+// userIDsOfUsers returns a list of User IDs from the provided list of users.
 func userIDsOfUsers(users []User) []int {
 	userIDs := make([]int, len(users))
 	for i, u := range users {
@@ -144,10 +107,10 @@ func userIDsOfUsers(users []User) []int {
 	return userIDs
 }
 
-// filterNonMembers take s a slice of User objects and a slice of user names
+// filterNonUsers takes a slice of User objects and a slice of usernames
 // any names that are not among the slice of User objects are collected as
 // a slice of names and returned
-func filterNonMembers(users []User, names []string) []string {
+func filterNonUsers(users []User, names []string) []string {
 	var inList bool
 	var notFound []string
 	for _, v := range names {
@@ -163,4 +126,16 @@ func filterNonMembers(users []User, names []string) []string {
 		}
 	}
 	return notFound
+}
+
+func usernameDiff(a, b []string) []string {
+	userMap := common.NewSet()
+	userMap.Add(a...)
+	var diff []string
+	for _, x := range b {
+		if !userMap.Contains(x) {
+			diff = append(diff, x)
+		}
+	}
+	return diff
 }

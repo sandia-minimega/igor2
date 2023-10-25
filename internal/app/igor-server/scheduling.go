@@ -330,7 +330,7 @@ func closeoutReservations(checkTime *time.Time) error {
 		}
 
 	} else {
-		logger.Debug().Msg("No reservations are expired.")
+		logger.Debug().Msg("no reservations are expired")
 	}
 
 	return nil

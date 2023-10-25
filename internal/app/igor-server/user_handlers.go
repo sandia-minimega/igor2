@@ -159,7 +159,7 @@ func validateUserParams(handler http.Handler) http.Handler {
 							if user, ok := val.(string); !ok {
 								validateErr = NewBadParamTypeError(key, val, "string")
 								break postPutParamLoop
-							} else if validateErr = checkFullnameRules(strings.ToLower(user)); validateErr != nil {
+							} else if validateErr = checkFullNameRules(strings.ToLower(user)); validateErr != nil {
 								break postPutParamLoop
 							}
 						case "email":
@@ -214,7 +214,7 @@ func validateUserParams(handler http.Handler) http.Handler {
 							if fullName, ok := val.(string); !ok {
 								validateErr = NewBadParamTypeError(key, val, "string")
 								break patchParamLoop
-							} else if validateErr = checkFullnameRules(fullName); validateErr != nil {
+							} else if validateErr = checkFullNameRules(fullName); validateErr != nil {
 								break patchParamLoop
 							}
 						case "password":

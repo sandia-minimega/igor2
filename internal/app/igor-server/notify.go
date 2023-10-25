@@ -78,12 +78,12 @@ func initNotify() {
 		t, _ = t.Parse(SenderInfoTemplate)
 		tMap[EmailGroupAddRmvMem] = t
 
-		t = template.New("EmailGroupChangeOwn")
+		t = template.New("EmailGroupAddOwner")
 		t.Funcs(tFuncs)
 		t = template.Must(t.Parse(BaseEmailTemplate))
 		t, _ = t.Parse(NotifyGroupOwnerChangeTemplate)
 		t, _ = t.Parse(SenderInfoTemplate)
-		tMap[EmailGroupChangeOwn] = t
+		tMap[EmailGroupAddOwner] = t
 
 		t = template.New("EmailGroupChangeName")
 		t.Funcs(tFuncs)
@@ -366,10 +366,14 @@ func processGroupNotifyEvent(msg GroupNotifyEvent) error {
 		t = tMap[EmailGroupAddRmvMem]
 		addEmailToList(&toList, msg.Member.Email)
 		msg.MemberAction = "removed from"
-	case EmailGroupChangeOwn:
-		subj = "igor: you are the new owner of group '" + msg.Group.Name + "'"
-		t = tMap[EmailGroupChangeOwn]
-		addEmailToList(&toList, msg.Group.Owner.Email)
+	case EmailGroupAddOwner:
+		subj = "igor: you have been added as an owner of group '" + msg.Group.Name + "'"
+		t = tMap[EmailGroupAddOwner]
+		addEmailToList(&toList, msg.Member.Email)
+	case EmailGroupRmvOwner:
+		subj = "igor: you have been removed from owner list of group '" + msg.Group.Name + "'"
+		t = tMap[EmailGroupRmvOwner]
+		addEmailToList(&toList, msg.Member.Email)
 	case EmailGroupChangeName:
 		subj = "igor: group '" + msg.Info + "' has been renamed"
 		t = tMap[EmailGroupChangeName]
@@ -644,7 +648,8 @@ const (
 	EmailGroupRmvMem
 	EmailGroupAddRmvMem
 	EmailGroupChangeName
-	EmailGroupChangeOwn
+	EmailGroupAddOwner
+	EmailGroupRmvOwner
 )
 
 const (

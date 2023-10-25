@@ -88,11 +88,9 @@ type Config struct {
 				// Cert: path to ldap-cert.pem
 				Cert string `yaml:"cert" json:"cert"`
 			} `yaml:"tlsConfig" json:"tlsConfig"`
-			// BindDN: represents LDAP DN for searching for the user DN.
-			// Typically read only user DN.
+			// BindDN: represents LDAP DN for searching for the user DN. Typically, read only user DN.
 			BindDN string `yaml:"bindDN" json:"bindDN"`
-			// BindPassword: LDAP password for searching for the user DN.
-			// Typically read only user password.
+			// BindPassword: LDAP password for searching for the user DN. Typically, read only user password.
 			BindPassword string `yaml:"bindPassword"  json:"-"`
 			// Attributes: used for users.
 			Attributes []string `yaml:"attributes" json:"attributes"`
@@ -101,21 +99,24 @@ type Config struct {
 			// Filter: for the User Object Filter.
 			// if username nedded more than once use fmt index pattern (%[1]s).
 			// Otherwise %s.
-			Filter    string `yaml:"filter" json:"filter"`
-			GroupSync struct {
-				// enableGroupSync: default=false Enable user sync feature
+			Filter string `yaml:"filter" json:"filter"`
+			Sync   struct {
+				// EnableUserSync: default=false Enable group sync feature
+				EnableUserSync bool `yaml:"enableUserSync" json:"enableUserSync"`
+				// EnableGroupSync: default=false Enable group sync feature
 				EnableGroupSync bool `yaml:"enableGroupSync" json:"enableGroupSync"`
-				// syncFrequency: default=60 Minutes to wait between running sync actions
+				// SyncFrequency: default=60 Minutes to wait between running sync actions
 				SyncFrequency int `yaml:"syncFrequency" json:"syncFrequency"`
-				// groupFilter default=blank - for the Group Object Filter
-				GroupFilter string `yaml:"groupFilter" json:"groupFilter"`
-				// groupAttribute default=blank - the key for the Entity Attribute value which holds the usernames for all members of the group
-				GroupAttribute string `yaml:"groupAttribute" json:"groupAttribute"`
+				// GroupFilters: default=blank - for the Group Object Filter
+				GroupFilters []string `yaml:"groupFilters" json:"groupFilters"`
+				// UserListAttribute: default=blank - the key for the Entity Attribute value which holds the usernames for all members of the group
+				UserListAttribute string `yaml:"userListAttribute" json:"userListAttribute"`
 				// groupAttributeEmail default=blank - the key for the Entity Attribute email Value.
-				GroupMemberAttributeEmail string `yaml:"groupMemberAttributeEmail" json:"groupMemberAttributeEmail"`
+				UserEmailAttribute string `yaml:"userEmailAttribute" json:"userEmailAttribute"`
 				// groupAttributeDisplayName default=blank - the key for the Entity Attribute display name Value.
-				GroupMemberAttributeDisplayName string `yaml:"groupMemberAttributeDisplayName" json:"groupMemberAttributeDisplayName"`
-			} `yaml:"groupSync" json:"groupSync"`
+				UserDisplayNameAttribute string   `yaml:"userDisplayNameAttribute" json:"userDisplayNameAttribute"`
+				GroupOwnerAttributes     []string `yaml:"groupOwnerAttributes" json:"groupOwnerAttributes"`
+			} `yaml:"sync" json:"sync"`
 		} `yaml:"ldap" json:"ldap"`
 	} `yaml:"auth" json:"auth"`
 
@@ -516,20 +517,20 @@ func initConfigCheck() {
 			}
 		}
 
-		if igor.Auth.Ldap.GroupSync.EnableGroupSync {
-			if igor.Auth.Ldap.GroupSync.SyncFrequency <= 0 {
-				igor.Auth.Ldap.GroupSync.SyncFrequency = 60
+		if igor.Auth.Ldap.Sync.EnableGroupSync {
+			if igor.Auth.Ldap.Sync.SyncFrequency <= 0 {
+				igor.Auth.Ldap.Sync.SyncFrequency = 60
 			}
-			if len(igor.Auth.Ldap.GroupSync.GroupFilter) == 0 {
-				exitPrintFatal(fmt.Sprintf("config error - GroupFilter must have a value when LDAP-GroupSync is enabled"))
+			if len(igor.Auth.Ldap.Sync.GroupFilters) == 0 {
+				exitPrintFatal(fmt.Sprintf("config error - GroupFilters must have a value when LDAP-Sync is enabled"))
 			}
-			if igor.Auth.Ldap.GroupSync.GroupMemberAttributeEmail == "" && igor.Email.DefaultSuffix == "" {
-				exitPrintFatal(fmt.Sprintf("config error - Email.DefaultSuffix must have a value when Auth.Ldap.GroupSync is enabled"))
+			if igor.Auth.Ldap.Sync.UserEmailAttribute == "" && igor.Email.DefaultSuffix == "" {
+				exitPrintFatal(fmt.Sprintf("config error - Email.DefaultSuffix must have a value when Auth.Ldap.Sync is enabled"))
 			}
 		}
 
 	} else {
-		igor.Auth.Ldap.GroupSync.EnableGroupSync = false
+		igor.Auth.Ldap.Sync.EnableGroupSync = false
 	}
 
 	if igor.Database.Adapter == "" {

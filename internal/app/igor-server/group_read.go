@@ -44,7 +44,7 @@ func parseGroupSearchParams(queryMap map[string][]string, r *http.Request) (map[
 			if ownerList, status, err = doReadUsers(map[string]interface{}{"name": val}); err != nil {
 				return nil, status, err
 			} else {
-				queryParams["owner_id"] = userIDsOfUsers(ownerList)
+				queryParams["owners"] = userIDsOfUsers(ownerList)
 			}
 		case "showMembers":
 			showMembers, _ := strconv.ParseBool(val[0])

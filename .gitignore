@@ -59,3 +59,4 @@ build/
 igor2.zip
 igor2.tar.gz
 
+/db-migrate/db-migrate
