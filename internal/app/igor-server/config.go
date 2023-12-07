@@ -101,7 +101,21 @@ type Config struct {
 			// Filter: for the User Object Filter.
 			// if username nedded more than once use fmt index pattern (%[1]s).
 			// Otherwise %s.
-			Filter string `yaml:"filter" json:"filter"`
+			Filter    string `yaml:"filter" json:"filter"`
+			GroupSync struct {
+				// enableGroupSync: default=false Enable user sync feature
+				EnableGroupSync bool `yaml:"enableGroupSync" json:"enableGroupSync"`
+				// syncFrequency: default=60 Minutes to wait between running sync actions
+				SyncFrequency int `yaml:"syncFrequency" json:"syncFrequency"`
+				// groupFilter default=blank - for the Group Object Filter
+				GroupFilter string `yaml:"groupFilter" json:"groupFilter"`
+				// groupAttribute default=blank - the key for the Entity Attribute value which holds the usernames for all members of the group
+				GroupAttribute string `yaml:"groupAttribute" json:"groupAttribute"`
+				// groupAttributeEmail default=blank - the key for the Entity Attribute email Value.
+				GroupMemberAttributeEmail string `yaml:"groupMemberAttributeEmail" json:"groupMemberAttributeEmail"`
+				// groupAttributeDisplayName default=blank - the key for the Entity Attribute display name Value.
+				GroupMemberAttributeDisplayName string `yaml:"groupMemberAttributeDisplayName" json:"groupMemberAttributeDisplayName"`
+			} `yaml:"groupSync" json:"groupSync"`
 		} `yaml:"ldap" json:"ldap"`
 	} `yaml:"auth" json:"auth"`
 
@@ -488,19 +502,34 @@ func initConfigCheck() {
 		if igor.Auth.Ldap.Host == "" {
 			exitPrintFatal(fmt.Sprintf("config error - LDAP auth scheme set but no LDAP hostname specified"))
 		}
-	}
 
-	if len(igor.Auth.Ldap.Port) == 0 {
-		if igor.Auth.Scheme == "ldap" {
-			igor.Auth.Ldap.Port = "389"
-			logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
-		} else if igor.Auth.Scheme == "ldaps" {
-			igor.Auth.Ldap.Port = "636"
-			logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
-		} else if igor.Auth.Scheme == "ldapi" {
-			igor.Auth.Ldap.Port = "0"
-			logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+		if len(igor.Auth.Ldap.Port) == 0 {
+			if igor.Auth.Scheme == "ldap" {
+				igor.Auth.Ldap.Port = "389"
+				logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+			} else if igor.Auth.Scheme == "ldaps" {
+				igor.Auth.Ldap.Port = "636"
+				logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+			} else if igor.Auth.Scheme == "ldapi" {
+				igor.Auth.Ldap.Port = "0"
+				logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+			}
 		}
+
+		if igor.Auth.Ldap.GroupSync.EnableGroupSync {
+			if igor.Auth.Ldap.GroupSync.SyncFrequency <= 0 {
+				igor.Auth.Ldap.GroupSync.SyncFrequency = 60
+			}
+			if len(igor.Auth.Ldap.GroupSync.GroupFilter) == 0 {
+				exitPrintFatal(fmt.Sprintf("config error - GroupFilter must have a value when LDAP-GroupSync is enabled"))
+			}
+			if igor.Auth.Ldap.GroupSync.GroupMemberAttributeEmail == "" && igor.Email.DefaultSuffix == "" {
+				exitPrintFatal(fmt.Sprintf("config error - Email.DefaultSuffix must have a value when Auth.Ldap.GroupSync is enabled"))
+			}
+		}
+
+	} else {
+		igor.Auth.Ldap.GroupSync.EnableGroupSync = false
 	}
 
 	if igor.Database.Adapter == "" {

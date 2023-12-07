@@ -289,12 +289,12 @@
         </b-card>
           <b-row class="mt-3">
             <b-col colspan="2">
-            <b-form-group>
-              <b-form-checkbox v-model="powerCycleStatus" @change="doNotCycle">
-                <p class="font-weight-bold">Do not Power Cycle on start</p>
-              </b-form-checkbox>
-            </b-form-group>
-          </b-col>
+              <b-form-group>
+                <b-form-checkbox v-model="powerCycleStatus" @change="doNotCycle">
+                  <p class="font-weight-bold">Do not Power Cycle on start</p>
+                </b-form-checkbox>
+              </b-form-group>
+            </b-col>
           </b-row>
           <b-row>
             <b-col colspan="2">
@@ -308,7 +308,6 @@
             </b-form-group>
             </b-col>
           </b-row>
-       
       </div>
     </b-form>
     <div class="mt-3">
@@ -442,28 +441,35 @@ export default {
     hostsFromGrid: {
       get () {
         if(this.$store.getters.selectedHosts != []) {
-          return this.$store.getters.selectedHosts.join(",");
+          return this.$store.getters.selectedHosts.join();
         }
         else {
           return "";
         }
       },
       set (value) {
-        if(value.includes(",")){
-          this.$store.dispatch('selectedResvHosts', value.split(","));
-        }
-        if(value.includes("-")){
-          let parseHostList = value.substr(value.indexOf("[")+1);
-          let hostRange = parseHostList.substr(0, parseHostList.indexOf("]"));
-          let prefix = this.$store.getters.clusterPrefix;
-          let str = hostRange.split("-");
-          let hostList = [];
-          for(let count = str[0]; count < parseInt(str[1])+1; count++){
-            hostList.push(prefix+count);
+        if(value != "") {
+          if(value.includes(",")) {
+            this.$store.dispatch('selectedResvHosts', value.split(","));
           }
-          this.$store.dispatch('selectedResvHosts', hostList);
+          else if(value.includes("-")) {
+            if(value.includes("]")){
+              let parseHostList = value.substr(value.indexOf("[")+1);
+              let hostRange = parseHostList.substr(0, parseHostList.indexOf("]"));
+              let prefix = this.$store.getters.clusterPrefix;
+              let str = hostRange.split("-");
+              let hostList = [];
+              for(let count = str[0]; count < parseInt(str[1])+1; count++){
+                hostList.push(prefix+count);
+              }
+              this.$store.dispatch('selectedResvHosts', hostList);
+            }
+          }
+          else {
+            this.$store.dispatch('selectedResvHosts', value.split());
+          }
         }
-        if(value == ""){
+        else {
           this.$store.dispatch('selectedResvHosts', []);
         }
       }  

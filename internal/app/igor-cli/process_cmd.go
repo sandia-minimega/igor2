@@ -149,8 +149,34 @@ func setUserAgent(r *http.Request) {
 }
 
 func doRequest(req *http.Request) (string, http.Header, *[]byte) {
+
 	setUserAgent(req)
 	setAuthToken(req)
+	resp := sendRequest(req)
+	defer resp.Body.Close()
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		checkClientErr(readErr)
+	}
+	return resp.Status, resp.Header, &body
+}
+
+func sendRequest(req *http.Request) *http.Response {
+	client := getClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		if !connProblem(err) {
+			checkClientErr(err)
+		}
+	}
+	if err = writeLastAccessDate(); err != nil {
+		fmt.Fprintf(os.Stderr, "problem writing to last access file : %v", err)
+	}
+
+	return resp
+}
+
+func getClient() *http.Client {
 
 	var cert tls.Certificate
 	var certErr error
@@ -191,21 +217,7 @@ func doRequest(req *http.Request) (string, http.Header, *[]byte) {
 		Timeout: time.Minute * 3,
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		if !connProblem(err) {
-			checkClientErr(err)
-		}
-	}
-	if err = writeLastAccessDate(); err != nil {
-		fmt.Fprintf(os.Stderr, "problem writing to last access file : %v", err)
-	}
-	defer resp.Body.Close()
-	body, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		checkClientErr(readErr)
-	}
-	return resp.Status, resp.Header, &body
+	return client
 }
 
 func writeLastAccessDate() error {

@@ -528,11 +528,15 @@ func printShow(rb *common.ResponseBodyShow, flagset *pflag.FlagSet) {
 		if len(filterOwnerList) > 0 || len(filterResList) > 0 {
 			fmt.Println(sBold("\nNo reservations returned by this query.\n"))
 		} else {
+			var noRes = "You have no owned or group-affiliated reservations."
+			if showFutureOnly {
+				noRes = "You have no future owned or group-affiliated reservations."
+			}
 			var extra = ""
 			if !showAll {
-				extra = " (Use the --all flag to see complete reservation list.)"
+				extra = "(Use the --all flag to see complete reservation list.)"
 			}
-			fmt.Println(sBold(fmt.Sprintf("\nYou have no owned or group-affiliated reservations.%s\n", extra)))
+			fmt.Println(sBold(fmt.Sprintf("\n%s %s\n", noRes, extra)))
 		}
 		return
 	}

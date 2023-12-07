@@ -12,15 +12,22 @@ import (
 	"igor2/internal/pkg/common"
 )
 
-func checkTimeLimit(nodes int, limit time.Duration, resDur time.Duration) error {
+func checkTimeLimit(nodeCount int, limit time.Duration, resDur time.Duration) error {
+	// nodeCount is ignored at the moment.
+	// In old igor, a formula was created that lowered the amount of time allowed for the res
+	// based on how many nodes were requested. More nodes = less reservation time. Doubtful we
+	// will ever go back to that, but the node count is there if needed.
 
-	// no time limit in the config
 	if limit <= 0 {
+		// no time limit defined, so return nil
 		return nil
 	}
 
-	if resDur > limit {
-		return fmt.Errorf("max allowable time is %s (you requested %s)", limit.Round(time.Minute), resDur.Round(time.Minute))
+	logger.Debug().Msgf("checkTimeLimit: requested res duration: %v", resDur)
+
+	// lop off some seconds to ensure requesting max allowable time doesn't exceed limit by some tiny fraction
+	if limit < resDur-(time.Second*5) {
+		return fmt.Errorf("max allowable time is %s (you requested %s)", limit.Round(time.Second), resDur.Round(time.Second))
 	}
 
 	return nil

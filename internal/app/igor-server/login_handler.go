@@ -14,6 +14,15 @@ import (
 	"github.com/rs/zerolog/hlog"
 )
 
+func loginGetHandler(w http.ResponseWriter, r *http.Request) {
+
+	if _, err := doPasswordAuth(w, r); err != nil {
+		return
+	}
+
+	makeJsonResponse(w, http.StatusOK, common.NewResponseBody())
+}
+
 // loginPostHandler processes a POST /login request. See doPasswordAuth for possible
 // error return codes.
 func loginPostHandler(w http.ResponseWriter, r *http.Request) {

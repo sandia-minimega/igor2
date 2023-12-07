@@ -6,10 +6,11 @@ package igorserver
 
 import (
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // This matches most cases but can be more robust. All email strings should be forced to use lower case.
@@ -141,4 +142,25 @@ func userIDsOfUsers(users []User) []int {
 		userIDs[i] = u.ID
 	}
 	return userIDs
+}
+
+// filterNonMembers take s a slice of User objects and a slice of user names
+// any names that are not among the slice of User objects are collected as
+// a slice of names and returned
+func filterNonMembers(users []User, names []string) []string {
+	var inList bool
+	var notFound []string
+	for _, v := range names {
+		inList = false
+		for _, u := range users {
+			if v == u.Name {
+				inList = true
+				continue
+			}
+		}
+		if !inList {
+			notFound = append(notFound, v)
+		}
+	}
+	return notFound
 }

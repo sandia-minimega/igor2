@@ -53,6 +53,14 @@ func runServer() {
 		logger.Warn().Msg("notification manager is disabled")
 	}
 
+	// the group sync manager will not run if disabled in config
+	if igor.Auth.Ldap.GroupSync.EnableGroupSync {
+		wg.Add(1)
+		go groupSyncManager()
+	} else {
+		logger.Warn().Msg("group sync manager is disabled")
+	}
+
 	cert, err := tls.LoadX509KeyPair(igor.Server.CertFile, igor.Server.KeyFile)
 	if err != nil {
 		exitPrintFatal(err.Error())
@@ -262,7 +270,8 @@ func notificationManager() {
 // those reservations to take them out of maintenance mode.
 func maintenanceManager() {
 	defer wg.Done()
-	countdown := NewScheduleTimer(time.Minute)
+	timer := time.Minute
+	countdown := NewScheduleTimer(timer)
 	for {
 		select {
 		case <-shutdownChan:
@@ -276,6 +285,31 @@ func maintenanceManager() {
 			if err := doMaintenance(&checkTime, finishMaintenance); err != nil {
 				logger.Error().Msgf("%v", err)
 			}
+			countdown.reset()
+		}
+	}
+}
+
+// groupSyncManager uses a configurable timer to fire every given interval. When this happens, the syncUsers()
+// function is called. The function uses configured settings to get a list of members for a given group from
+// LDAP. It then compares the list of members to Igor's user list. Any group members who do not currently have
+// a User profile in Igor will have one created for them. If notifications is enabled, the user will receive
+// one to inform them they can use Igor.
+func groupSyncManager() {
+	defer wg.Done()
+	timer := time.Minute * time.Duration(igor.Auth.Ldap.GroupSync.SyncFrequency)
+	countdown := NewScheduleTimer(timer)
+	for {
+		select {
+		case <-shutdownChan:
+			logger.Info().Msg("stopping group sync management background worker")
+			if !countdown.t.Stop() {
+				<-countdown.t.C
+			}
+			return
+		case checkTime := <-countdown.t.C:
+			logger.Debug().Msgf("doing group sync management - %v", checkTime.Format(time.RFC3339))
+			syncUsers()
 			countdown.reset()
 		}
 	}

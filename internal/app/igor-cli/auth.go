@@ -6,12 +6,14 @@ package igorcli
 
 import (
 	"errors"
+	"fmt"
+	"github.com/spf13/cobra"
 	"igor2/internal/pkg/api"
 	"igor2/internal/pkg/common"
+	"io"
 	"net/http"
 	"os"
-
-	"github.com/spf13/cobra"
+	"os/user"
 )
 
 func newResetSecretCmd() *cobra.Command {
@@ -40,7 +42,69 @@ func doJwtReset() *common.ResponseBodyBasic {
 	return unmarshalBasicResponse(body)
 }
 
-// CLIENT COMMANDS... these don't call the server
+// CLIENT COMMANDS...
+
+func newLoginCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "login",
+		Short: "Starts a new auth session",
+		Long: `
+Gets a valid authentication token for the user. This action will ask for the
+user's account credentials when executed.
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			osUser, osErr := user.Current()
+			if osErr != nil {
+				return osErr
+			}
+
+			username, password, rucErr := reqUserCreds(osUser)
+			if rucErr != nil {
+				return rucErr
+			}
+
+			response, lErr := doLogin(username, password)
+			if lErr != nil {
+				return lErr
+			}
+			printRespSimple(response)
+			return nil
+		},
+		DisableFlagsInUseLine: true,
+		ValidArgsFunction:     validateNoArgs,
+	}
+}
+
+func doLogin(username string, password string) (*common.ResponseBodyBasic, error) {
+
+	req, _ := http.NewRequest("GET", cli.IgorServerAddr+api.Login, nil)
+	req.SetBasicAuth(username, password)
+	setUserAgent(req)
+	lastAccessUser = username
+
+	resp := sendRequest(req)
+	defer resp.Body.Close()
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		checkClientErr(readErr)
+	}
+
+	cookies := resp.Cookies()
+	for i, c := range cookies {
+		if c.Name == "auth_token" {
+			if err := writeAuthToken(cookies[i]); err != nil {
+				return nil, err
+			}
+			if err := writeLastAccessUser(); err != nil {
+				fmt.Printf("%v\n", err)
+			}
+		}
+	}
+	return unmarshalBasicResponse(&body), nil
+}
+
+// these client commands don't call the server
 
 func newLogoutCmd() *cobra.Command {
 

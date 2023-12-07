@@ -173,7 +173,7 @@ igor res create obiwan -d cent7 -n rx[5,12-15] -e ` + exEndDts() + ` -g jedis
   to the 'jedis' group.
 
 
-igor res create Twit2 -p twitserv -n dq74,dq9 -s ` + exStartDts() + ` -t 6d -v Twit1
+igor res create Twit2 -p twitserv -n dq74,dq9 -s ` + exStartDts() + ` -e 6d -v Twit1
 
   * Uses node list, future start date, duration to end, and vlan res-name.
   Requests a reservation named 'Twit2' using the profile 'twitserv' on three

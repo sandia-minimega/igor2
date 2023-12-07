@@ -71,9 +71,15 @@ func applyApiRoutes(router *httprouter.Router) {
 	hcConfig.Extend(hcAuthChain)
 	router.Handle(http.MethodGet, api.Config, hcConfig.ApplyTo(configHandler))
 
+	// handles bare login attempt
 	hcLogin := NewHandlerChain()
 	hcLogin.Extend(hcDefaultChain)
-	router.Handle(http.MethodPost, api.Login, hcLogin.ApplyTo(loginPostHandler))
+	router.Handle(http.MethodGet, api.Login, hcLogin.ApplyTo(loginGetHandler))
+
+	// handles a login triggered by another command
+	hcLoginPost := NewHandlerChain()
+	hcLoginPost.Extend(hcDefaultChain)
+	router.Handle(http.MethodPost, api.Login, hcLoginPost.ApplyTo(loginPostHandler))
 
 	hcShow := NewHandlerChain()
 	hcShow.Extend(hcDefaultChain)

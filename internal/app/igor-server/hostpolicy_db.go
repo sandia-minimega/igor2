@@ -177,20 +177,20 @@ func dbDeleteHostPolicy(target *HostPolicy, tx *gorm.DB) error {
 //	200/OK if no conflicts were found.
 func dbCheckHostPolicyConflicts(hostNames []string, groupAccessList []string, isElevated bool,
 	startTime time.Time, currentEndTime time.Time, newEndTime time.Time, clog *zl.Logger) (int, error) {
-	// get all hostpolicies associated with the given list of host names
+	// get all policies associated with the given list of host names
 	myHostPolicies, err := getHostPoliciesFromHostNames(hostNames)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	// determine if any hostpolicies do not contain at least one group from groupAccessList
+	// determine if any policies do not contain at least one group from groupAccessList
 	if membership, policy := dbCheckHostPolicyGroupConflicts(myHostPolicies, groupAccessList); !membership {
 		// get the intersection of affected policy hosts and requested hosts
 		offendingHosts := getHostIntersection(hostNames, policy.Hosts)
 		return http.StatusConflict, &HostPolicyConflictError{"", true, false, false, time.Time{}, time.Time{}, offendingHosts}
 	}
 
-	// determine if any hostpolicies conflict based on maxResDuration or unavailability
+	// determine if any policies conflict based on maxResDuration or unavailability
 	totalResDuration := newEndTime.Sub(startTime)
 	for _, policy := range myHostPolicies {
 		clog.Debug().Msgf("checking HostPolicy: %s", policy.Name)
@@ -200,7 +200,7 @@ func dbCheckHostPolicyConflicts(hostNames []string, groupAccessList []string, is
 				clog.Warn().Msgf("%v", err)
 				// get the intersection of affected policy hosts and requested hosts
 				offendingHosts := getHostIntersection(hostNames, policy.Hosts)
-				return http.StatusConflict, &HostPolicyConflictError{"", false, true, false, time.Time{}, time.Time{}, offendingHosts}
+				return http.StatusConflict, &HostPolicyConflictError{err.Error(), false, true, false, time.Time{}, time.Time{}, offendingHosts}
 			}
 		}
 		// iterate through any policy ScheduleBlocks to determine if a conflict exists with the given times
@@ -219,7 +219,7 @@ func dbCheckHostPolicyConflicts(hostNames []string, groupAccessList []string, is
 }
 
 func dbCheckHostPolicyGroupConflicts(hostPolicies []HostPolicy, groupAccessList []string) (bool, HostPolicy) {
-	// determine if any hostpolicies do not contain at least one group from groupAccessList
+	// determine if any policies do not contain at least one group from groupAccessList
 	for _, policy := range hostPolicies {
 		logger.Debug().Msgf("Looking at policy: %s", policy.Name)
 		policyGroups := policy.AccessGroups
@@ -288,7 +288,7 @@ func dbGetAccessibleHosts(accessGroupList []string, isElevated bool, startTime, 
 		finalTimeExceeded = finalTimeExceeded && et
 	}
 	if finalTimeExceeded {
-		return nil, http.StatusConflict, fmt.Errorf("max allowable time is %s (you requested %s)", maxPolicyTime.Round(time.Minute), givenDuration.Round(time.Minute))
+		return nil, http.StatusConflict, fmt.Errorf("max allowable time is %s (you requested %s)", maxPolicyTime.Round(time.Second), givenDuration.Round(time.Second))
 	}
 
 	// collect all hosts attached to valid hostPolicies and states
