@@ -123,3 +123,12 @@ func checkEthRules(ref string) error {
 	}
 	return nil
 }
+
+func validBootMode(ref string) bool {
+	for _, bMode := range AllowedBootModes {
+		if ref == bMode {
+			return true
+		}
+	}
+	return false
+}

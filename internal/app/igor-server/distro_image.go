@@ -32,9 +32,11 @@ type DistroImage struct {
 	Name      string `gorm:"unique; notNull"`
 	Kernel    string
 	Initrd    string
-	Iso       string
+	Distro    string
 	Breed     string
 	LocalBoot bool
+	BiosBoot  bool
+	UefiBoot  bool
 	Distros   []Distro
 }
 
@@ -56,7 +58,6 @@ func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData
 			ImageType: image.Type,
 			Kernel:    image.Kernel,
 			Initrd:    image.Initrd,
-			Iso:       image.Iso,
 			Distros:   distros,
 			Breed:     image.Breed,
 			Local:     local,

@@ -50,22 +50,32 @@ parameter localBoot = true and a breed.
 func newImageRegisterCmd() *cobra.Command {
 
 	cmdRegisterImage := &cobra.Command{
-		Use: "register -k FILENAME.KERNEL -i FILENAME.INITRD " +
-			" 		[-l --localBoot {true|false} -b --breed BREED]",
-		Short: "Register image files " + adminOnly,
+		Use: "register {-k FILENAME.KERNEL -i FILENAME.INITRD |" +
+			" 		--kstaged FILENAME.KERNEL --istaged FILENAME.INITRD |" +
+			" 		-d FOLDER/PATH} --boot {bios,uefi}" +
+			"		[-l --localBoot {true|false} -b --breed BREED]",
+		Short: "Register image files or distro",
 		Long: `
 Registers bootable file(s) (ex. a kernel/initrd file pair) with igor. This
 command is used when uploading is not enabled for users.
 
 ` + requiredFlags + `
 
-  -k : name of the kernel file in the staged image directory
-  -i : name of the initrd file in the staged image directory
+  -k : name/path to the kernel file. If including a distro for local boot,
+		include the kernel file name if using a custom name. Otherwise,
+		Igor will look for a default name based on OS breed.
+  -i : name/path to the initrd file. If including a distro for local boot,
+  		include the initrd file name if using a custom name. Otherwise,
+  		Igor will look for a default name based on OS breed.
+  -d : path to the folder containing the distribution if local install
+  --boot: at least one or more comma-separated strings incidicating this 
+  		image's compatible boot methods. Available values are: bios,uefi
 
 ` + optionalFlags + `
 
   -l : true if included, designate the image for local boot
-  -b : breed of image. (Required if localBoot = true) Available values are:
+  -b : breed of image. (Required if local boot flag -l is included)
+  		Available values are:
   		debian, freebsd, generic, nexenta,
 		redhat, suse, ubuntu, unix, vmware
 		windows, xen
@@ -78,17 +88,19 @@ create a distro:
 When registering an image using this action, the image files must have already
 been placed in igor server's designated staged-images directory. See the
 server.imageStageDir setting in the server config for directory path.
-
-` + adminOnlyBanner + `
 `,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flagset := cmd.Flags()
-			kstaged, _ := flagset.GetString("kernel")
-			istaged, _ := flagset.GetString("initrd")
+			kstaged, _ := flagset.GetString("kstaged")
+			istaged, _ := flagset.GetString("istaged")
+			kpath, _ := flagset.GetString("kernel")
+			ipath, _ := flagset.GetString("initrd")
+			dpath, _ := flagset.GetString("distro")
+			boot, _ := flagset.GetStringSlice("boot")
 			localBoot, _ := flagset.GetBool("localBoot")
 			breed, _ := flagset.GetString("breed")
-			res, err := doRegisterImage(kstaged, istaged, breed, localBoot)
+			res, err := doRegisterImage(kstaged, istaged, kpath, ipath, dpath, boot, breed, localBoot)
 			if err != nil {
 				return err
 			}
@@ -99,10 +111,15 @@ server.imageStageDir setting in the server config for directory path.
 		ValidArgsFunction:     validateNoArgs,
 	}
 
-	var kstaged, istaged, breed string
+	var kstaged, istaged, kpath, ipath, dpath, breed string
+	var boot []string
 	var localBoot bool
-	cmdRegisterImage.Flags().StringVarP(&kstaged, "kernel", "k", "", "name of the already staged .kernel file")
-	cmdRegisterImage.Flags().StringVarP(&istaged, "initrd", "i", "", "name of the already staged .initrd file")
+	cmdRegisterImage.Flags().StringVar(&kstaged, "kstaged", "", "name of the .kernel file already staged in the staged_images folder on the Igor server")
+	cmdRegisterImage.Flags().StringVar(&istaged, "istaged", "", "name of the .initrd file already staged in the staged_images folder on the Igor server")
+	cmdRegisterImage.Flags().StringVarP(&kpath, "kernel", "k", "", "name/path of the .kernel file to upload")
+	cmdRegisterImage.Flags().StringVarP(&ipath, "initrd", "i", "", "name/path of the .initrd file to upload")
+	cmdRegisterImage.Flags().StringVarP(&dpath, "distro", "d", "", "path to the distro folder to upload")
+	cmdRegisterImage.Flags().StringSlice("boot", boot, "the compatible boot system to use the image with")
 	cmdRegisterImage.Flags().StringVarP(&breed, "breed", "b", "", "name of the OS breed")
 	cmdRegisterImage.Flags().BoolVarP(&localBoot, "localBoot", "l", false, "true = image is intended for local install/boot")
 	_ = cmdRegisterImage.MarkFlagRequired("kernel")
@@ -171,15 +188,45 @@ will also be destroyed automatically.
 	}
 }
 
-func doRegisterImage(kstaged string, istaged string, breed string, localBoot bool) (*common.ResponseBodyBasic, error) {
+func doRegisterImage(kstaged, istaged, kpath, ipath, dpath string, boot []string, breed string, localBoot bool) (*common.ResponseBodyBasic, error) {
 
 	params := map[string]interface{}{}
-	params["kernelStaged"] = kstaged
-	params["initrdStaged"] = istaged
+	params["boot"] = boot
 	if localBoot {
+		if dpath != "" {
+			tarPath := "output.tar.gz"
+			// an OS repo is being uploaded
+			err := compressFolderToTarGz(dpath, tarPath)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to process given distribution path: %v", err.Error())
+			}
+			params["distro"] = openFile(tarPath)
+			// might need to remove the tar file
+			// os.Remove(tarPath)
+		} else if kstaged != "" && istaged != "" {
+			params["kstaged"] = kstaged
+			params["istaged"] = istaged
+		}
+		if kpath != "" {
+			params["kpath"] = kpath
+		}
+		if ipath != "" {
+			params["ipath"] = ipath
+		}
 		params["localBoot"] = "true"
-		params["breed"] = breed
+	} else {
+		if kstaged != "" && istaged != "" {
+			params["kstaged"] = kstaged
+			params["istaged"] = istaged
+		} else if kpath != "" && ipath != "" {
+			params["kernel"] = openFile(kpath)
+			params["initrd"] = openFile(ipath)
+		} else {
+			return nil, fmt.Errorf("paths to either uploadable kernel/initrd files or staged files names are required for image registration")
+		}
+
 	}
+	params["breed"] = breed
 
 	body := doSendMultiform(http.MethodPost, api.ImageRegister, params)
 	return unmarshalBasicResponse(body), nil

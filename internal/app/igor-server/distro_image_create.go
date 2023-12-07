@@ -42,20 +42,28 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	// potential way of determining whether files were included and type based on count?
 	clog.Debug().Msgf("Number of files attached: %v", len(r.MultipartForm.File))
 
-	// check for included staged file names, admin may have manually placed files in staging folder for us
-	image = detectStagedFiles(r)
-	if image == nil {
-		// we need to pull files from the multiform and stage them
-		image, err = stageUploadedFiles(r)
-		if err != nil {
-			return image, http.StatusInternalServerError, err
+	// is this local install or net-only?
+	if strings.ToLower(r.FormValue("localBoot")) == "true" {
+		image.LocalBoot = true
+	}
+
+	if image.LocalBoot {
+		// local-install: we're getting a distro
+
+	} else {
+		// net-boot only: we're getting a KI pair
+		// check for included staged file names, admin may have manually placed files in staging folder for us
+		image = detectStagedFiles(r)
+		if image == nil {
+			// we need to pull files from the multiform and stage them
+			image, err = stageUploadedFiles(r)
+			if err != nil {
+				return image, http.StatusInternalServerError, err
+			}
 		}
 	}
 
 	// is image intended for local installation/booting?
-	if strings.ToLower(r.FormValue("localBoot")) == "true" {
-		image.LocalBoot = true
-	}
 
 	// set image OS breed value, if given, otherwise put generic as default
 	breed := strings.ToLower(r.FormValue("breed"))
@@ -342,13 +350,13 @@ func copyFile(srcPath, targetPath string) error {
 	return nil
 }
 
-// determine if references to staged file(s) were given to us
-// and what types of files they are. Returns an Image obj
-// containing the image type, or nil otherwise
+// // determine if references to staged file(s) were given to us
+// // and what types of files they are. Returns an Image obj
+// // containing the image type, or nil otherwise
 func detectStagedFiles(r *http.Request) *DistroImage {
 	// expand in the future to accomodate different image type
-	kFile := r.FormValue("kernelStaged")
-	iFile := r.FormValue("initrdStaged")
+	kFile := r.FormValue("kstaged")
+	iFile := r.FormValue("istaged")
 	if kFile != "" && iFile != "" {
 		return &DistroImage{
 			Type:   DistroKI,

@@ -28,6 +28,8 @@ const (
 	PermHosts = "hosts"
 )
 
+var AllowedBootModes = [...]string{"legacy", "uefi"}
+
 // Host is the compute resource being reserved. It's data contains all relevant information needed by
 // igor to make reservations and issue commands to interact with a given host or get information
 // about its current status.
@@ -39,6 +41,7 @@ type Host struct {
 	Eth            string
 	Mac            string `gorm:"unique; notNull"`
 	IP             string
+	BootMode       string    `gorm:"notNull"`
 	State          HostState // State is the HostState of this node. Default when created is HostBlocked.
 	ClusterID      int       `gorm:"notNull; uniqueIndex:idx_cluster_seq"`
 	Cluster        Cluster   `gorm:"->;<-:create; notNull"` // read/create only; hosts never change clusters
