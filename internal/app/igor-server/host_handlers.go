@@ -247,6 +247,21 @@ func validateHostParams(handler http.Handler) http.Handler {
 							validateErr = NewBadParamTypeError(key, val, "valid IPv4/6 string")
 							break patchParamLoop
 						}
+					case "boot":
+						if _, ok := val.(string); !ok {
+							validateErr = NewBadParamTypeError(key, val, "string")
+							break patchParamLoop
+						}
+						is_valid := false
+						for _, v := range AllowedBootModes {
+							if strings.ToLower(val.(string)) == v {
+								is_valid = true
+							}
+						}
+						if !is_valid {
+							validateErr = fmt.Errorf("invalid boot type given")
+							break patchParamLoop
+						}
 					case "mac":
 						if mac, ok := val.(string); !ok {
 							validateErr = NewBadParamTypeError(key, val, "string")

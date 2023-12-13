@@ -25,6 +25,7 @@ node_modules/
 
 # image and tftp default paths
 .images/
+efi/
 igor_images/
 igor_staged_images/
 pxelinux.cfg/

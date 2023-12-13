@@ -80,6 +80,10 @@ func parseHostEditParams(editParams map[string]interface{}, clog *zl.Logger) (ma
 	if val, ok := editParams["hostname"].(string); ok {
 		changes["host_name"] = val
 	}
+	// check for boot type change
+	if val, ok := editParams["boot"].(string); ok {
+		changes["boot_mode"] = val
+	}
 	// check for mac address chnage
 	if val, ok := editParams["mac"].(string); ok {
 		if _, err := net.ParseMAC(val); err != nil {
