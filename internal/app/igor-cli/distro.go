@@ -48,6 +48,8 @@ func newDistroCreateCmd() *cobra.Command {
 	cmdCreateDistro := &cobra.Command{
 		Use: "create NAME {--copy-distro DISTRO | --use-distro-image DISTRO |\n" +
 			"              --kernel PATH/TO/KFILE.KERNEL --initrd PATH/TO/IFILE.INITRD |\n" +
+			" 			   --kstaged FILENAME.KERNEL --istaged FILENAME.INITRD |\n" +
+			" 			   -d FOLDER/PATH} --boot {bios,uefi}\n" +
 			"              --image-ref IMAGEREF} [-g GRP1...] [--kickstart KICKSTART]\n" +
 			"              [-k KARGS]  [-p PUBLIC] [--desc \"DESCRIPTION\"]",
 		Short: "Create a distro",
@@ -71,10 +73,15 @@ another igor user if desired.
   --image-ref : The reference ID/name of a registered image. If an image was
       previously registered in a separate step, the refID that was returned can
       be used.
-  --kernel/--initrd : The full path to the kernel or initrd file to be uploaded
+  --kernel/--initrd : The full path to the kernel and initrd files to be uploaded
       and registered to use in the new distro. This assumes the upload feature
       has been enabled in the configuration. Files must have extension names
       .kernel and .initrd respectively.
+  --kstaged/--istaged : the file names of the kernel and initrd files
+	  that have been placed in the igor_staged_images path by the admin.
+  -d : path to the folder containing the distribution if local install
+  --boot: at least one or more comma-separated strings incidicating this 
+  		image's compatible boot methods. Available values are: bios,uefi
   --copy-distro : The name of an existing distro to base the new distro on.
       User must be the owner of the existing distro. New distro will inherit
       the description, image, kickstart script, and kernel args of the existing
@@ -119,6 +126,10 @@ team.
 			flagset := cmd.Flags()
 			kernel, _ := flagset.GetString("kernel")
 			initrd, _ := flagset.GetString("initrd")
+			kstaged, _ := flagset.GetString("kstaged")
+			istaged, _ := flagset.GetString("istaged")
+			dpath, _ := flagset.GetString("distro")
+			boot, _ := flagset.GetStringSlice("boot")
 			copyDistro, _ := flagset.GetString("copy-distro")
 			useDistroImage, _ := flagset.GetString("use-distro-image")
 			imageRef, _ := flagset.GetString("image-ref")
@@ -128,7 +139,7 @@ team.
 			public, _ := flagset.GetBool("public")
 			isDefault, _ := flagset.GetBool("default")
 			kickstart, _ := flagset.GetString("kickstart")
-			res, err := doCreateDistro(args[0], kernel, initrd, copyDistro, useDistroImage, imageRef, desc, groups, kargs, kickstart, public, isDefault)
+			res, err := doCreateDistro(args[0], kernel, initrd, kstaged, istaged, dpath, copyDistro, useDistroImage, imageRef, desc, groups, boot, kargs, kickstart, public, isDefault)
 			if err != nil {
 				return err
 			}
@@ -141,16 +152,23 @@ team.
 
 	var kernel,
 		initrd,
+		kstaged,
+		istaged,
+		dpath,
 		copyDistro,
 		useDistroImage,
 		imageRef,
 		desc,
 		kargs,
 		kickstart string
-	var groups []string
+	var groups, boot []string
 
 	cmdCreateDistro.Flags().StringVar(&kernel, "kernel", "", "full local path to a .kernel file")
 	cmdCreateDistro.Flags().StringVar(&initrd, "initrd", "", "full local path to a .initrd file")
+	cmdCreateDistro.Flags().StringVar(&kstaged, "kstaged", "", "name of the .kernel file already placed in the staged_images folder on the Igor server")
+	cmdCreateDistro.Flags().StringVar(&istaged, "istaged", "", "name of the .initrd file already placed in the staged_images folder on the Igor server")
+	cmdCreateDistro.Flags().StringVarP(&dpath, "distro", "d", "", "path to the distro folder to upload")
+	cmdCreateDistro.Flags().StringSlice("boot", boot, "the compatible boot system to use the image with")
 	cmdCreateDistro.Flags().StringVar(&copyDistro, "copy-distro", "", "name of an already existing distro to duplicate")
 	cmdCreateDistro.Flags().StringVar(&useDistroImage, "use-distro-image", "", "name of an already existing distro to use image from")
 	cmdCreateDistro.Flags().StringVar(&imageRef, "image-ref", "", "the image reference ID (provided by admin)")
@@ -352,13 +370,17 @@ also be destroyed automatically.
 	}
 }
 
-func doCreateDistro(name, kfile, ifile, eDistro, eKI, kiref, desc string, groups []string, kargs string, kickstart string, public, isDefault bool) (*common.ResponseBodyBasic, error) {
+func doCreateDistro(name, kfile, ifile, kstaged, istaged, dpath, eDistro, eKI, kiref, desc string, groups, boot []string, kargs string, kickstart string, public, isDefault bool) (*common.ResponseBodyBasic, error) {
 
 	params := map[string]interface{}{}
 	params["name"] = name
+	params["boot"] = boot
 	if kfile != "" && ifile != "" {
 		params["kernelFile"] = openFile(kfile)
 		params["initrdFile"] = openFile(ifile)
+	} else if kstaged != "" && istaged != "" {
+		params["kStaged"] = kstaged
+		params["iStaged"] = istaged
 	} else if eDistro != "" {
 		params["copyDistro"] = eDistro
 	} else if eKI != "" {
@@ -366,9 +388,11 @@ func doCreateDistro(name, kfile, ifile, eDistro, eKI, kiref, desc string, groups
 	} else if kiref != "" {
 		params["imageRef"] = kiref
 	} else {
-		return nil, fmt.Errorf("error - one of the following is required: kernel and initrd OR copy-distro OR use-distro-image OR image-ref")
+		return nil, fmt.Errorf("error - one of the following is required: kernel and initrd OR kstaged and istaged OR copy-distro OR use-distro-image OR image-ref")
 	}
-
+	if dpath != "" {
+		params["dPath"] = dpath
+	}
 	if desc != "" {
 		params["description"] = desc
 	}

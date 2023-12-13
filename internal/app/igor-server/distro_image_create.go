@@ -42,28 +42,35 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	// potential way of determining whether files were included and type based on count?
 	clog.Debug().Msgf("Number of files attached: %v", len(r.MultipartForm.File))
 
-	// is this local install or net-only?
-	if strings.ToLower(r.FormValue("localBoot")) == "true" {
-		image.LocalBoot = true
-	}
-
-	if image.LocalBoot {
-		// local-install: we're getting a distro
-
-	} else {
-		// net-boot only: we're getting a KI pair
-		// check for included staged file names, admin may have manually placed files in staging folder for us
-		image = detectStagedFiles(r)
-		if image == nil {
-			// we need to pull files from the multiform and stage them
-			image, err = stageUploadedFiles(r)
-			if err != nil {
-				return image, http.StatusInternalServerError, err
-			}
+	// net-boot only: we're getting a KI pair
+	// check for included staged file names, admin may have manually placed files in staging folder for us
+	image = detectStagedFiles(r)
+	if image == nil {
+		// we need to pull files from the multiform and stage them
+		image, err = stageUploadedFiles(r)
+		if err != nil {
+			return image, http.StatusInternalServerError, err
 		}
 	}
 
 	// is image intended for local installation/booting?
+	if strings.ToLower(r.FormValue("localBoot")) == "true" {
+		image.LocalBoot = true
+	}
+
+	// get boot type(s) of image
+	if boots, ok := r.Form["boot"]; ok {
+		for _, boot := range boots {
+			if strings.ToLower(boot) == "bios" {
+				image.BiosBoot = true
+			}
+			if strings.ToLower(boot) == "uefi" {
+				image.UefiBoot = true
+			}
+		}
+	} else {
+		return image, http.StatusBadRequest, fmt.Errorf("at least one value required image boot type")
+	}
 
 	// set image OS breed value, if given, otherwise put generic as default
 	breed := strings.ToLower(r.FormValue("breed"))

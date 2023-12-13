@@ -108,8 +108,22 @@ func validateDistroImageParams(handler http.Handler) http.Handler {
 						if validateErr = checkGenericNameRules(val[0]); validateErr != nil {
 							break postPutParamLoop
 						}
+					case "boot":
+						for _, v := range val {
+							is_valid := false
+							for _, v2 := range AllowedBootModes {
+								if strings.ToLower(v) == v2 {
+									is_valid = true
+								}
+							}
+							if !is_valid {
+								validateErr = fmt.Errorf("invalid boot type given")
+								break postPutParamLoop
+							}
+						}
 					default:
-						continue
+						validateErr = NewUnknownParamError(key, val)
+						break postPutParamLoop
 					}
 				}
 			} else {

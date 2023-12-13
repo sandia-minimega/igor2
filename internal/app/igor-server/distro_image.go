@@ -52,6 +52,13 @@ func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData
 		if image.LocalBoot {
 			local = "yes"
 		}
+		boot := []string{}
+		if image.BiosBoot {
+			boot = append(boot, "bios")
+		}
+		if image.UefiBoot {
+			boot = append(boot, "uefi")
+		}
 		distroImageList = append(distroImageList, common.DistroImageData{
 			Name:      image.Name,
 			ImageID:   image.ImageID,
@@ -61,6 +68,7 @@ func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData
 			Distros:   distros,
 			Breed:     image.Breed,
 			Local:     local,
+			Boot:      boot,
 		})
 	}
 

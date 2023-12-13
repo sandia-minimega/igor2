@@ -66,6 +66,7 @@ type DistroImageData struct {
 	Distros   []string `json:"distros"`
 	Breed     string   `json:"breed"`
 	Local     string   `json:"local"`
+	Boot      []string `json:"boot"`
 }
 
 // KickstartData contains the filtered contents of a Kickstart for user consumption
@@ -91,6 +92,7 @@ type HostData struct {
 	Eth          string   `json:"eth"`
 	IP           string   `json:"ip"`
 	Mac          string   `json:"mac"`
+	BootMode     string   `json:"bootMode"`
 	State        string   `json:"state"`
 	Powered      string   `json:"powered"`
 	Cluster      string   `json:"cluster"`

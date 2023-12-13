@@ -111,3 +111,14 @@ func determineNodeResetTime(resEnd time.Time) time.Time {
 	resetEnd := resEnd.Add(time.Minute * time.Duration(igor.Config.Maintenance.HostMaintenanceDuration))
 	return resetEnd
 }
+
+// getActiveReservation returns a Reservation the given host
+// Host is associated with
+func getActiveReservation(h *Host) *Reservation {
+	for _, res := range h.Reservations {
+		if res.IsActive(time.Now()) {
+			return &res
+		}
+	}
+	return nil
+}

@@ -50,10 +50,10 @@ parameter localBoot = true and a breed.
 func newImageRegisterCmd() *cobra.Command {
 
 	cmdRegisterImage := &cobra.Command{
-		Use: "register {-k FILENAME.KERNEL -i FILENAME.INITRD |" +
-			" 		--kstaged FILENAME.KERNEL --istaged FILENAME.INITRD |" +
-			" 		-d FOLDER/PATH} --boot {bios,uefi}" +
-			"		[-l --localBoot {true|false} -b --breed BREED]",
+		Use: "register {-k FILENAME.KERNEL -i FILENAME.INITRD |\n" +
+			" 		--kstaged FILENAME.KERNEL --istaged FILENAME.INITRD |\n" +
+			" 		-d FOLDER/PATH} --boot {bios,uefi}\n" +
+			"		[-l --localBoot {true|false} -b --breed BREED]\n",
 		Short: "Register image files or distro",
 		Long: `
 Registers bootable file(s) (ex. a kernel/initrd file pair) with igor. This
@@ -219,14 +219,16 @@ func doRegisterImage(kstaged, istaged, kpath, ipath, dpath string, boot []string
 			params["kstaged"] = kstaged
 			params["istaged"] = istaged
 		} else if kpath != "" && ipath != "" {
-			params["kernel"] = openFile(kpath)
-			params["initrd"] = openFile(ipath)
+			params["kernelFile"] = openFile(kpath)
+			params["initrdFile"] = openFile(ipath)
 		} else {
 			return nil, fmt.Errorf("paths to either uploadable kernel/initrd files or staged files names are required for image registration")
 		}
 
 	}
-	params["breed"] = breed
+	if breed != "" {
+		params["breed"] = breed
+	}
 
 	body := doSendMultiform(http.MethodPost, api.ImageRegister, params)
 	return unmarshalBasicResponse(body), nil
@@ -262,7 +264,7 @@ func printImages(rb *common.ResponseBodyImages) {
 	})
 
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"NAME", "ID", "TYPE", "KERNEL", "INITRD", "ISO", "BREED", "LOCAL", "DISTROS"})
+	tw.AppendHeader(table.Row{"NAME", "ID", "TYPE", "KERNEL", "INITRD", "ISO", "BREED", "BOOT TYPE", "LOCAL", "DISTROS"})
 
 	for _, di := range imageList {
 		tw.AppendRow([]interface{}{
@@ -273,6 +275,7 @@ func printImages(rb *common.ResponseBodyImages) {
 			di.Initrd,
 			di.Iso,
 			di.Breed,
+			di.Boot,
 			di.Local,
 			strings.Join(di.Distros, "\n"),
 		})

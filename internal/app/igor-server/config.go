@@ -387,15 +387,26 @@ func initConfigCheck() {
 	}
 
 	igor.TFTPPath = igor.Server.TFTPRoot
-	igor.PXEDir = "pxelinux.cfg"
+	igor.PXEBIOSDir = "pxelinux.cfg"
+	igor.PXEUEFIDir = filepath.Join("efi", "grub")
 	igor.ImageStoreDir = "igor_images"
 	igor.KickstartDir = "kickstarts"
 
-	// pxe rep paths
-	tftprep := filepath.Join(igor.TFTPPath, igor.PXEDir, "igor")
+	// pxe rep paths for bios + igor backup
+	tftprep := filepath.Join(igor.TFTPPath, igor.PXEBIOSDir, "igor")
 	if _, err := os.Stat(tftprep); errors.Is(err, os.ErrNotExist) {
-		logger.Warn().Msgf("TFTP repository path(s) not found, creating directory")
+		logger.Warn().Msgf("TFTP BIOS repository path(s) not found, creating directory")
 		createErr := os.MkdirAll(tftprep, 0755)
+		if createErr != nil {
+			logger.Error().Msgf("TFTP repository path creation failure: %v", createErr)
+		}
+	}
+
+	// same for uefi
+	tftuefiprep := filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor")
+	if _, err := os.Stat(tftuefiprep); errors.Is(err, os.ErrNotExist) {
+		logger.Warn().Msgf("TFTP UEFI repository path(s) not found, creating directory")
+		createErr := os.MkdirAll(tftuefiprep, 0755)
 		if createErr != nil {
 			logger.Error().Msgf("TFTP repository path creation failure: %v", createErr)
 		}

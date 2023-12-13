@@ -28,7 +28,7 @@ const (
 	PermHosts = "hosts"
 )
 
-var AllowedBootModes = [...]string{"legacy", "uefi"}
+var AllowedBootModes = [...]string{"bios", "uefi"}
 
 // Host is the compute resource being reserved. It's data contains all relevant information needed by
 // igor to make reservations and issue commands to interact with a given host or get information
@@ -127,6 +127,7 @@ func (h *Host) getHostData(powered *bool, user *User) common.HostData {
 		Eth:          h.Eth,
 		IP:           ip,
 		Mac:          h.Mac,
+		BootMode:     h.BootMode,
 		State:        h.State.String(),
 		Powered:      poweredOn,
 		Cluster:      h.Cluster.Name,
