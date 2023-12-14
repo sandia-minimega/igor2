@@ -39,6 +39,10 @@ func scheduleHostsByName(res *Reservation, tx *gorm.DB, clog *zl.Logger) (int, e
 		return status, err
 	}
 
+	if err := res.checkHostBootPolicy(); err != nil {
+		return http.StatusBadRequest, err
+	}
+
 	// check that no hosts have conflicts in their host policy
 	isElevated := userElevated(res.Owner.Name)
 	status, err = dbCheckHostPolicyConflicts(hostNameList, groupAccessList, isElevated, res.Start, res.End, res.End, clog)
@@ -81,7 +85,27 @@ func scheduleHostsByAvailability(res *Reservation, tx *gorm.DB, clog *zl.Logger)
 	paddedDur := paddedEndTime.Sub(res.Start)
 
 	for ahKey, ahList := range validAccessHosts {
-		ahNames := namesOfHosts(ahList)
+		// let's filter hosts by boot compatibilty here
+		needsBios := res.Profile.Distro.DistroImage.BiosBoot
+		needsUefi := res.Profile.Distro.DistroImage.UefiBoot
+		filteredAHList := []Host{}
+		if !needsBios || !needsUefi {
+			pxeType := "bios"
+			if needsUefi {
+				pxeType = "uefi"
+			}
+			for _, host := range ahList {
+				if host.BootMode == pxeType {
+					filteredAHList = append(filteredAHList, host)
+				}
+			}
+		} else {
+			filteredAHList = ahList
+		}
+		if len(filteredAHList) == 0 {
+			continue
+		}
+		ahNames := namesOfHosts(filteredAHList)
 		if ahKey != DefaultPolicyName {
 			hasRestrictedHosts = true
 		}

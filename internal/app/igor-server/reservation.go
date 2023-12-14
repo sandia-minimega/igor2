@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -197,6 +198,30 @@ func (r *Reservation) getKernelArgs() string {
 		kargs = kargs + r.Profile.KernelArgs
 	}
 	return kargs
+}
+
+func (r *Reservation) checkHostBootPolicy() error {
+	incompatible := []string{}
+	image := r.Profile.Distro.DistroImage
+	if image.BiosBoot && image.UefiBoot {
+		return nil
+	}
+	for _, host := range r.Hosts {
+		switch host.BootMode {
+		case "bios":
+			if !image.BiosBoot {
+				incompatible = append(incompatible, host.Name)
+			}
+		case "uefi":
+			if !image.UefiBoot {
+				incompatible = append(incompatible, host.Name)
+			}
+		}
+	}
+	if len(incompatible) > 0 {
+		return fmt.Errorf("hosts %v are not compatible to boot distro image for distro %s", incompatible, r.Profile.Distro.Name)
+	}
+	return nil
 }
 
 // SetHostNetworkParams sets Hosts and PXENames based on IP lookups for the provided hosts.
