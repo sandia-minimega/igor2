@@ -413,7 +413,8 @@ func initConfigCheck() {
 	}
 
 	logger.Info().Msgf("TFTP root path established: %v", igor.TFTPPath)
-	logger.Info().Msgf(".cfg repository established: %v", tftprep)
+	logger.Info().Msgf("BIOS cfg repository established: %v", tftprep)
+	logger.Info().Msgf("UEFI boot repository established: %v", tftuefiprep)
 
 	// kickstart rep path
 	ksPath := filepath.Join(igor.TFTPPath, igor.KickstartDir)
