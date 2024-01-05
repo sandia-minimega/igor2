@@ -219,7 +219,7 @@ func (r *Reservation) checkHostBootPolicy() error {
 		}
 	}
 	if len(incompatible) > 0 {
-		return fmt.Errorf("hosts %v are not compatible to boot distro image for distro %s", incompatible, r.Profile.Distro.Name)
+		return fmt.Errorf("host(s) %v are not boot-compatible to the image used for distro %s", incompatible, r.Profile.Distro.Name)
 	}
 	return nil
 }

@@ -41,7 +41,7 @@ type Host struct {
 	Eth            string
 	Mac            string `gorm:"unique; notNull"`
 	IP             string
-	BootMode       string    `gorm:"notNull"`
+	BootMode       string    `gorm:"notNull; default:bios"`
 	State          HostState // State is the HostState of this node. Default when created is HostBlocked.
 	ClusterID      int       `gorm:"notNull; uniqueIndex:idx_cluster_seq"`
 	Cluster        Cluster   `gorm:"->;<-:create; notNull"` // read/create only; hosts never change clusters
