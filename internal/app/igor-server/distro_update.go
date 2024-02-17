@@ -202,7 +202,7 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 		}
 		// remove all existing groups (except user's pug)
 		targetGroups := target.Groups
-		groupRemove := []string{}
+		var groupRemove []string
 		userPugID, _ := target.Owner.getPugID()
 		for _, group := range targetGroups {
 			// allow db to handle removal of old user pug

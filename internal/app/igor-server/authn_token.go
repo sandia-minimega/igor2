@@ -143,7 +143,7 @@ func extractToken(r *http.Request) (string, error) {
 	// token may be in the cookie
 	c, err := r.Cookie("auth_token")
 	if err != nil {
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			// no cookie present
 			return "", nil
 		}

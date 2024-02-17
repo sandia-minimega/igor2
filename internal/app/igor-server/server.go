@@ -7,6 +7,7 @@ package igorserver
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -82,7 +83,7 @@ func runServer() {
 
 	corsHandler := cors.New(cors.Options{
 		// If AllowedOrigins is "*" then AllowedCredentials option always treated as false (not good).
-		// This gives us configurable control over where the VueJS server is allowed to be installed.
+		// This gives us configurable control over where the Vue.js server is allowed to be installed.
 		// This shouldn't affect the CLI client which talks directly to the port igor-server is listening
 		// to for HTTP connections.
 		AllowedOrigins: allowedOrigins,
@@ -154,7 +155,7 @@ func runServer() {
 	wg.Add(1)
 	go func() {
 		logger.Info().Msgf("igor-server (REST service) is listening on https://%s", apiSrv.Addr)
-		if stopErr := apiSrv.ListenAndServeTLS("", ""); stopErr != nil && stopErr != http.ErrServerClosed && stopErr != context.Canceled {
+		if stopErr := apiSrv.ListenAndServeTLS("", ""); stopErr != nil && !errors.Is(stopErr, http.ErrServerClosed) && !errors.Is(stopErr, context.Canceled) {
 			logger.Error().Msgf("an error occurred during REST service shutdown: %v", stopErr)
 			if igor.Server.Port < 1025 {
 				logger.Warn().Msgf("port %d normally requires process to run as root", igor.Server.Port)
@@ -168,7 +169,7 @@ func runServer() {
 	go func() {
 		if *igor.Server.CbUseTLS {
 			logger.Info().Msgf("igor-server (node callback service) is listening on https://%s", cbSrv.Addr)
-			if stopErr := cbSrv.ListenAndServeTLS("", ""); stopErr != nil && stopErr != http.ErrServerClosed && stopErr != context.Canceled {
+			if stopErr := cbSrv.ListenAndServeTLS("", ""); stopErr != nil && !errors.Is(stopErr, http.ErrServerClosed) && !errors.Is(stopErr, context.Canceled) {
 				logger.Error().Msgf("an error occurred during node callback service shutdown: %v", stopErr)
 				if igor.Server.CbPort < 1025 {
 					logger.Warn().Msgf("port %d normally requires process to run as root", igor.Server.CbPort)
@@ -177,7 +178,7 @@ func runServer() {
 			}
 		} else {
 			logger.Info().Msgf("igor-server (node callback service) is listening on http://%s", cbSrv.Addr)
-			if stopErr := cbSrv.ListenAndServe(); stopErr != nil && stopErr != http.ErrServerClosed && stopErr != context.Canceled {
+			if stopErr := cbSrv.ListenAndServe(); stopErr != nil && !errors.Is(stopErr, http.ErrServerClosed) && !errors.Is(stopErr, context.Canceled) {
 				logger.Error().Msgf("an error occurred during node callback service shutdown: %v", stopErr)
 				if igor.Server.CbPort < 1025 {
 					logger.Warn().Msgf("port %d normally requires process to run as root", igor.Server.CbPort)

@@ -33,7 +33,7 @@ func Execute(configFilepath *string) {
 	err := runServer()
 
 	if err != nil {
-		if err != context.Canceled {
+		if !errors.Is(err, context.Canceled) {
 			exitPrintFatal(fmt.Sprintf("An error occurred: %v", err))
 		}
 		os.Exit(1)
@@ -75,13 +75,13 @@ func runServer() error {
 
 		<-sigint // we block here waiting for a signal, then when we get it ...
 
-		if err := webSrv.Shutdown(context.Background()); err != nil {
+		if wsErr := webSrv.Shutdown(context.Background()); wsErr != nil {
 			// Error from closing listeners, or context timeout:
-			logger.Error().Msgf("Abby-normal igorweb server shutdown: %v\n", err)
+			logger.Error().Msgf("Abby-normal igorweb server shutdown: %v\n", wsErr)
 		}
 	}()
 
-	if err := webSrv.ListenAndServeTLS(igorweb.WebServer.CertFile, igorweb.WebServer.KeyFile); err != http.ErrServerClosed {
+	if err = webSrv.ListenAndServeTLS(igorweb.WebServer.CertFile, igorweb.WebServer.KeyFile); !errors.Is(err, http.ErrServerClosed) {
 		// Error starting or closing listener:
 		logger.Error().Msgf("igorweb error: %v", err)
 		return err

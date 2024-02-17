@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -101,8 +102,9 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 	if err != nil {
 		errLine := err.Error()
 		rb.Message = errLine
-		switch err.(type) {
-		case *BadCredentialsError:
+		var badCredentialsError *BadCredentialsError
+		switch {
+		case errors.As(err, &badCredentialsError):
 			// authentication failed
 			// at this point igor CLI came from the /login handler and the
 			// user must have entered their username/password wrong. For igorweb
@@ -110,7 +112,6 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 			clog.Warn().Msgf(errLine)
 			makeJsonResponse(w, http.StatusUnauthorized, rb)
 			return
-
 		default:
 			clog.Error().Msgf(errLine)
 			makeJsonResponse(w, http.StatusInternalServerError, rb)

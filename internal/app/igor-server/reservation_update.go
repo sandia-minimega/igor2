@@ -475,7 +475,7 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 			return nil, http.StatusInternalServerError, err
 		}
 		// make a list of the access groups that this new owner qualifies for
-		groupAccessList := []string{}
+		var groupAccessList []string
 		for _, uGroup := range newOwner.Groups {
 			if !strings.HasPrefix(uGroup.Name, GroupUserPrefix) {
 				groupAccessList = append(groupAccessList, uGroup.Name)

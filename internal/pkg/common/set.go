@@ -53,7 +53,7 @@ func (s *Set) ContainsAll(other *Set) bool {
 	if other == nil {
 		return false
 	}
-	for k, _ := range other.elements {
+	for k := range other.elements {
 		if !s.Contains(k) {
 			return false
 		}
