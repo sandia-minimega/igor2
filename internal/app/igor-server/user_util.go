@@ -128,6 +128,10 @@ func filterNonUsers(users []User, names []string) []string {
 	return notFound
 }
 
+// usernameDiff compares the contents of slice a to b, producing a list
+// of names in b that were not found in a. Note that b should not contain
+// the empty string or pure whitespace as the underlying data structure
+// used to compare against a will ignore those string values.
 func usernameDiff(a, b []string) []string {
 	userMap := common.NewSet()
 	userMap.Add(a...)
