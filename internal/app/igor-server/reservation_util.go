@@ -26,7 +26,7 @@ func checkTimeLimit(nodeCount int, limit time.Duration, resDur time.Duration) er
 	logger.Debug().Msgf("checkTimeLimit: requested res duration: %v", resDur)
 
 	// lop off some seconds to ensure requesting max allowable time doesn't exceed limit by some tiny fraction
-	if limit < resDur-(time.Second*5) {
+	if resDur-(time.Second*31) > limit {
 		return fmt.Errorf("max allowable time is %s (you requested %s)", limit.Round(time.Second), resDur.Round(time.Second))
 	}
 
