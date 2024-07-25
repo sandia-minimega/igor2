@@ -147,6 +147,15 @@ if [[ $BUILD_ALL == true || $BUILD_SERVER == true ]]; then
    cp cmd/igor-server/*.yaml build/etc
    cp igor-extra/igor.logrotate build/igor-extra
    cp igor-extra/igor-server.service build/igor-extra
+   echo -n "and database migration tool... "
+   rm -f db-migrate/db-migrate
+   db_migrate=$(go build -ldflags "$LDFLAGS" -o db-migrate ./db-migrate 2>&1 >/dev/null)
+   if [ $? -ne 0 ]; then
+      echo "$db_migrate"
+      echo "Go encountered an error... db-migrate build aborted."
+   fi
+   cp -r db-migrate build
+   rm build/db-migrate/migrate.go
    echo "done."
 fi
 
