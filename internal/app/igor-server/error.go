@@ -110,7 +110,7 @@ func (e *HostPolicyConflictError) Error() string {
 	relevantHosts := namesOfHosts(e.conflictHosts)
 
 	if e.groupConflict {
-		e.msg = fmt.Sprintf("%v; the following hosts are policy-restricted and unavailable to the user: %v", e.msg, relevantHosts)
+		e.msg = fmt.Sprintf("the following hosts are policy-restricted and unavailable to the user: %v", relevantHosts)
 	} else if e.durationConflict {
 		e.msg = fmt.Sprintf("%v; reservation duration exceeds maximum allowed for the following policy-restricted hosts: %v", e.msg, relevantHosts)
 	} else if e.scheduleConflict {
