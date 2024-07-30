@@ -65,7 +65,7 @@ func getUsers(names []string, findAll bool, tx *gorm.DB) ([]User, int, error) {
 	}
 
 	if findAll {
-		notFound := filterNonMembers(found, names)
+		notFound := filterNonUsers(found, names)
 
 		if len(notFound) != 0 {
 			return nil, http.StatusNotFound, fmt.Errorf("user(s) '%s' not found", strings.Join(notFound, ","))

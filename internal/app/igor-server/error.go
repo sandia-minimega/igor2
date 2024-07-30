@@ -112,9 +112,9 @@ func (e *HostPolicyConflictError) Error() string {
 	if e.groupConflict {
 		e.msg = fmt.Sprintf("the following hosts are policy-restricted and unavailable to the user: %v", relevantHosts)
 	} else if e.durationConflict {
-		e.msg = fmt.Sprintf("%v, reservation duration exceeds maximum allowed for the following policy-restricted hosts: %v", e.msg, relevantHosts)
+		e.msg = fmt.Sprintf("%v; reservation duration exceeds maximum allowed for the following policy-restricted hosts: %v", e.msg, relevantHosts)
 	} else if e.scheduleConflict {
-		e.msg = fmt.Sprintf("the following policy-restricted hosts: %v are unavailable for the proposed duration during the times %v and %v", relevantHosts, e.scStart, e.scEnd)
+		e.msg = fmt.Sprintf("%v; the following policy-restricted hosts: %v are unavailable for the proposed duration during the times %v and %v", e.msg, relevantHosts, e.scStart, e.scEnd)
 	} else {
 		e.msg = "unknown error has occurred during policy check"
 	}

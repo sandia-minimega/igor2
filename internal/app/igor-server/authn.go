@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"errors"
 	"igor2/internal/pkg/api"
 	"net/http"
 	"strings"
@@ -56,8 +57,9 @@ func authnHandler(handler http.Handler) http.Handler {
 			rb := common.NewResponseBody()
 			errLine := actionPrefix + " failed - " + err.Error()
 			rb.Message = errLine
-			switch err.(type) {
-			case *BadCredentialsError:
+			var badCredentialsError *BadCredentialsError
+			switch {
+			case errors.As(err, &badCredentialsError):
 				if _, _, ok := r.BasicAuth(); ok {
 					break
 				}
@@ -72,7 +74,6 @@ func authnHandler(handler http.Handler) http.Handler {
 				clog.Warn().Msgf(errLine)
 				makeJsonResponse(w, http.StatusUnauthorized, rb)
 				return
-
 			default:
 				clog.Error().Msgf(errLine)
 				makeJsonResponse(w, http.StatusInternalServerError, rb)

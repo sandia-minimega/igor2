@@ -622,7 +622,7 @@ func (rb *ResponseBodyStats) GetStatus() string {
 	return getStatus(&rb.ResponseBodyBase)
 }
 
-// ResponseBodyStats casts its Data field as StatsData
+// ResponseBodySync casts its Data field as StatsData
 type ResponseBodySync struct {
 	ResponseBodyBase
 	Data map[string]interface{} `json:"data"`

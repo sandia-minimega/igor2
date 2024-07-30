@@ -475,17 +475,17 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 			return nil, http.StatusInternalServerError, err
 		}
 		// make a list of the access groups that this new owner qualifies for
-		groupAccessList := []string{}
+		var groupAccessList []string
 		for _, uGroup := range newOwner.Groups {
 			if !strings.HasPrefix(uGroup.Name, GroupUserPrefix) {
 				groupAccessList = append(groupAccessList, uGroup.Name)
 			}
 		}
-		// determine if any hostpolicies do not contain at least one group from groupAccessList
+		// determine if any policies do not contain at least one group from groupAccessList
 		if membership, policy := dbCheckHostPolicyGroupConflicts(myHostPolicies, groupAccessList); !membership {
 			// get the intersection of affected policy hosts and requested hosts
 			offendingHosts := getHostIntersection(hostNames, policy.Hosts)
-			return nil, http.StatusConflict, &HostPolicyConflictError{"", true, false, false, time.Time{}, time.Time{}, offendingHosts}
+			return nil, http.StatusConflict, &HostPolicyConflictError{"no group available that matches node restriction", true, false, false, time.Time{}, time.Time{}, offendingHosts}
 		}
 
 		// if the reservation group is not going to change (and not a pug), make sure the new owner is also a member

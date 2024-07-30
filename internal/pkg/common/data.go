@@ -125,7 +125,7 @@ type UserData struct {
 type GroupData struct {
 	Name         string   `json:"name"`
 	Description  string   `json:"description"`
-	Owner        string   `json:"owner"`
+	Owners       []string `json:"owners"`
 	Members      []string `json:"members"`
 	Distros      []string `json:"distros"`
 	Policies     []string `json:"hostPolicies"`

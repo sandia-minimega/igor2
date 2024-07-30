@@ -44,7 +44,8 @@ another igor user if desired.`,
 func newGroupCreateCmd() *cobra.Command {
 
 	cmdCreateGroup := &cobra.Command{
-		Use:   "create NAME [-m USER1,USER2...] [--desc \"DESCRIPTION\"]",
+		Use: "create NAME {[-o USER1,USER2...] [-m USER3,USER4...]\n" +
+			"                [--desc \"DESCRIPTION\"] | -L }",
 		Short: "Create a group",
 		Long: `
 Creates a new igor group.
@@ -53,38 +54,64 @@ A group is a collection of users that can be given access to various resources
 created by other igor users. Using groups is completely optional. When this
 action is performed an email will be sent out to members.
 
-Once created only the owner is allowed to edit or delete the group.
+Two types of groups are supported by igor: LDAP-synced and igor-only.
+
+LDAP-synced groups derive their information (owners, members, etc.) by looking
+up the group name via an LDAP service and matching the usernames it contains
+against igor's internal list of users. Once created, an LDAP-synced group will
+only periodically check the server for changes and update itself accordingly.
+It cannot be edited through the Igor interface, but it can be dropped by its
+owner or admin when it is no longer needed.
+
+Igor-only groups are completely created and maintained within Igor. This option
+is the default.
 
 ` + requiredArgs + `
 
-  NAME : group name
+  NAME : group name (a local name or matching LDAP name)
 
 ` + optionalFlags + `
 
-Use the -m flag to specify a comma-delimited list of members. The list must
-accurately match existing igor users. The group creator does not need to add
-their name to the member list, thus if a list is not provided the group creator
-will be the only member.
+Use the -o flag to specify a comma-delimited list of additional owners who will
+have full permissions to edit and delete the group. The user creating a group
+is automatically an owner. Users listed here will be treated as members, so 
+they don't need to be listed twice if the -m flag is also used.
+
+Use the -m flag to specify a comma-delimited list of non-owning group members.
+Members of this kind gain access to group-restricted resources but cannot edit
+the group itself.
 
 ` + descFlagText + `
+
+Use the -L flag to specify the group as LDAP-sync enabled. It cannot be used
+with other flags. Additionally, you must have owner or delegate permissions on
+the LDAP group itself in order to use this flag successfully. The command will
+fail if the user running the group creation command lacks this permission.
 `,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			flagset := cmd.Flags()
+			isLDAP, _ := flagset.GetBool("LDAP")
 			desc, _ := flagset.GetString("desc")
 			members, _ := flagset.GetStringSlice("members")
-			printRespSimple(doCreateGroup(args[0], desc, members))
+			owners, _ := flagset.GetStringSlice("owners")
+			printRespSimple(doCreateGroup(args[0], isLDAP, desc, owners, members))
 		},
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction:     validateNameArg,
 	}
 
 	var desc string
+	var isLDAP bool
 	var members []string
+	var owners []string
 	cmdCreateGroup.Flags().StringVarP(&desc, "desc", "", "", "description of the group")
+	cmdCreateGroup.Flags().BoolVarP(&isLDAP, "LDAP", "L", false, "sync with LDAP group of same name")
+	cmdCreateGroup.Flags().StringSliceVarP(&owners, "owners", "o", nil, "owners to add to the group")
 	cmdCreateGroup.Flags().StringSliceVarP(&members, "members", "m", nil, "members to add to group")
 	_ = registerFlagArgsFunc(cmdCreateGroup, "desc", []string{"\"DESCRIPTION\""})
 	_ = registerFlagArgsFunc(cmdCreateGroup, "members", []string{"USER1"})
+	_ = registerFlagArgsFunc(cmdCreateGroup, "owners", []string{"OWNER1"})
 
 	return cmdCreateGroup
 
@@ -138,13 +165,17 @@ Use the -x flag to render screen output without pretty formatting.
 func newGroupEditCmd() *cobra.Command {
 
 	cmdEditGroup := &cobra.Command{
-		Use: "edit NAME { [-n NEWNAME] [-o OWNER] [-a USER1,...] [-r USER1,...]\n" +
-			"                [--desc \"DESCRIPTION\"] }",
-
+		Use: "edit NAME [-n NEWNAME] {[-o OWNER1,...] [-w OWNER1,...] | \n" +
+			"                [-a MEMBER1,...] [-r MEMBER1,...]} [--desc \"DESCRIPTION\"]",
 		Short: "Edit group information",
 		Long: `
 Edits group information. This can only be done by the group owner or an admin.
 Changes to the group are emailed out to those affected.
+
+` + notesOnUsage + `
+
+This command cannot be used on an LDAP-synced group. Modify the group's proper-
+ties using the network's LDAP interface instead.
 
 ` + requiredArgs + `
 
@@ -154,16 +185,19 @@ Changes to the group are emailed out to those affected.
 
 Use the -n flag to re-name of the group.
 
-Use the -o flag to transfer ownership to another user. After this the original
-owner can no longer edit the group. The new owner is added to the group if they
-are not already a member.
+Use the -o flag to add a list of users as group owners. If any new owner is not
+already a member of the group they will be added to the membership list.
+
+Use the -w flag to remove a list of users as group owners. Owners will remain 
+members. This action cannot remove all owners of a group. There must be at
+least one owner.
 
 Use the -a flag to add a list of users to the group. ` + sItalic("Note: adding a member to\n"+
 			"the 'admins' group gives that user igor admin privileges.") + `
 
-Use the -r flag to remove a list of users from the group. This can be combined
-with the -o flag to both transfer ownership and completely remove themselves
-from the group at the same time.
+Use the -r flag to remove a list of users from the group.
+
+
 
 ` + descFlagText + `
 `,
@@ -172,28 +206,32 @@ from the group at the same time.
 			flagset := cmd.Flags()
 			name, _ := flagset.GetString("name")
 			desc, _ := flagset.GetString("desc")
-			owner, _ := flagset.GetString("owner")
+			addOwners, _ := flagset.GetStringSlice("add-owners")
+			rmvOwners, _ := flagset.GetStringSlice("rmv-owners")
 			add, _ := flagset.GetStringSlice("add")
 			remove, _ := flagset.GetStringSlice("remove")
-			printRespSimple(doEditGroup(args[0], name, owner, desc, add, remove))
+			printRespSimple(doEditGroup(args[0], name, addOwners, rmvOwners, desc, add, remove))
 		},
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction:     validateNameArg,
 	}
 
 	var name,
-		desc,
-		owner string
-	var names,
-		owners []string
+		desc string
+	var addUsers,
+		rmvUsers,
+		addOwners,
+		rmvOwners []string
 	cmdEditGroup.Flags().StringVarP(&name, "name", "n", "", "update the group name")
 	cmdEditGroup.Flags().StringVar(&desc, "desc", "", "update the description of the group")
-	cmdEditGroup.Flags().StringVarP(&owner, "owner", "o", "", "new owner (user) name")
-	cmdEditGroup.Flags().StringSliceVarP(&names, "add", "a", nil, "comma-delimited users to add")
-	cmdEditGroup.Flags().StringSliceVarP(&owners, "remove", "r", nil, "comma-delimited users to remove")
+	cmdEditGroup.Flags().StringSliceVarP(&addOwners, "add-owners", "o", nil, "comma-delimited owners to add")
+	cmdEditGroup.Flags().StringSliceVarP(&rmvOwners, "rmv-owners", "w", nil, "comma-delimited owners to remove")
+	cmdEditGroup.Flags().StringSliceVarP(&addUsers, "add", "a", nil, "comma-delimited users to add")
+	cmdEditGroup.Flags().StringSliceVarP(&rmvUsers, "remove", "r", nil, "comma-delimited users to remove")
 	_ = registerFlagArgsFunc(cmdEditGroup, "name", []string{"NAME"})
 	_ = registerFlagArgsFunc(cmdEditGroup, "desc", []string{"\"DESCRIPTION\""})
-	_ = registerFlagArgsFunc(cmdEditGroup, "owner", []string{"OWNER"})
+	_ = registerFlagArgsFunc(cmdEditGroup, "add-owners", []string{"OWNER1"})
+	_ = registerFlagArgsFunc(cmdEditGroup, "rmv-owners", []string{"OWNER1"})
 	_ = registerFlagArgsFunc(cmdEditGroup, "add", []string{"USER1"})
 	_ = registerFlagArgsFunc(cmdEditGroup, "remove", []string{"USER1"})
 
@@ -206,16 +244,20 @@ func newGroupDelCmd() *cobra.Command {
 		Use:   "del NAME",
 		Short: "Delete a group",
 		Long: `
-Deletes an igor group. This can only be done by the group owner or an admin.
-
-` + requiredArgs + `
-
-  NAME : group name
+Deletes an igor group. This can only be done by a group owner or an admin.
 
 ` + notesOnUsage + `
 
 A group cannot be deleted if it is attached to a host policy. The policy must
 be edited to remove the group or deleted prior to running this command.
+
+When used on an LDAP-synced group, igor only deletes its internal references to
+the group. It does not affect the LDAP group service object itself. 
+
+` + requiredArgs + `
+
+  NAME : group name
+
 `,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -229,12 +271,18 @@ be edited to remove the group or deleted prior to running this command.
 
 }
 
-func doCreateGroup(name string, desc string, members []string) *common.ResponseBodyBasic {
+func doCreateGroup(name string, isLDAP bool, desc string, owners []string, members []string) *common.ResponseBodyBasic {
 
 	params := map[string]interface{}{}
 	params["name"] = name
+	if isLDAP {
+		params["isLDAP"] = true
+	}
 	if desc != "" {
 		params["description"] = desc
+	}
+	if len(owners) > 0 {
+		params["owners"] = owners
 	}
 	if len(members) > 0 {
 		params["members"] = members
@@ -271,14 +319,17 @@ func doShowGroups(names []string, owners []string, showMembers bool) *common.Res
 	return &rb
 }
 
-func doEditGroup(name string, newName string, owner string, desc string, add []string, remove []string) *common.ResponseBodyBasic {
+func doEditGroup(name string, newName string, addOwners []string, rmvOwners []string, desc string, add []string, remove []string) *common.ResponseBodyBasic {
 	apiPath := api.Groups + "/" + name
 	params := make(map[string]interface{})
 	if newName != "" {
 		params["name"] = newName
 	}
-	if owner != "" {
-		params["owner"] = owner
+	if len(addOwners) > 0 {
+		params["addOwners"] = addOwners
+	}
+	if len(rmvOwners) > 0 {
+		params["rmvOwners"] = rmvOwners
 	}
 	if desc != "" {
 		params["description"] = desc
@@ -329,16 +380,21 @@ func printShowGroups(rb *common.ResponseBodyGroups) {
 				continue
 			}
 
-			var members string
+			var members, owners string
 			if len(g.Members) == 0 {
 				members = "<not shown>"
 			} else {
 				members = strings.Join(g.Members, ",")
 			}
+			if len(g.Owners) == 1 {
+				owners = g.Owners[0]
+			} else {
+				owners = strings.Join(g.Owners, ",")
+			}
 
 			groupInfo = "GROUP: " + g.Name + "\n"
 			groupInfo += "  -DESCRIPTION:  " + g.Description + "\n"
-			groupInfo += "  -OWNER:        " + g.Owner + "\n"
+			groupInfo += "  -OWNERS:       " + owners + "\n"
 			groupInfo += "  -MEMBERS:      " + members + "\n"
 			groupInfo += "  -DISTROS:      " + strings.Join(g.Distros, ",") + "\n"
 			groupInfo += "  -RESERVATIONS: " + strings.Join(g.Reservations, ",") + "\n"
@@ -352,7 +408,7 @@ func printShowGroups(rb *common.ResponseBodyGroups) {
 	} else {
 
 		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "MEMBERS", "DISTROS", "RESERVATIONS", "POLICIES"})
+		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNERS", "MEMBERS", "DISTROS", "RESERVATIONS", "POLICIES"})
 
 		for _, g := range groupList {
 
@@ -360,17 +416,22 @@ func printShowGroups(rb *common.ResponseBodyGroups) {
 				continue
 			}
 
-			var members string
+			var members, owners string
 			if len(g.Members) == 0 {
 				members = "<not shown>"
 			} else {
 				members = strings.Join(g.Members, "\n")
 			}
+			if len(g.Owners) == 1 {
+				owners = g.Owners[0]
+			} else {
+				owners = strings.Join(g.Owners, "\n")
+			}
 
 			tw.AppendRow([]interface{}{
 				g.Name,
 				g.Description,
-				g.Owner,
+				owners,
 				members,
 				strings.Join(g.Distros, "\n"),
 				strings.Join(g.Reservations, "\n"),

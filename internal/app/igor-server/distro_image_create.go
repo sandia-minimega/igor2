@@ -377,7 +377,7 @@ func detectStagedFiles(r *http.Request) *DistroImage {
 // destroyStagedImages deletes the specified image files from
 // the igor_staged_images directory
 func destroyStagedImages(image *DistroImage) {
-	paths := []string{}
+	var paths []string
 	switch image.Type {
 	case DistroKI:
 		// setup paths

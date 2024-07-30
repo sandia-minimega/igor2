@@ -5,7 +5,6 @@
 package igorserver
 
 import (
-	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -23,9 +22,6 @@ func Execute(configFilepath *string) {
 	if igor.IgorHome = os.Getenv("IGOR_HOME"); strings.TrimSpace(igor.IgorHome) == "" {
 		exitPrintFatal("environment variable IGOR_HOME not defined")
 	}
-
-	// seed rand for hash generator (default naming)
-	rand.Seed(igor.Started.UTC().UnixNano())
 
 	initConfig(*configFilepath)
 	initLog()

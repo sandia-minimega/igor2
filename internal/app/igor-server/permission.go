@@ -202,7 +202,7 @@ func (p *Permission) String() string {
 		if buffer.Len() > 0 {
 			buffer.Write([]byte(PermDividerToken))
 		}
-		for i, k := range set.GetVals() {
+		for i, k := range set.Elements() {
 			buffer.Write([]byte(k))
 			if i < set.Size()-1 {
 				buffer.Write([]byte(PermSubpartToken))

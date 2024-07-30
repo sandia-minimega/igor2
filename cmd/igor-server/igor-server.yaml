@@ -193,15 +193,31 @@ auth:
     # Default: (blank)
     attributes:
 
-    # GROUP_SYNC - Igor can synchronize its user list with a provided group in LDAP. With this feature enabled, Igor
-    # will start with a worker that will regularly connect to LDAP using the settings provided above, then pull a 
-    # list of all members of the given group. Igor will compare the list of members with its user table. Any member 
-    # of the group that is not a member of Igor will be created as a new Igor user. Conversely, if there is an existing 
-    # Igor user that is not found in the group member list, the user will be disabled. 
-    groupSync:
+    # LDAP Sync - Igor can synchronize its user list with provided groups in LDAP and/or sync group members of provided
+    # groups so that access and membership updates do not need to be done through Igor. With this feature enabled, Igor
+    # will start with a worker that will regularly connect to LDAP using the settings provided above to perform sync
+    # functions using the filters and attributes specified below.
+    sync:
 
-      # enableGroupSync (bool) - If true, Igor will launch a worker that periodically syncs its user list with the
-      # members of the specified group using LDAP.
+      # enableUserSync (bool) - If true, Igor will periodically sync its user list with the members of the specified
+      # LDAP groups. This will automatically create Igor accounts for those members who do not already have one,
+      # therefore best practice should limit the groups used here specifically for this purpose. The final list of
+      # synced users will always be the union of the groups listed. Therefore, if an Igor user account needs to be
+      # removed, they need to be removed from all included lists.
+      # In order to use this feature, you must:
+      #  1. Be using the LDAP scheme for Igor login and provide connection information above
+      #  2. Be using the email notification features or have a value entered in Email: defaultSuffix below.
+      #  3. Have already changed the Admin password from initial default
+      #  4. Have already created a cluster.
+      # Default: false
+      enableUserSync:
+
+      # enableGroupSync (bool) - If true, Igor will allow the creation of groups that sync periodically with LDAP groups
+      # of the same name. Such groups can only be created by a group owner or delegate as specified by LDAP, or a member
+      # of the igor admins group. Once created a group's membership is controlled by LDAP and is not accessible through
+      # Igor. Owners, delegates and admins can delete a synced group when it is no longer needed. Members of a sync group
+      # that do not have Igor accounts are IGNORED by Igor. For auto-account creation, the group can be added to the user
+      # sync list or created manually by an admin.
       # In order to use this feature, you must:
       #  1. Be using the LDAP scheme for Igor login and provide connection information above
       #  2. Be using the email notification features or have a value entered in Email: defaultSuffix below.
@@ -214,31 +230,47 @@ auth:
       # Default: 60
       syncFrequency: 
 
-      # groupFilter (string) - for the Group Object Filter. Only 1 group name can be used at this time.
-      # Ex: cn=working_group_name
+      # groupFilters (string list) - for the Group Object Filter. This is a comma-delimited list specifying which groups will
+      # be used to auto-sync igor account creation. Groups can contain the same members, however to be removed from igor
+      # they must not be present in any of the lists.
+      # Example:
+      #    - cn=igor_cluster_users
+      #    - cn=igor_project_managers
       # REQUIRED. Cannot be left blank if enableGroupSync is true.
       # Default: (blank)
-      groupFilter:
+      groupFilters:
 
-      # groupAttribute (string) - the key for the Entity Attribute value which holds the usernames for all members of the group
+      # userListAttribute (string) - the key for the Entity Attribute value which holds the list of usernames for all members
+      # of the group.
       # Ex: memberUid
-      # REQUIRED. Cannot be left blank if enableGroupSync is true.
+      # REQUIRED. Cannot be left blank if enableUserSync or enableGroupSync is true.
       # Default: (blank)
-      groupAttribute:
+      userListAttribute:
 
-      # groupAttributeEmail (string) - the key for the Entity Attribute email Value. This is needed for Igor to know
+      # userEmailAttribute (string) - the key for the Entity Attribute email Value. This is needed for Igor to know
       # what key to use to extract the user's email from an LDAP response entry. If email is not kept in the LDAP user
-      # attributes, leave blank and Igor will reconstruct the user's email using the defaultDomain config value 
+      # attributes, leave blank and Igor will reconstruct the user's email using the defaultDomain config value
       # from the email section above.
+      # Ex: primaryEmail
       # Default: (blank)
-      groupMemberAttributeEmail:
+      userEmailAttribute:
 
-      # groupAttributeDisplayName (string) - the key for the Entity Attribute display name Value. This is needed for Igor 
-      # to know what key to use to extract the user's full/display from an LDAP response entry. If a display name is not 
+      # userDisplayNameAttribute (string) - the key for the Entity Attribute display name Value. This is needed for Igor
+      # to know what key to use to extract the user's full/display from an LDAP response entry. If a display name is not
       # kept in the LDAP user attributes, leave blank and Igor will ignore. (a display name is optional when registering
       # a new user)
+      # Ex: displayName
       # Default: (blank)
-      groupMemberAttributeDisplayName:
+      userDisplayNameAttribute:
+
+      # groupOwnerAttributes (string list) - the key(s) for the Entity Attribute value(s) that holds uids for group owners
+      # and delegate owners, if they exist
+      # Example:
+      #    - owner
+      #    - ownerDelegate
+      # REQUIRED. Cannot be left blank if enableGroupSync is true.
+      # Default: (blank)
+      groupOwnerAttributes:
 
 
 # -- DATABASE SETTINGS --

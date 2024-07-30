@@ -163,7 +163,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 }
 
 func (b *TFTPInstaller) Uninstall(r *Reservation) error {
-	logger.Debug().Msgf("uninstalling Reservation %v", r.Name)
+	logger.Debug().Msgf("uninstalling reservation %v", r.Name)
 	// Delete all the PXE files in the reservation
 	for _, host := range r.Hosts {
 		pxePath := getPxePath(&host)
@@ -171,7 +171,7 @@ func (b *TFTPInstaller) Uninstall(r *Reservation) error {
 		err := os.Remove(pxePath)
 		if err != nil {
 			// record the failure but no need to halt
-			logger.Error().Msgf("failed to uninstall pxeconfig file for host %v: %v", host.Name, err.Error())
+			logger.Warn().Msgf("pxeconfig file for host %v encountered a problem during uninstall: %v", host.Name, err.Error())
 		}
 	}
 	return nil

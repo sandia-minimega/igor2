@@ -33,7 +33,6 @@ const (
 
 var (
 	lastAccessUser string
-	termVal        = os.Getenv("TERM")
 	_, envNoColor  = os.LookupEnv("NO_COLOR")
 )
 
@@ -190,7 +189,7 @@ func getClient() *http.Client {
 
 		caCert, err := os.ReadFile(cli.Client.CaCert)
 		if err != nil {
-			fmt.Errorf("error reading CA cert file %s: %s", cli.Client.CaCert, err)
+			checkClientErr(fmt.Errorf("error reading CA cert file %s: %s", cli.Client.CaCert, err))
 		}
 		caCertPool = x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
@@ -394,7 +393,7 @@ func connProblem(err error) bool {
 		if errors.As(urlErr.Err, &opErr) {
 			var scErr *os.SyscallError
 			if errors.As(opErr.Err, &scErr) {
-				if scErr.Err == syscall.ECONNREFUSED {
+				if errors.Is(scErr.Err, syscall.ECONNREFUSED) {
 					checkClientErr(fmt.Errorf("connection refused -- check igor-server address... also is igor-server running?"))
 				} else {
 					checkClientErr(scErr.Err)

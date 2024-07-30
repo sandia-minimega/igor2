@@ -26,7 +26,7 @@ func scheduleHostsByName(res *Reservation, tx *gorm.DB, clog *zl.Logger) (int, e
 	hostNameList := namesOfHosts(res.Hosts)
 
 	// make a list of the access groups that this user qualifies for
-	groupAccessList := []string{}
+	var groupAccessList []string
 	for _, uGroup := range res.Owner.Groups {
 		if !strings.HasPrefix(uGroup.Name, GroupUserPrefix) {
 			groupAccessList = append(groupAccessList, uGroup.Name)
@@ -354,7 +354,7 @@ func closeoutReservations(checkTime *time.Time) error {
 		}
 
 	} else {
-		logger.Debug().Msg("No reservations are expired.")
+		logger.Debug().Msg("no reservations are expired")
 	}
 
 	return nil
@@ -376,9 +376,9 @@ func startMaintenance(res *MaintenanceRes) error {
 		return fmt.Errorf("error retrieving igor-admin while starting maintenance - %v", err.Error())
 	}
 	now := time.Now()
-	maintnanceEnd := res.MaintenanceEndTime
-	maintenanceDuration := maintnanceEnd.Sub(now)
-	logger.Debug().Msgf("reservation %v going into maintenenace mode from %v to %v (duration: %v).", res.ReservationName, now, maintnanceEnd, maintenanceDuration)
+	maintenanceEnd := res.MaintenanceEndTime
+	maintenanceDuration := maintenanceEnd.Sub(now)
+	logger.Debug().Msgf("reservation %v going into maintenenace mode from %v to %v (duration: %v).", res.ReservationName, now, maintenanceEnd, maintenanceDuration)
 
 	// turn all hosts to the unavailable state
 	logger.Debug().Msgf("changing state of nodes for reservation %v to blocked", res.ReservationName)

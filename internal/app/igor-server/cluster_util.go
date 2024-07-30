@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -75,23 +76,21 @@ func updateClusterConfigFile(yDoc []byte, clog *zl.Logger) (string, error) {
 	clusterConfigLocHome := filepath.Join(igor.IgorHome, "conf", IgorClusterConfDefault)
 
 	if dumpErr := moveAndDump(IgorClusterConfPathDefault, string(yDoc)); dumpErr != nil {
-		if pathErr, ok := dumpErr.(*os.PathError); ok && pathErr.Op == "stat" {
+		var pathErr *os.PathError
+		if errors.As(dumpErr, &pathErr) && pathErr.Op == "stat" {
 			// couldn't locate cluster conf file in /etc/igor
 			clog.Warn().Msgf("%v - trying %s", pathErr, clusterConfigLocHome)
-		} else {
-			return "", dumpErr
 		}
 
 		if dumpErr = moveAndDump(clusterConfigLocHome, string(yDoc)); dumpErr != nil {
-			if pathErr, ok := dumpErr.(*os.PathError); ok && pathErr.Op == "stat" {
+			var pathErr *os.PathError
+			if errors.As(dumpErr, &pathErr) && pathErr.Op == "stat" {
 				return "", fmt.Errorf("no config found at %s or %s - %w", IgorClusterConfPathDefault, clusterConfigLocHome, pathErr)
-			} else {
-				return "", dumpErr
 			}
 		} else {
 			return clusterConfigLocHome, nil
 		}
-	} else {
-		return IgorClusterConfPathDefault, nil
 	}
+
+	return IgorClusterConfPathDefault, nil
 }

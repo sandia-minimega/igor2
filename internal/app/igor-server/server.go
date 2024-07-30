@@ -7,6 +7,7 @@ package igorserver
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -54,11 +55,11 @@ func runServer() {
 	}
 
 	// the group sync manager will not run if disabled in config
-	if igor.Auth.Ldap.GroupSync.EnableGroupSync {
+	if igor.Auth.Ldap.Sync.EnableUserSync || igor.Auth.Ldap.Sync.EnableGroupSync {
 		wg.Add(1)
-		go groupSyncManager()
+		go ldapSyncManager()
 	} else {
-		logger.Warn().Msg("group sync manager is disabled")
+		logger.Warn().Msg("LDAP sync manager is disabled")
 	}
 
 	cert, err := tls.LoadX509KeyPair(igor.Server.CertFile, igor.Server.KeyFile)
@@ -82,7 +83,7 @@ func runServer() {
 
 	corsHandler := cors.New(cors.Options{
 		// If AllowedOrigins is "*" then AllowedCredentials option always treated as false (not good).
-		// This gives us configurable control over where the VueJS server is allowed to be installed.
+		// This gives us configurable control over where the Vue.js server is allowed to be installed.
 		// This shouldn't affect the CLI client which talks directly to the port igor-server is listening
 		// to for HTTP connections.
 		AllowedOrigins: allowedOrigins,
@@ -154,7 +155,7 @@ func runServer() {
 	wg.Add(1)
 	go func() {
 		logger.Info().Msgf("igor-server (REST service) is listening on https://%s", apiSrv.Addr)
-		if stopErr := apiSrv.ListenAndServeTLS("", ""); stopErr != nil && stopErr != http.ErrServerClosed && stopErr != context.Canceled {
+		if stopErr := apiSrv.ListenAndServeTLS("", ""); stopErr != nil && !errors.Is(stopErr, http.ErrServerClosed) && !errors.Is(stopErr, context.Canceled) {
 			logger.Error().Msgf("an error occurred during REST service shutdown: %v", stopErr)
 			if igor.Server.Port < 1025 {
 				logger.Warn().Msgf("port %d normally requires process to run as root", igor.Server.Port)
@@ -168,7 +169,7 @@ func runServer() {
 	go func() {
 		if *igor.Server.CbUseTLS {
 			logger.Info().Msgf("igor-server (node callback service) is listening on https://%s", cbSrv.Addr)
-			if stopErr := cbSrv.ListenAndServeTLS("", ""); stopErr != nil && stopErr != http.ErrServerClosed && stopErr != context.Canceled {
+			if stopErr := cbSrv.ListenAndServeTLS("", ""); stopErr != nil && !errors.Is(stopErr, http.ErrServerClosed) && !errors.Is(stopErr, context.Canceled) {
 				logger.Error().Msgf("an error occurred during node callback service shutdown: %v", stopErr)
 				if igor.Server.CbPort < 1025 {
 					logger.Warn().Msgf("port %d normally requires process to run as root", igor.Server.CbPort)
@@ -177,7 +178,7 @@ func runServer() {
 			}
 		} else {
 			logger.Info().Msgf("igor-server (node callback service) is listening on http://%s", cbSrv.Addr)
-			if stopErr := cbSrv.ListenAndServe(); stopErr != nil && stopErr != http.ErrServerClosed && stopErr != context.Canceled {
+			if stopErr := cbSrv.ListenAndServe(); stopErr != nil && !errors.Is(stopErr, http.ErrServerClosed) && !errors.Is(stopErr, context.Canceled) {
 				logger.Error().Msgf("an error occurred during node callback service shutdown: %v", stopErr)
 				if igor.Server.CbPort < 1025 {
 					logger.Warn().Msgf("port %d normally requires process to run as root", igor.Server.CbPort)
@@ -290,26 +291,42 @@ func maintenanceManager() {
 	}
 }
 
-// groupSyncManager uses a configurable timer to fire every given interval. When this happens, the syncUsers()
+// ldapSyncManager uses a configurable timer to fire every given interval. When this happens, the syncLdapUsers()
 // function is called. The function uses configured settings to get a list of members for a given group from
 // LDAP. It then compares the list of members to Igor's user list. Any group members who do not currently have
 // a User profile in Igor will have one created for them. If notifications is enabled, the user will receive
 // one to inform them they can use Igor.
-func groupSyncManager() {
+func ldapSyncManager() {
 	defer wg.Done()
-	timer := time.Minute * time.Duration(igor.Auth.Ldap.GroupSync.SyncFrequency)
+	timer := time.Minute * time.Duration(igor.Auth.Ldap.Sync.SyncFrequency)
 	countdown := NewScheduleTimer(timer)
 	for {
 		select {
 		case <-shutdownChan:
-			logger.Info().Msg("stopping group sync management background worker")
-			if !countdown.t.Stop() {
-				<-countdown.t.C
-			}
+			logger.Info().Msg("stopping LDAP sync management background worker")
 			return
+			/*
+				//checking the timer was causing
+				if !countdown.t.Stop() {
+					<-countdown.t.C
+				}
+				return
+			*/
 		case checkTime := <-countdown.t.C:
-			logger.Debug().Msgf("doing group sync management - %v", checkTime.Format(time.RFC3339))
-			syncUsers()
+			logger.Info().Msg("attempting to start LDAP sync management background worker")
+			if adErr := syncPreCheck(); adErr != nil {
+				logger.Warn().Msgf("%v", adErr)
+				continue
+			}
+			dbAccess.Lock()
+			logger.Debug().Msgf("doing LDAP sync management - %v", checkTime.Format(time.RFC3339))
+			if igor.Auth.Ldap.Sync.EnableUserSync {
+				executeLdapUserSync()
+			}
+			if igor.Auth.Ldap.Sync.EnableGroupSync {
+				executeLdapGroupSync()
+			}
+			dbAccess.Unlock()
 			countdown.reset()
 		}
 	}

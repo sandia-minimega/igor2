@@ -224,7 +224,7 @@ func doCreateReservation(resParams map[string]interface{}, r *http.Request) (res
 				err = fmt.Errorf("reservation duration must be larger than minimum value %v minutes", igor.Scheduler.MinReserveTime)
 				return err
 			}
-			resEnd = resStart.Add(dur).Round(time.Minute)
+			resEnd = resStart.Add(dur).Truncate(time.Minute) // drop any seconds in the value
 		}
 
 		if err = checkScheduleLimit(resEnd, isElevated); err != nil {

@@ -132,7 +132,7 @@ func initDbBackend() {
 		exitPrintFatal(fmt.Sprintf("database error querying %s - %v", IgorAdmin, uErr))
 	}
 
-	passHash, _ := getPasswordHash(IgorAdmin)
+	passHash, _ := createPasswordHash(IgorAdmin)
 	igorAdmin := &User{
 		Name:     IgorAdmin,
 		Email:    "",
@@ -176,23 +176,26 @@ func initDbBackend() {
 		{
 			Name:        GroupAll,
 			Description: "igor users",
-			Owner:       *igorAdmin,
+			Owners:      []User{*igorAdmin},
 			Members:     []User{*igorAdmin},
 			Permissions: []Permission{*publicViewPermission, *publicCreatePermission, *publicViewGroupAll},
+			IsLDAP:      false,
 		},
 		{
 			Name:        GroupAdmins,
 			Description: "igor administrators",
-			Owner:       *igorAdmin,
+			Owners:      []User{*igorAdmin},
 			Members:     []User{*igorAdmin},
 			Permissions: []Permission{*adminViewGroup},
+			IsLDAP:      false,
 		},
 		{
 			Name:          GroupUserPrefix + IgorAdmin,
 			Description:   IgorAdmin + " private group",
-			Owner:         *igorAdmin,
+			Owners:        []User{*igorAdmin},
 			Members:       []User{*igorAdmin},
 			IsUserPrivate: true,
+			IsLDAP:        false,
 		},
 	}
 	result = db.Clauses(clause.OnConflict{DoNothing: true}).Create(systemGroups)

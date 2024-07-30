@@ -77,7 +77,7 @@ func hostSliceContains(hosts []Host, name string) (bool, Host) {
 }
 
 func getHostIntersection(hostNames []string, hosts []Host) []Host {
-	targetHosts := []Host{}
+	var targetHosts []Host
 	for _, hostName := range hostNames {
 		if contains, host := hostSliceContains(hosts, hostName); contains {
 			targetHosts = append(targetHosts, host)

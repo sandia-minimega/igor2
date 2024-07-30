@@ -18,34 +18,34 @@ var exists = struct{}{}
 // and the empty string cannot be used as keys and trying to do so with the
 // Add method will silently ignore the attempt.
 type Set struct {
-	vals map[string]struct{}
+	elements map[string]struct{}
 }
 
 func NewSet() *Set {
 	s := &Set{}
-	s.vals = make(map[string]struct{})
+	s.elements = make(map[string]struct{})
 	return s
 }
 
-func (s *Set) Add(values ...string) {
-	for _, val := range values {
-		val = strings.TrimSpace(val)
-		if val != "" {
-			s.vals[val] = exists
+func (s *Set) Add(elems ...string) {
+	for _, elem := range elems {
+		elem = strings.TrimSpace(elem)
+		if elem != "" {
+			s.elements[elem] = exists
 		}
 	}
 }
 
-func (s *Set) Remove(values ...string) {
-	for _, val := range values {
-		val = strings.TrimSpace(val)
-		delete(s.vals, val)
+func (s *Set) Remove(elems ...string) {
+	for _, elem := range elems {
+		elem = strings.TrimSpace(elem)
+		delete(s.elements, elem)
 	}
 }
 
-func (s *Set) Contains(value string) bool {
-	val := strings.TrimSpace(value)
-	_, included := s.vals[val]
+func (s *Set) Contains(element string) bool {
+	elem := strings.TrimSpace(element)
+	_, included := s.elements[elem]
 	return included
 }
 
@@ -53,7 +53,7 @@ func (s *Set) ContainsAll(other *Set) bool {
 	if other == nil {
 		return false
 	}
-	for k, _ := range other.vals {
+	for k := range other.elements {
 		if !s.Contains(k) {
 			return false
 		}
@@ -61,19 +61,20 @@ func (s *Set) ContainsAll(other *Set) bool {
 	return true
 }
 
-func (s *Set) GetVals() []string {
-	vals := make([]string, 0, s.Size())
-	for k := range s.vals {
-		vals = append(vals, k)
+// Elements returns all values in the set as a string slice.
+func (s *Set) Elements() []string {
+	elems := make([]string, 0, s.Size())
+	for k := range s.elements {
+		elems = append(elems, k)
 	}
-	sort.Strings(vals)
-	return vals
+	sort.Strings(elems)
+	return elems
 }
 
 func (s *Set) Size() int {
-	return len(s.vals)
+	return len(s.elements)
 }
 
 func (s *Set) Equals(other *Set) bool {
-	return reflect.DeepEqual(s.vals, other.vals)
+	return reflect.DeepEqual(s.elements, other.elements)
 }

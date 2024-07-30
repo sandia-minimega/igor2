@@ -37,7 +37,7 @@ func handleReadKickstart(w http.ResponseWriter, r *http.Request) {
 	actionPrefix := "read kickstart"
 	rb := common.NewResponseBody()
 	status := http.StatusInternalServerError
-	kickstarts := []Kickstart{}
+	var kickstarts []Kickstart
 
 	searchParams, code, err := parseKSSearchParams(queryMap, r)
 	if err != nil {
