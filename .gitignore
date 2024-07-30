@@ -21,11 +21,11 @@ node_modules/
 *.crt
 *.key
 *.csr
+db-migrate/
 
 
 # image and tftp default paths
 .images/
-efi/
 igor_images/
 igor_staged_images/
 pxelinux.cfg/
@@ -60,3 +60,4 @@ build/
 igor2.zip
 igor2.tar.gz
 
+/db-migrate/db-migrate
