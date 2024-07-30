@@ -106,9 +106,9 @@ func generateBootFile(host *Host, r *Reservation) error {
 		autoInstallFilePath := fmt.Sprintf("http://%s:%v/%s/%s", igor.Server.CbHost, igor.Server.CbPort, api.CbKS, ksFile)
 		switch osType {
 		case "redhat":
-			autoInstallPart = fmt.Sprintf("ks=%s ksdevice=bootif", autoInstallFilePath)
+			autoInstallPart = fmt.Sprintf("ks=%s ", autoInstallFilePath)
 		case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
-			autoInstallPart = fmt.Sprintf("auto url=%s", autoInstallFilePath)
+			autoInstallPart = fmt.Sprintf("url=%s", autoInstallFilePath)
 		default:
 			return fmt.Errorf("unknown OS type: %s", osType)
 		}
@@ -127,9 +127,9 @@ func generateBootFile(host *Host, r *Reservation) error {
 			switch osType {
 			case "redhat":
 				appendStmt = "IPAPPEND 2\n" + appendStmt
-				autoInstallPart = " lang=  kssendmac text" + autoInstallPart
+				autoInstallPart = " lang=  kssendmac text ksdevice=bootif " + autoInstallPart
 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
-				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=auto text  auto-install/enable=true priority=critical hostname=%s %s domain=local.lan suite=bionic", host.Name, autoInstallPart)
+				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=auto text  auto-install/enable=true priority=critical hostname=%s %s domain=local.lan", host.Name, autoInstallPart)
 			default:
 				return fmt.Errorf("unknown OS type: %s", osType)
 			}
@@ -137,6 +137,16 @@ func generateBootFile(host *Host, r *Reservation) error {
 		content = fmt.Sprintf("%s\n\n%s\n%s\n%s\n%s %s\n", defaultLabel, defaultOptions, label, kernel, appendStmt, autoInstallPart)
 	case "uefi":
 		// Generate content for UEFI
+		if autoInstallPart != "" {
+			switch osType {
+			case "redhat":
+				autoInstallPart = " lang=  kssendmac text ksdevice=bootif" + autoInstallPart
+			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
+				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=%s text  auto-install/enable=true priority=critical %s", host.Mac, autoInstallPart)
+			default:
+				return fmt.Errorf("unknown OS type: %s", osType)
+			}
+		}
 		content = fmt.Sprintf("menuentry 'reservation %s netbooting distro %s on host %s' {\n    linuxefi %s %s\n    initrdefi %s\n}\n", r.Name, r.Profile.Distro.Name, host.Name, kernelPath, autoInstallPart, initrdPath)
 		masterPath = filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor", host.Name)
 	default:
