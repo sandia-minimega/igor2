@@ -388,7 +388,7 @@ func initConfigCheck() {
 
 	igor.TFTPPath = igor.Server.TFTPRoot
 	igor.PXEBIOSDir = "pxelinux.cfg"
-	igor.PXEUEFIDir = filepath.Join("efi", "boot")
+	igor.PXEUEFIDir = filepath.Join("uefi")
 	igor.ImageStoreDir = "igor_images"
 	igor.KickstartDir = "kickstarts"
 
