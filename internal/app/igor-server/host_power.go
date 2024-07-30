@@ -55,7 +55,7 @@ func checkPowerParams(powerParams map[string]interface{}, r *http.Request) (stri
 			return cmd, nil, http.StatusInternalServerError, rrErr
 		} else {
 			if len(res) == 1 {
-				hostNames = namesOfHosts(res[0].Hosts)
+				hostNames = hostNamesOfHosts(res[0].Hosts)
 			} else {
 				return cmd, nil, http.StatusNotFound, fmt.Errorf("reservation '%s' not found", resName)
 			}
