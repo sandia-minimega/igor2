@@ -100,18 +100,10 @@ func generateBootFile(host *Host, r *Reservation) error {
 	pxePath := getPxePath(host)
 
 	// Construct the autoinstall part of the boot file based on OS type
-	autoInstallPart := ""
+	autoInstallFilePath := ""
 	if image.LocalBoot {
 		ksFile := r.Profile.Distro.Kickstart.Filename
-		autoInstallFilePath := fmt.Sprintf("http://%s:%v/%s/%s", igor.Server.CbHost, igor.Server.CbPort, api.CbKS, ksFile)
-		switch osType {
-		case "redhat":
-			autoInstallPart = fmt.Sprintf("ks=%s ", autoInstallFilePath)
-		case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
-			autoInstallPart = fmt.Sprintf("url=%s", autoInstallFilePath)
-		default:
-			return fmt.Errorf("unknown OS type: %s", osType)
-		}
+		autoInstallFilePath = fmt.Sprintf("http://%s:%v/%s/%s", igor.Server.CbHost, igor.Server.CbPort, api.CbKS, ksFile)
 	}
 
 	switch bootMode {
@@ -119,35 +111,37 @@ func generateBootFile(host *Host, r *Reservation) error {
 		// Generate content for BIOS
 		defaultLabel := fmt.Sprintf("DEFAULT %s", r.Name)
 		defaultOptions := ""
-		label := fmt.Sprintf("LABEL Reservation: %s netbooting %s on host %s\n", r.Name, r.Profile.Distro.Name, host.Name)
+		bios_label := fmt.Sprintf("LABEL %s", r.Name)
 		kernel := fmt.Sprintf("\tKERNEL %v", kernelPath)
 		appendStmt := fmt.Sprintf("\tAPPEND initrd=%v", initrdPath)
-		if autoInstallPart != "" {
-			defaultOptions = fmt.Sprintf("%sprompt 0\ntimeout 1", defaultOptions)
+		autoInstallPart := ""
+		if autoInstallFilePath != "" {
 			switch osType {
 			case "redhat":
 				appendStmt = "IPAPPEND 2\n" + appendStmt
-				autoInstallPart = " lang=  kssendmac text ksdevice=bootif " + autoInstallPart
+				autoInstallPart = fmt.Sprintf(" lang=  kssendmac text ksdevice=bootif ks=%s ", autoInstallFilePath)
 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
-				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=auto text  auto-install/enable=true priority=critical hostname=%s %s domain=local.lan", host.Name, autoInstallPart)
+				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=auto text  auto-install/enable=true priority=critical hostname=%s url=%s domain=local.lan", host.Name, autoInstallFilePath)
 			default:
 				return fmt.Errorf("unknown OS type: %s", osType)
 			}
 		}
-		content = fmt.Sprintf("%s\n\n%s\n%s\n%s\n%s %s\n", defaultLabel, defaultOptions, label, kernel, appendStmt, autoInstallPart)
+		content = fmt.Sprintf("%s\n%s\n%s\n%s\n%s %s\n", defaultLabel, defaultOptions, bios_label, kernel, appendStmt, autoInstallPart)
 	case "uefi":
 		// Generate content for UEFI
-		if autoInstallPart != "" {
+		label := fmt.Sprintf("\"Reservation: %s netbooting %s on host %s\"", r.Name, r.Profile.Distro.Name, host.Name)
+		autoInstallPart := ""
+		if autoInstallFilePath != "" {
 			switch osType {
 			case "redhat":
-				autoInstallPart = " lang=  kssendmac text ksdevice=bootif" + autoInstallPart
+				autoInstallPart = fmt.Sprintf(" lang=  inst.kssendmac inst.text inst.ksdevice=bootif inst.ks=%s", autoInstallFilePath)
 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
-				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=%s text  auto-install/enable=true priority=critical %s", host.Mac, autoInstallPart)
+				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=%s text  auto-install/enable=true priority=critical url=%s", host.Mac, autoInstallFilePath)
 			default:
 				return fmt.Errorf("unknown OS type: %s", osType)
 			}
 		}
-		content = fmt.Sprintf("menuentry 'reservation %s netbooting distro %s on host %s' {\n    linuxefi %s %s\n    initrdefi %s\n}\n", r.Name, r.Profile.Distro.Name, host.Name, kernelPath, autoInstallPart, initrdPath)
+		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s --id install-menu {\n    linuxefi %s %s\n    initrdefi %s\n}\n", label, kernelPath, autoInstallPart, initrdPath)
 		masterPath = filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor", host.Name)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", bootMode)
@@ -210,14 +204,23 @@ func setLocalConfig(host *Host, r *Reservation) error {
 	case "bios":
 		defaultLabel := "DEFAULT local\n"
 		defaultOptions := "PROMPT 0\nTIMEOUT 0\nTOTALTIMEOUT 0\nONTIMEOUT local\n"
-		label := fmt.Sprintf("LABEL Reservation: %s netbooting %s on host %s\n", r.Name, r.Profile.Distro.Name, host.Name)
+		label := fmt.Sprint("LABEL local\n")
 		labelOptions := "\tLOCALBOOT -1\n"
 		content = defaultLabel +
 			defaultOptions +
 			label +
 			labelOptions
 	case "uefi":
-		content = fmt.Sprintf("menuentry 'Reservation: %s booting %s locally on host %s' {\n    insmod chain\n    set root=(hd0,1)  # Assuming the OS is installed on the first partition of the first hard drive\n   chainloader +1", r.Name, r.Profile.Distro.Name, host.Name)
+		grub_path := ""
+		logger.Info().Msgf("TFTP - attempting to match 'redhat' to %s.", r.Profile.Distro.DistroImage.Breed)
+		switch r.Profile.Distro.DistroImage.Breed {
+			case "redhat":
+				grub_path = "/EFI/redhat/grubx64.efi"
+			default:
+				grub_path = "+1"
+		}
+		label := fmt.Sprintf("\"Reservation: %s booting %s locally on host %s\"", r.Name, r.Profile.Distro.Name, host.Name)
+		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s  --id install-menu{\n    insmod part_gpt\n    insmod fat\n    search --no-floppy --set=root --file %s\n    chainloader %s", label, grub_path, grub_path)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", host.BootMode)
 	}

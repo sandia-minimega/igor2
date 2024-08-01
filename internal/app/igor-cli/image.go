@@ -122,10 +122,10 @@ server.imageStageDir setting in the server config for directory path.
 	cmdRegisterImage.Flags().StringSlice("boot", boot, "the compatible boot system to use the image with")
 	cmdRegisterImage.Flags().StringVarP(&breed, "breed", "b", "", "name of the OS breed")
 	cmdRegisterImage.Flags().BoolVarP(&localBoot, "localBoot", "l", false, "true = image is intended for local install/boot")
-	_ = cmdRegisterImage.MarkFlagRequired("kernel")
-	_ = cmdRegisterImage.MarkFlagRequired("initrd")
-	_ = registerFlagArgsFunc(cmdRegisterImage, "kernel", []string{"FILENAME.kernel"})
-	_ = registerFlagArgsFunc(cmdRegisterImage, "initrd", []string{"FILENAME.initrd"})
+	// _ = cmdRegisterImage.MarkFlagRequired("kernel")
+	// _ = cmdRegisterImage.MarkFlagRequired("initrd")
+	// _ = registerFlagArgsFunc(cmdRegisterImage, "kernel", []string{"FILENAME.kernel"})
+	// _ = registerFlagArgsFunc(cmdRegisterImage, "initrd", []string{"FILENAME.initrd"})
 
 	return cmdRegisterImage
 }

@@ -39,10 +39,6 @@ func scheduleHostsByName(res *Reservation, tx *gorm.DB, clog *zl.Logger) (int, e
 		return status, err
 	}
 
-	if err := res.checkHostBootPolicy(); err != nil {
-		return http.StatusBadRequest, err
-	}
-
 	// check that no hosts have conflicts in their host policy
 	isElevated := userElevated(res.Owner.Name)
 	status, err = dbCheckHostPolicyConflicts(hostNameList, groupAccessList, isElevated, res.Start, res.End, res.End, clog)
@@ -426,7 +422,7 @@ func startMaintenance(res *MaintenanceRes) error {
 
 		// power on the hosts
 		logger.Debug().Msgf("power cycling hosts for reservation '%s'", tempRes.Name)
-		if _, powerErr := doPowerHosts(PowerCycle, namesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
+		if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
 			// don't return this error we still want to mark it installed
 			logger.Error().Msgf("problem powering cycling hosts for reservation '%s': %v", tempRes.Name, powerErr)
 		}
@@ -481,7 +477,7 @@ func finishMaintenance(now *time.Time) error {
 			if hasDefaultDistro {
 				// power off the hosts
 				logger.Debug().Msgf("powering off hosts for reservation '%s'", tempRes.Name)
-				if _, powerErr := doPowerHosts(PowerOff, namesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
+				if _, powerErr := doPowerHosts(PowerOff, hostNamesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
 					// don't return this error we still want to mark it installed
 					logger.Error().Msgf("problem powering off hosts for reservation '%s': %v", tempRes.Name, powerErr)
 				}
@@ -571,7 +567,7 @@ func installReservations(checkTime *time.Time) error {
 
 					if r.CycleOnStart {
 						logger.Debug().Msgf("power cycling hosts for reservation '%s'", r.Name)
-						if _, powerErr := doPowerHosts(PowerCycle, namesOfHosts(r.Hosts), &logger); powerErr != nil {
+						if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(r.Hosts), &logger); powerErr != nil {
 							// don't return this error we still want to mark it installed
 							logger.Error().Msgf("problem powering cycling hosts for reservation '%s': %v", r.Name, powerErr)
 						}

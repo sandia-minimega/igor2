@@ -40,13 +40,18 @@ func checkPowerParams(powerParams map[string]interface{}, r *http.Request) (stri
 	var hostNames []string
 
 	if hostExpr, hok := powerParams["hosts"].(string); hok {
-		hostNames, err = common.SplitList(hostExpr)
+		hostList, err := common.SplitList(hostExpr)
 		if err != nil {
 			return cmd, nil, http.StatusNotFound, err
 		}
-		sort.Slice(hostNames, func(i, j int) bool {
-			return hostNames[i] < hostNames[j]
+		sort.Slice(hostList, func(i, j int) bool {
+			return hostList[i] < hostList[j]
 		})
+		hosts, status, err := getHostsTx(hostList, true)
+		if err != nil {
+			return cmd, nil, status, err
+		}
+		hostNames = hostNamesOfHosts(hosts)
 
 	} else if resName, rok := powerParams["resName"].(string); rok {
 
