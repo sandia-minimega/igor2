@@ -128,6 +128,7 @@ func getActiveReservation(h *Host) *Reservation {
 				}
 				if len(reses) > 0 {
 					result = reses[0]
+					return nil
 				}
 				return fmt.Errorf("no reservations found")
 			}); err != nil {
