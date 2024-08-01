@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"igor2/internal/pkg/common"
+
+	"gorm.io/gorm"
 )
 
 func checkTimeLimit(nodeCount int, limit time.Duration, resDur time.Duration) error {
@@ -116,8 +118,22 @@ func determineNodeResetTime(resEnd time.Time) time.Time {
 // Host is associated with
 func getActiveReservation(h *Host) *Reservation {
 	for _, res := range h.Reservations {
+		result := res
 		if res.IsActive(time.Now()) {
-			return &res
+			// this res is a shallow copy, we want the whole thing
+			if err := performDbTx(func(tx *gorm.DB) error {
+				reses, _, err := getReservations([]string{res.Name}, tx)
+				if err != nil {
+					return err
+				}
+				if len(reses) > 0 {
+					result = reses[0]
+				}
+				return fmt.Errorf("no reservations found")
+			}); err != nil {
+				return &res
+			}
+			return &result
 		}
 	}
 	return nil
