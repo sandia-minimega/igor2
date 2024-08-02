@@ -212,7 +212,6 @@ func setLocalConfig(host *Host, r *Reservation) error {
 			labelOptions
 	case "uefi":
 		grub_path := ""
-		logger.Info().Msgf("TFTP - attempting to match 'redhat' to %s.", r.Profile.Distro.DistroImage.Breed)
 		switch r.Profile.Distro.DistroImage.Breed {
 		case "redhat":
 			grub_path = "/EFI/redhat/grubx64.efi"
