@@ -214,13 +214,13 @@ func setLocalConfig(host *Host, r *Reservation) error {
 		grub_path := ""
 		logger.Info().Msgf("TFTP - attempting to match 'redhat' to %s.", r.Profile.Distro.DistroImage.Breed)
 		switch r.Profile.Distro.DistroImage.Breed {
-			case "redhat":
-				grub_path = "/EFI/redhat/grubx64.efi"
-			default:
-				grub_path = "+1"
+		case "redhat":
+			grub_path = "/EFI/redhat/grubx64.efi"
+		default:
+			grub_path = "+1"
 		}
 		label := fmt.Sprintf("\"Reservation: %s booting %s locally on host %s\"", r.Name, r.Profile.Distro.Name, host.Name)
-		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s  --id install-menu{\n    insmod part_gpt\n    insmod fat\n    search --no-floppy --set=root --file %s\n    chainloader %s", label, grub_path, grub_path)
+		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s  --id install-menu {\n    insmod part_gpt\n    insmod fat\n    search --no-floppy --set=root --file %s\n    chainloader %s\n}\n", label, grub_path, grub_path)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", host.BootMode)
 	}
