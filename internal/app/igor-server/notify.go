@@ -106,6 +106,13 @@ func initNotify() {
 		setCommonInfo(t)
 		tMap[EmailResDrop] = t
 
+		t = template.New("EmailResBlock")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyResBlockTemplate)
+		setCommonInfo(t)
+		tMap[EmailResBlock] = t
+
 		t = template.New("EmailResNewOwner")
 		t.Funcs(tFuncs)
 		t = template.Must(t.Parse(BaseEmailTemplate))
@@ -475,8 +482,12 @@ func processResNotifyEvent(msg ResNotifyEvent) error {
 		t = tMap[EmailResEdit]
 		priority = true
 	case EmailResDrop:
-		subj = "igor reservation " + subjMid + " has dropped hosts"
+		subj = "igor reservation " + subjMid + " has dropped host"
 		t = tMap[EmailResDrop]
+		priority = true
+	case EmailResBlock:
+		subj = "igor reservation " + subjMid + " has blocked host(s)"
+		t = tMap[EmailResBlock]
 		priority = true
 	case EmailResRename:
 		subj = "igor reservation '" + msg.Info + "' on " + msg.Cluster + " has been renamed"
@@ -626,6 +637,7 @@ const (
 	EmailResNewOwner
 	EmailResNewGroup
 	EmailResDrop
+	EmailResBlock
 	EmailResEdit = 1029
 )
 
@@ -693,6 +705,24 @@ const (
 <p>Greetings,</p>
 
 <p>The following hosts have been dropped from reservation '{{.Res.Name}}': {{.Info}}</p>
+
+<p>The modified reservation's current info:</p>
+
+{{block "res-info" .}}{{end}}
+
+<p>If you have questions please contact, <a href="mailto:{{.ActionUser.Email}}">{{emailOrName .ActionUser}}</a>. This action was undertaken in their role as {{isAdmin .IsElevated}}.</p>
+
+{{block "sender-info" .}}{{end}}
+{{end}}`
+
+	NotifyResBlockTemplate = `
+{{template "base" .}}
+{{define "mail-body"}}
+<p>Greetings,</p>
+
+<p>The following hosts have been blocked in reservation '{{.Res.Name}}': {{.Info}}</p>
+
+<p>This action is usually undertaken when a cluster admin needs to bring the host(s) offline at some point in the near future to do repairs or upgrades to the hardware. Please reach out to the cluster admin team for more information.</p>
 
 <p>The modified reservation's current info:</p>
 

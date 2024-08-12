@@ -657,6 +657,22 @@ func printShow(rb *common.ResponseBodyShow, flagset *pflag.FlagSet) {
 
 				hostStatus = strings.TrimSuffix(fmt.Sprintf("%s -%s%s%s", r.HostRange, up, na, down), " /")
 			}
+
+			var blockedLabel = fmt.Sprintf(" / %s ", cBlockedUp.Sprintf(Blocked))
+			var blockedHosts []string
+			for _, ah := range showData.Hosts {
+				if ah.State == "blocked" {
+					for _, rh := range r.Hosts {
+						if ah.HostName == rh {
+							blockedHosts = append(blockedHosts, ah.HostName)
+						}
+					}
+				}
+			}
+
+			if len(blockedHosts) > 0 {
+				hostStatus += blockedLabel + common.UnsplitList(blockedHosts)
+			}
 		}
 
 		tw.AppendRow([]interface{}{
@@ -756,6 +772,9 @@ func printNodeMap(cData common.ClusterData, hData []common.HostData, rData []com
 				if instErr[seqID] {
 					// show node background as error state
 					row = append(row, colorNode.SetBg(BgError).AddOpts(color.Bold).Sprint(name))
+				} else if hDataMap[seqID].State == "blocked" {
+					// set node background for blocked
+					row = append(row, colorNode.SetBg(BgBlocked).AddOpts(color.Bold).Sprint(name))
 				} else if resIndex, ok := n2r[seqID]; ok {
 
 					// set node background based on user reservation access
@@ -774,9 +793,6 @@ func printNodeMap(cData common.ClusterData, hData []common.HostData, rData []com
 						row = append(row, colorNode.Sprint(name))
 					}
 
-				} else if hDataMap[seqID].State == "blocked" {
-					// set node background for blocked
-					row = append(row, colorNode.SetBg(BgBlocked).AddOpts(color.Bold).Sprint(name))
 				} else if restricted[seqID] {
 					// set node background for restricted
 					row = append(row, colorNode.SetBg(BgRestricted).Sprintf(name))

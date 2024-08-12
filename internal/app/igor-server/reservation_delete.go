@@ -111,7 +111,15 @@ func doDeleteRes(res *Reservation, tx *gorm.DB, activeRes bool, clog *zl.Logger)
 
 		// change the reservation's hosts out of 'reserved' state
 		clog.Debug().Msgf("changing reservation %v's hosts out of 'reserved' state", res.Name)
-		err = dbEditHosts(res.Hosts, map[string]interface{}{"State": HostAvailable}, tx)
+
+		var availableHosts []Host
+		for _, host := range res.Hosts {
+			if host.State != HostBlocked {
+				availableHosts = append(availableHosts, host)
+			}
+		}
+
+		err = dbEditHosts(availableHosts, map[string]interface{}{"State": HostAvailable}, tx)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -142,21 +150,19 @@ func uninstallRes(res *Reservation) (err error) {
 	}
 
 	// remove pxeboot configs for reservation hosts
-	if uErr := igor.IResInstaller.Uninstall(res); err != nil {
-		if err == nil {
-			err = uErr
-		} else {
-			err = fmt.Errorf("%v\n%v", err, uErr)
-		}
+	uErr := igor.IResInstaller.Uninstall(res)
+	if err == nil {
+		err = uErr
+	} else {
+		err = fmt.Errorf("%v\n%v", err, uErr)
 	}
 
 	// power off the nodes of this reservation
-	if pErr := powerOffResNodes(res); err != nil {
-		if err == nil {
-			err = pErr
-		} else {
-			err = fmt.Errorf("%v\n%v", err, pErr)
-		}
+	pErr := powerOffResNodes(res)
+	if err == nil {
+		err = pErr
+	} else {
+		err = fmt.Errorf("%v\n%v", err, pErr)
 	}
 
 	// Put reservation nodes into maintenance mode if a Maintenance period has been specified
@@ -180,7 +186,7 @@ func uninstallRes(res *Reservation) (err error) {
 			logger.Error().Msgf("warning - errors detected when creating maintenance reservation %v: %v", res.Name, err)
 		} else {
 			// begin maintenance immediately
-			startMaintenance(maintenanceRes)
+			_ = startMaintenance(maintenanceRes)
 		}
 	}
 
