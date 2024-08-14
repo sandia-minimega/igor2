@@ -235,12 +235,6 @@ func dbDeleteReservation(res *Reservation, perms []Permission, isResNow bool, tx
 				}
 			}
 		}
-		/*
-			result := tx.Model(&res.Hosts).Omit("access_group_id").Update("State", HostAvailable)
-			if result.Error != nil {
-				return result.Error
-			}
-		*/
 	}
 
 	// delete the associations with the hosts table

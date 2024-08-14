@@ -40,10 +40,16 @@ func checkPowerParams(powerParams map[string]interface{}, r *http.Request) (stri
 	var hostNames []string
 
 	if hostExpr, hok := powerParams["hosts"].(string); hok {
-		hostNames, err = common.SplitList(hostExpr)
-		if err != nil {
+		if tempHostNames, listErr := common.SplitList(hostExpr); listErr != nil {
 			return cmd, nil, http.StatusNotFound, err
+		} else {
+			if hList, ghStatus, ghErr := getHostsTx(tempHostNames, true); ghErr != nil {
+				return cmd, nil, ghStatus, ghErr
+			} else {
+				hostNames = hostNamesOfHosts(hList)
+			}
 		}
+
 		sort.Slice(hostNames, func(i, j int) bool {
 			return hostNames[i] < hostNames[j]
 		})
@@ -181,7 +187,7 @@ func doPowerHosts(action string, hostList []string, clog *zl.Logger) (int, error
 
 // powerOffResNodes explicitly sends the power 'off' command to the nodes of a deleted/expired reservation.
 func powerOffResNodes(reservation *Reservation) error {
-	hostnames := namesOfHosts(reservation.Hosts)
+	hostnames := hostNamesOfHosts(reservation.Hosts)
 	if _, pErr := doPowerHosts(PowerOff, hostnames, &logger); pErr != nil {
 		return fmt.Errorf("problem powering off hosts %v for end of reservation '%s': %v", hostnames, reservation.Name, pErr)
 	}
