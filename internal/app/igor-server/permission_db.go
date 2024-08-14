@@ -77,14 +77,14 @@ func dbGetResourceGroupPermissions(resourceType string, resourceName string, gro
 func dbGetHostPowerPermissions(group *Group, resHosts []Host, tx *gorm.DB) (perms []Permission, err error) {
 
 	sort.Slice(resHosts, func(i, j int) bool {
-		return resHosts[i].Name < resHosts[j].Name
+		return resHosts[i].HostName < resHosts[j].HostName
 	})
 
 	var hList string
 	for i := 0; i < len(resHosts)-1; i++ {
-		hList += resHosts[i].Name + PermSubpartToken
+		hList += resHosts[i].HostName + PermSubpartToken
 	}
-	hList += resHosts[len(resHosts)-1].Name
+	hList += resHosts[len(resHosts)-1].HostName
 
 	permFind := PermPowerAction + PermDividerToken + hList + "%"
 	err = tx.Model(group).Where("fact LIKE ?", permFind).Association("Permissions").Find(&perms)
