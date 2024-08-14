@@ -86,8 +86,8 @@ func dbGetHostPowerPermissions(group *Group, resHosts []Host, tx *gorm.DB) (perm
 	}
 	hList += resHosts[len(resHosts)-1].HostName
 
-	permFind := PermPowerAction + PermDividerToken + hList + "%"
-	err = tx.Model(group).Where("fact LIKE ?", permFind).Association("Permissions").Find(&perms)
+	permFind := PermPowerAction + PermDividerToken + hList
+	err = tx.Model(group).Where("fact = ?", permFind).Association("Permissions").Find(&perms)
 	return
 }
 
