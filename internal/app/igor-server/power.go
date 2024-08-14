@@ -62,7 +62,7 @@ func powerStatusManager(hosts []Host) {
 				}
 			}
 		}
-		ipMap[ip] = h.Name
+		ipMap[ip] = h.HostName
 	}
 
 	logger.Debug().Msgf("%v", ipMap)
@@ -73,7 +73,7 @@ func powerStatusManager(hosts []Host) {
 	timeout := timeoutFast
 	fastRefreshes := 20
 	countdown := time.NewTimer(startup)
-	hostNames := namesOfHosts(hosts)
+	hostNames := hostNamesOfHosts(hosts)
 	powerMap = make(map[string]*bool, len(hostNames))
 	for _, h := range hostNames {
 		powerMap[h] = nil

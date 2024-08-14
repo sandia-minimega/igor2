@@ -31,7 +31,7 @@ func initToOn(hosts []Host) {
 
 	_doInitOn = false
 
-	hostNames := namesOfHosts(hosts)
+	hostNames := hostNamesOfHosts(hosts)
 	rHosts, _ := getReservedHosts()
 
 	powerMapMU.Lock()
