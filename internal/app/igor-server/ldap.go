@@ -419,6 +419,16 @@ func syncLdapUsers(conn *ldap.Conn) error {
 		return fmt.Errorf("%s failed - %w", actionPrefix, ruErr)
 	}
 
+	currLdapUserList := usernamesFromNames(igorUsers, userList.Elements())
+	currIgorUserList := userNamesOfUsers(igorUsers)
+
+	slices.Sort(currLdapUserList)
+	slices.Sort(currIgorUserList)
+	if !slices.Equal(currLdapUserList, currIgorUserList) {
+		removedUsernames := usernameDiff(currLdapUserList, currIgorUserList)
+		_ = removeSyncedUsers(usersFromNames(igorUsers, removedUsernames))
+	}
+
 	// filter out non-members so we can register them
 	newIgorUsers := filterNonUsers(igorUsers, userList.Elements())
 
@@ -437,6 +447,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 			Filter:     userFilter,
 			Attributes: memberAttributes,
 		})
+
 		if srErr != nil {
 			logger.Warn().Msgf("%s failed - search for user '%s' in LDAP - %v", actionPrefix, member, srErr)
 			continue
@@ -445,24 +456,32 @@ func syncLdapUsers(conn *ldap.Conn) error {
 			logger.Warn().Msgf("%s failed - no user '%s' found", actionPrefix, member)
 			continue
 		}
+
+		userInfo := map[string]interface{}{"name": member}
+
 		entry := userResult.Entries[0]
 		memberEmail := ""
 		if gcConf.UserEmailAttribute != "" {
 			if len(entry.GetAttributeValues(gcConf.UserEmailAttribute)) > 0 {
 				memberEmail = entry.GetAttributeValues(gcConf.UserEmailAttribute)[0]
+				userInfo["email"] = memberEmail
 			}
 		}
 		if memberEmail == "" {
 			memberEmail = fmt.Sprintf("%s@%s", member, igor.Email.DefaultSuffix)
+			userInfo["email"] = memberEmail
 		}
 		memberDisplayName := ""
 		if gcConf.UserDisplayNameAttribute != "" {
 			if len(entry.GetAttributeValues(gcConf.UserDisplayNameAttribute)) > 0 {
 				memberDisplayName = entry.GetAttributeValues(gcConf.UserDisplayNameAttribute)[0]
+				if len(memberDisplayName) > 0 {
+					userInfo["fullName"] = memberDisplayName
+				}
 			}
 		}
 
-		if user, _, cuErr := doCreateUser(map[string]interface{}{"name": member, "email": memberEmail, "fullName": memberDisplayName}, nil); cuErr != nil {
+		if user, _, cuErr := doCreateUser(userInfo, nil); cuErr != nil {
 			return fmt.Errorf("failed to create new user '%s' via LDAP sync manager: %v", member, cuErr)
 		} else {
 			logger.Info().Msgf("created new user '%s' via with LDAP sync manager", user.Name)
@@ -470,4 +489,82 @@ func syncLdapUsers(conn *ldap.Conn) error {
 	}
 
 	return nil
+}
+
+func removeSyncedUsers(users []User) (err error) {
+
+	for _, u := range users {
+
+		if err = performDbTx(func(tx *gorm.DB) error {
+
+			ia, _, _ := getIgorAdmin(tx)
+			changes := map[string]interface{}{}
+
+			singleGlist := u.singleOwnedGroups()
+			for _, g := range singleGlist {
+				changes["addOwners"] = []User{*ia}
+				changes["rmvOwners"] = u
+				dbEditGroup(&g, changes, tx)
+			}
+
+			// if the ownership is shared, nothing needs to be done
+
+			searchByOwnerID := map[string]interface{}{"owner_id": u.ID}
+
+			if orList, orErr := dbReadReservations(searchByOwnerID, nil, tx); orErr != nil {
+				return orErr // uses default err status
+			} else {
+				if len(orList) > 0 {
+					// transfer ownership to igor-admin
+				}
+			}
+
+			if odList, rdErr := dbReadDistros(searchByOwnerID, tx); rdErr != nil {
+				return rdErr // uses default err status
+			} else {
+				if len(odList) > 0 {
+					// transfer ownership to igor-admin
+				}
+			}
+
+			// *** All good! let's start deleting stuff ***
+
+			if opList, opErr := dbReadProfiles(searchByOwnerID, tx); opErr != nil {
+				return opErr // uses default err status
+			} else {
+				for _, p := range opList {
+					logger.Debug().Msgf("deleting profile '%s'", p.Name)
+					if err = dbDeleteProfile(&p, tx); err != nil {
+						return err // uses default err status
+					}
+				}
+			}
+
+			// get user PUG
+			pug, pugErr := u.getPug()
+			if pugErr != nil {
+				return pugErr // uses default err status
+			}
+
+			// delete user PUG permissions
+			logger.Debug().Msgf("deleting '%s' group permissions", pug.Name)
+			if err = dbDeletePermissionsByGroup(pug, tx); err != nil {
+				return err // uses default err status
+			}
+
+			// delete user PUG
+			logger.Debug().Msgf("deleting '%s' group", pug.Name)
+			if err = dbDeleteGroup(pug, tx); err != nil {
+				return err // uses default err status
+			}
+
+			// delete the user (and their group memberships)
+			logger.Debug().Msgf("deleting '%s' from the database and removing group memberships", u.Name)
+			return dbDeleteUser(&u, tx)
+
+		}); err == nil {
+			logger.Debug().Msgf("user '%s' deletion complete", u.Name)
+		}
+	}
+	return
 }

@@ -108,7 +108,7 @@ func syncArista(force, quiet bool) (result map[string]interface{}, status int, e
 	// aggregate all to report and sync the node if force
 	powerMapMU.Lock()
 	for _, host := range hosts {
-		hostName := host.Name
+		hostName := host.HostName
 		data := map[string]string{}
 		if resInfo, ok := withRes[hostName]; ok {
 			data["res_vlan"] = resInfo["res_vlan"].(string)

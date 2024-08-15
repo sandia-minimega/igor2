@@ -390,7 +390,7 @@ func handleBlockHosts(w http.ResponseWriter, r *http.Request) {
 		actionPrefix = "unblock host(s)"
 	}
 	if err == nil {
-		status, err = doUpdateBlockHosts(block, hostList)
+		status, err = doUpdateBlockHosts(block, hostList, r)
 	}
 
 	rb := common.NewResponseBody()

@@ -148,17 +148,17 @@ func filterHostList(hostList []Host, filterPowered *bool, user *User) []common.H
 	for _, h := range hostList {
 
 		var hd common.HostData
-		if _, ok := powerMap[h.Name]; ok {
+		if _, ok := powerMap[h.HostName]; ok {
 			// if the powered boolean search param was included only send hosts that match that
 			// power condition, otherwise send everything
 			if filterPowered != nil {
-				if filterPowered == powerMap[h.Name] {
-					hd = h.getHostData(powerMap[h.Name], user)
+				if filterPowered == powerMap[h.HostName] {
+					hd = h.getHostData(powerMap[h.HostName], user)
 				} else {
 					continue
 				}
 			} else {
-				hd = h.getHostData(powerMap[h.Name], user)
+				hd = h.getHostData(powerMap[h.HostName], user)
 			}
 		} else {
 			hd = h.getHostData(nil, user)

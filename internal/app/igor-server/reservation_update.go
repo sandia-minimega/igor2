@@ -220,11 +220,20 @@ func parseDrop(res *Reservation, dropList string, tx *gorm.DB) (map[string]inter
 	return changes, http.StatusOK, nil
 }
 
-// parseExtend checks that the extend parameter has correct syntax and the modified end time
+// parseExtend checks that the 'extend' parameter has correct syntax and the modified end time
 // it creates doesn't collide with existing reservations and/or host policies.
 func parseExtend(res *Reservation, extendTime string, isActionUserElevated bool, r *http.Request, tx *gorm.DB) (map[string]interface{}, int, error) {
 
 	clog := hlog.FromRequest(r)
+
+	if !isActionUserElevated {
+		for _, h := range res.Hosts {
+			if h.State == HostBlocked {
+				return nil, http.StatusConflict,
+					fmt.Errorf("unable to extend - one or more nodes in this reservation has a blocked status. Contact your cluster admin team.")
+			}
+		}
+	}
 
 	hostNameList := namesOfHosts(res.Hosts)
 
@@ -439,7 +448,8 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 	}
 
 	// get the current power perms (will be empty if reservation hasn't started yet)
-	powerPerms, ppErr := dbGetPermissions(map[string]interface{}{"fact": makeNodePowerPerm(res.Hosts)}, tx)
+	// powerPerms, ppErr := dbGetPermissions(map[string]interface{}{"fact": makeNodePowerPerm(res.Hosts)}, tx)
+	powerPerms, ppErr := dbGetHostPowerPermissions(&res.Group, res.Hosts, tx)
 	if ppErr != nil {
 		return nil, http.StatusInternalServerError, ppErr
 	}

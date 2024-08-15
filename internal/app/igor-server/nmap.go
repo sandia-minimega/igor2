@@ -32,8 +32,6 @@ func (nr *NmapPowerStatus) updateHosts(hosts []Host) {
 		return
 	}
 
-	hostNames := namesOfHosts(hosts)
-
 	// create a slice of just the host hostnames
 	hostHNames := hostNamesOfHosts(hosts)
 
@@ -62,11 +60,11 @@ func (nr *NmapPowerStatus) updateHosts(hosts []Host) {
 
 	if err != nil {
 		logger.Warn().Msgf("nmap encountered a problem: %v", err)
-		for _, h := range hostNames {
+		for _, h := range hostHNames {
 			powerMap[h] = nil
 		}
 	} else {
-		for _, h := range hostNames {
+		for _, h := range hostHNames {
 			tmpFalse := false
 			powerMap[h] = &tmpFalse
 		}

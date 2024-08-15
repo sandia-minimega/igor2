@@ -71,18 +71,18 @@ func makeResGroupPermStrings(res *Reservation) []string {
 
 // Create the permission string for allowing power commands to be performed on a group of hosts.
 func makeNodePowerPerm(hostList []Host) string {
-	var hostsStrList string
-
-	sort.Slice(hostList, func(i, j int) bool {
-		return hostList[i].Name < hostList[j].Name
+	var hostPermStr string
+	hostNames := hostNamesOfHosts(hostList)
+	sort.Slice(hostNames, func(i, j int) bool {
+		return hostNames[i] < hostNames[j]
 	})
 
-	for i := 0; i < len(hostList)-1; i++ {
-		hostsStrList += hostList[i].Name + PermSubpartToken
+	for i := 0; i < len(hostNames)-1; i++ {
+		hostPermStr += hostNames[i] + PermSubpartToken
 	}
-	hostsStrList += hostList[len(hostList)-1].Name
+	hostPermStr += hostNames[len(hostNames)-1]
 
-	return NewPermissionString(PermPowerAction, hostsStrList)
+	return NewPermissionString(PermPowerAction, hostPermStr)
 }
 
 // resNamesOfResList returns a list of Reservation names from

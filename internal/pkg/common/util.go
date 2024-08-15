@@ -7,6 +7,7 @@ package common
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +53,20 @@ func RandSeq(n int) string {
 		b[i] = smallLetters[rand.Intn(len(smallLetters))]
 	}
 	return string(b)
+}
+
+func WriteFile(path string, content string, mode os.FileMode) error {
+	if file, err := os.Create(path); err != nil {
+		return fmt.Errorf("failed to create %v -- %v", path, err)
+	} else {
+		_ = file.Chmod(mode)
+		_, err = file.WriteString(content)
+		if err != nil {
+			return fmt.Errorf("failed to write %v -- %v", path, err)
+		}
+		_ = file.Close()
+	}
+	return nil
 }
 
 // ParseDuration parses a duration, supporting a 'd' suffix in addition to

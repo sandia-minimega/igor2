@@ -181,9 +181,16 @@ func dbEditReservation(res *Reservation, changes map[string]interface{}, tx *gor
 		// if this reservation is current we need to update the power permissions and change the
 		// dropped hosts' states to available
 		if _, ok = changes["resIsNow"].(bool); ok {
-			result := tx.Model(dropHosts).Update("State", HostAvailable)
-			if result.Error != nil {
-				return result.Error
+
+			var result *gorm.DB
+
+			for _, dropHost := range dropHosts {
+				if dropHost.State != HostBlocked {
+					result = tx.Model(dropHost).Update("State", HostAvailable)
+					if result.Error != nil {
+						return result.Error
+					}
+				}
 			}
 
 			p := changes["pUpdate"].(Permission)
@@ -219,9 +226,14 @@ func dbDeleteReservation(res *Reservation, perms []Permission, isResNow bool, tx
 	// if this reservation is currently running or already finished (we are cleaning up after a prolonged shutdown),
 	// change state of the reservation hosts back to 'available'
 	if isResNow {
-		result := tx.Model(&res.Hosts).Omit("access_group_id").Update("State", HostAvailable)
-		if result.Error != nil {
-			return result.Error
+
+		for _, host := range res.Hosts {
+			if host.State != HostBlocked {
+				result := tx.Model(&host).Omit("access_group_id").Update("State", HostAvailable)
+				if result.Error != nil {
+					return result.Error
+				}
+			}
 		}
 	}
 

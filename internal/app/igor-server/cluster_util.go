@@ -57,15 +57,8 @@ func updateClusterConfigFile(yDoc []byte, clog *zl.Logger) (string, error) {
 			if mvErr := os.Rename(filepath, moveFilePath); mvErr != nil {
 				return mvErr
 			} else {
-				if f, fileErr := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644); fileErr != nil {
-					return fileErr
-				} else {
-					_, fileErr = f.WriteString(configDoc)
-					if fileErr != nil {
-						return fileErr
-					}
-					f.Close()
-				}
+				_ = common.WriteFile(filepath, configDoc, 0644)
+
 			}
 		} else {
 			return pathErr
