@@ -168,6 +168,16 @@ func uninstallRes(res *Reservation) (err error) {
 	// Put reservation nodes into maintenance mode if a Maintenance period has been specified
 	if igor.Config.Maintenance.HostMaintenanceDuration > 0 {
 		logger.Debug().Msgf("sending nodes for reservation %v into maintenance mode", res.Name)
+
+		// prep for saving the current state so it can be restored after maintenance mode is finished
+		for i := range res.Hosts {
+			if res.Hosts[i].State == HostReserved {
+				res.Hosts[i].RestoreState = HostAvailable // a reserved host will always return to available
+			} else {
+				res.Hosts[i].RestoreState = res.Hosts[i].State
+			}
+		}
+
 		resetEnd := res.ResetEnd
 		now := time.Now()
 		// if the reservation is ending early, adjust the reset/maintenance time

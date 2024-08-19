@@ -32,7 +32,7 @@ func (nr *NmapPowerStatus) updateHosts(hosts []Host) {
 		return
 	}
 
-	hostNames := namesOfHosts(hosts)
+	//hostNames := namesOfHosts(hosts)
 
 	// create a slice of just the host hostnames
 	hostHNames := hostNamesOfHosts(hosts)

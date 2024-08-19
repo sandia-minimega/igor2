@@ -305,13 +305,6 @@ func ldapSyncManager() {
 		case <-shutdownChan:
 			logger.Info().Msg("stopping LDAP sync management background worker")
 			return
-			/*
-				//checking the timer was causing
-				if !countdown.t.Stop() {
-					<-countdown.t.C
-				}
-				return
-			*/
 		case checkTime := <-countdown.t.C:
 			logger.Info().Msg("attempting to start LDAP sync management background worker")
 			if adErr := syncPreCheck(); adErr != nil {

@@ -40,6 +40,7 @@ type Host struct {
 	Mac            string `gorm:"unique; notNull"`
 	IP             string
 	State          HostState // State is the HostState of this node. Default when created is HostBlocked.
+	RestoreState   HostState // State to return to after Maintenance phase is done. Either HostAvailable or HostBlocked.
 	ClusterID      int       `gorm:"notNull; uniqueIndex:idx_cluster_seq"`
 	Cluster        Cluster   `gorm:"->;<-:create; notNull"` // read/create only; hosts never change clusters
 	HostPolicyID   int
