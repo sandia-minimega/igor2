@@ -208,6 +208,15 @@ func dbEditReservation(res *Reservation, changes map[string]interface{}, tx *gor
 		return nil
 	}
 
+	if _, ok := changes["autoRemoveOwner"].(bool); ok {
+		adminPug := changes["adminPug"].(*Group)
+		res.OwnerID = adminPug.ID
+		if result := tx.Model(&res).Update("OwnerID", adminPug.ID); result.Error != nil {
+			return result.Error
+		}
+		return nil
+	}
+
 	// change the rest of the fields, if any
 	var fields []string
 	for k := range changes {

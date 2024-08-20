@@ -497,33 +497,65 @@ func removeSyncedUsers(users []User) (err error) {
 
 		if err = performDbTx(func(tx *gorm.DB) error {
 
+			var sendEmailAlert = false
 			ia, _, _ := getIgorAdmin(tx)
-			changes := map[string]interface{}{}
+			groupList := u.singleOwnedGroups()
 
-			singleGlist := u.singleOwnedGroups()
-			for _, g := range singleGlist {
+			// when user is the sole owner of a non-pug group, replace them with igor-admin
+			if len(groupList) > 0 {
+				sendEmailAlert = true
+				changes := make(map[string]interface{})
 				changes["addOwners"] = []User{*ia}
 				changes["rmvOwners"] = u
-				dbEditGroup(&g, changes, tx)
+				for _, g := range groupList {
+					if rmErr := dbEditGroup(&g, changes, tx); rmErr != nil {
+						logger.Error().Msgf("problem changing group '%s' from auto-removed owner '%s' to igor-admin: %v", g.Name, u.Name, rmErr)
+					}
+				}
 			}
-
-			// if the ownership is shared, nothing needs to be done
 
 			searchByOwnerID := map[string]interface{}{"owner_id": u.ID}
 
 			if orList, orErr := dbReadReservations(searchByOwnerID, nil, tx); orErr != nil {
 				return orErr // uses default err status
 			} else {
+				// for any reservation they own, change ownership to igor-admin and send email alert
 				if len(orList) > 0 {
-					// transfer ownership to igor-admin
+					sendEmailAlert = true
+					changes := make(map[string]interface{})
+					changes["autoRemoveOwner"] = true
+					iaPug, _ := ia.getPug()
+					changes["adminPug"] = iaPug
+					for _, r := range orList {
+						if editErr := dbEditReservation(&r, changes, tx); editErr != nil {
+							logger.Error().Msgf("problem changing reservation '%s' from auto-removed owner '%s' to igor-admin: %v", r.Name, u.Name, editErr)
+						}
+					}
 				}
 			}
 
 			if odList, rdErr := dbReadDistros(searchByOwnerID, tx); rdErr != nil {
 				return rdErr // uses default err status
 			} else {
+				// for any distro they own, change ownership to igor-admin and send email alert
 				if len(odList) > 0 {
-					// transfer ownership to igor-admin
+					sendEmailAlert = true
+					changes := make(map[string]interface{})
+					changes["autoRemoveOwner"] = true
+					iaPug, _ := ia.getPug()
+					changes["adminPug"] = iaPug
+					for _, d := range odList {
+						if editErr := dbEditDistro(&d, changes, tx); editErr != nil {
+							logger.Error().Msgf("problem changing distro '%s' from auto-removed owner '%s' to igor-admin: %v", d.Name, u.Name, editErr)
+						}
+					}
+				}
+			}
+
+			if sendEmailAlert {
+				acctRemovedIssueMsg := makeAcctNotifyEvent(EmailAcctRemovedIssue, &u)
+				if acctRemovedIssueMsg != nil {
+					acctNotifyChan <- *acctRemovedIssueMsg
 				}
 			}
 
