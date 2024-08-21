@@ -314,7 +314,7 @@ func processAcctNotifyEvent(msg AcctNotifyEvent) error {
 		}
 		t = tMap[EmailPasswordReset]
 	case EmailAcctRemovedIssue:
-		subj = "auto-removal of igor account encountered problems"
+		subj = "auto-removal of igor account needs review"
 		admin, _, _ := getIgorAdminTx()
 		if len(admin.Email) != 0 {
 			addEmailToList(&toList, admin.Email)
