@@ -81,27 +81,7 @@ func scheduleHostsByAvailability(res *Reservation, tx *gorm.DB, clog *zl.Logger)
 	paddedDur := paddedEndTime.Sub(res.Start)
 
 	for ahKey, ahList := range validAccessHosts {
-		// let's filter hosts by boot compatibilty here
-		needsBios := res.Profile.Distro.DistroImage.BiosBoot
-		needsUefi := res.Profile.Distro.DistroImage.UefiBoot
-		filteredAHList := []Host{}
-		if !needsBios || !needsUefi {
-			pxeType := "bios"
-			if needsUefi {
-				pxeType = "uefi"
-			}
-			for _, host := range ahList {
-				if host.BootMode == pxeType {
-					filteredAHList = append(filteredAHList, host)
-				}
-			}
-		} else {
-			filteredAHList = ahList
-		}
-		if len(filteredAHList) == 0 {
-			continue
-		}
-		ahNames := namesOfHosts(filteredAHList)
+		ahNames := namesOfHosts(ahList)
 		if ahKey != DefaultPolicyName {
 			hasRestrictedHosts = true
 		}

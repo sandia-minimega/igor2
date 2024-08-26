@@ -59,18 +59,18 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	}
 
 	// get boot type(s) of image
-	if boots, ok := r.Form["boot"]; ok {
-		for _, boot := range boots {
-			if strings.ToLower(boot) == "bios" {
-				image.BiosBoot = true
-			}
-			if strings.ToLower(boot) == "uefi" {
-				image.UefiBoot = true
-			}
-		}
-	} else {
-		return image, http.StatusBadRequest, fmt.Errorf("at least one value required image boot type")
-	}
+	// if boots, ok := r.Form["boot"]; ok {
+	// 	for _, boot := range boots {
+	// 		if strings.ToLower(boot) == "bios" {
+	// 			image.BiosBoot = true
+	// 		}
+	// 		if strings.ToLower(boot) == "uefi" {
+	// 			image.UefiBoot = true
+	// 		}
+	// 	}
+	// } else {
+	// 	return image, http.StatusBadRequest, fmt.Errorf("at least one value required image boot type")
+	// }
 
 	// set image OS breed value, if given, otherwise put generic as default
 	breed := strings.ToLower(r.FormValue("breed"))
