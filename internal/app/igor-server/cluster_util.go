@@ -34,6 +34,7 @@ func assembleYamlOutput(clusters []Cluster) ([]byte, error) {
 			tempMap["eth"] = h.Eth
 			tempMap["policy"] = h.HostPolicy.Name
 			tempMap["ip"] = h.IP
+			tempMap["bootMode"] = h.BootMode
 			cc.HostMap[h.SequenceID] = tempMap
 		}
 		ccs[c.Name] = *cc
