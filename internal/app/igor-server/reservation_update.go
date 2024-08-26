@@ -448,7 +448,6 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 	}
 
 	// get the current power perms (will be empty if reservation hasn't started yet)
-	// powerPerms, ppErr := dbGetPermissions(map[string]interface{}{"fact": makeNodePowerPerm(res.Hosts)}, tx)
 	powerPerms, ppErr := dbGetHostPowerPermissions(&res.Group, res.Hosts, tx)
 	if ppErr != nil {
 		return nil, http.StatusInternalServerError, ppErr

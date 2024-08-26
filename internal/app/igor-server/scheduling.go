@@ -360,10 +360,15 @@ func startMaintenance(res *MaintenanceRes) error {
 	logger.Debug().Msgf("changing state of nodes for reservation %v to blocked", res.ReservationName)
 	changes := map[string]interface{}{"State": HostBlocked}
 	err = performDbTx(func(tx *gorm.DB) error {
-		err := dbEditHosts(res.Hosts, changes, tx)
-		if err != nil {
-			logger.Error().Msg(err.Error())
+
+		for _, host := range res.Hosts {
+			changes["RestoreState"] = host.RestoreState
+			err = dbEditHosts([]Host{host}, changes, tx)
+			if err != nil {
+				logger.Error().Msg(err.Error())
+			}
 		}
+
 		return err
 	})
 	if err != nil {
@@ -467,14 +472,19 @@ func finishMaintenance(now *time.Time) error {
 
 			}
 
-			// turn all hosts back to an available state
+			// set each host to its restore state
 			logger.Debug().Msgf("changing state of nodes for reservation %v to available", tempRes.Name)
-			changes := map[string]interface{}{"State": HostAvailable}
+
 			_ = performDbTx(func(tx *gorm.DB) error {
-				err := dbEditHosts(tempRes.Hosts, changes, tx)
-				if err != nil {
-					logger.Error().Msg(err.Error())
+
+				for _, host := range tempRes.Hosts {
+					state := map[string]interface{}{"State": host.RestoreState, "RestoreState": HostAvailable}
+					err = dbEditHosts([]Host{host}, state, tx)
+					if err != nil {
+						logger.Error().Msg(err.Error())
+					}
 				}
+
 				return err
 			})
 			// remove the res from db table

@@ -64,6 +64,13 @@ func initNotify() {
 		t, _ = t.Parse(SenderInfoTemplate)
 		tMap[EmailPasswordReset] = t
 
+		t = template.New("EmailAcctRemovedIssue")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyAcctRemovedIssue)
+		t, _ = t.Parse(SenderInfoTemplate)
+		tMap[EmailAcctRemovedIssue] = t
+
 		t = template.New("EmailGroupCreated")
 		t.Funcs(tFuncs)
 		t = template.Must(t.Parse(BaseEmailTemplate))
@@ -282,15 +289,16 @@ func processAcctNotifyEvent(msg AcctNotifyEvent) error {
 	var t *template.Template
 	var toList []string
 	var ccList []string
-	addEmailToList(&toList, msg.User.Email)
 
 	switch msg.Type {
 
 	case EmailAcctCreated:
 		subj = "igor account created"
+		addEmailToList(&toList, msg.User.Email)
 		t = tMap[EmailAcctCreated]
 	case EmailPasswordReset:
 		subj = "igor account password reset"
+		addEmailToList(&toList, msg.User.Email)
 		if msg.User.Name == IgorAdmin {
 			subj = "igor-admin account password reset"
 			queryAdmins := map[string]interface{}{"name": GroupAdmins, "showMembers": true}
@@ -305,6 +313,15 @@ func processAcctNotifyEvent(msg AcctNotifyEvent) error {
 			}
 		}
 		t = tMap[EmailPasswordReset]
+	case EmailAcctRemovedIssue:
+		subj = "auto-removal of igor account needs review"
+		admin, _, _ := getIgorAdminTx()
+		if len(admin.Email) != 0 {
+			addEmailToList(&toList, admin.Email)
+		} else {
+			addEmailToList(&toList, igor.Email.HelpLink)
+		}
+		t = tMap[EmailAcctRemovedIssue]
 	default:
 		err := fmt.Errorf("unrecognized notify type '%d' - aborting email send", msg.Type)
 		logger.Error().Msgf("%v", err)
@@ -652,6 +669,7 @@ const (
 const (
 	EmailAcctCreated = iota + 1200
 	EmailPasswordReset
+	EmailAcctRemovedIssue
 )
 
 const (
@@ -834,6 +852,18 @@ const (
 <p>{{passwordLine .User}}</p>
 
 <p>{{passwordAction .IsLocal}}</p>
+
+{{block "sender-info" .}}{{end}}
+{{end}}
+`
+	NotifyAcctRemovedIssue = `
+{{template "base" .}}
+{{define "mail-body"}}
+<p>To the Igor administration team,</p>
+
+<p>The account '{{.User.Name}} has been auto-removed. During this process one or more of the user's groups, reservations and/or distros were re-assigned to igor-admin ownership.</p>
+
+<p>Review these resources and either delete or re-assign their ownership to users they were shared with. Check logs for more information.</p>
 
 {{block "sender-info" .}}{{end}}
 {{end}}

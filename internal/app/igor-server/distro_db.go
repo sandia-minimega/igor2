@@ -231,8 +231,26 @@ func dbEditDistro(distro *Distro, changes map[string]interface{}, tx *gorm.DB) e
 			distro.Groups = append(distro.Groups, *newOwnerPug)
 		}
 		tx.Save(&distro)
-
 	}
+
+	if _, ok := changes["autoRemoveOwner"].(bool); ok {
+		oldOwnerPug, err := originalOwner.getPug()
+		if err != nil {
+			return err
+		}
+		distro.Groups = removeGroup(distro.Groups, oldOwnerPug)
+		if err = tx.Model(&distro).Association("Groups").Delete(oldOwnerPug); err != nil {
+			return err
+		}
+
+		adminPug := changes["adminPug"].(*Group)
+		distro.OwnerID = adminPug.ID
+		if result := tx.Model(&distro).Update("OwnerID", adminPug.ID); result.Error != nil {
+			return result.Error
+		}
+		return nil
+	}
+
 	// update distro with any remaining changes
 	if result := tx.Model(&distro).Updates(changes); result.Error != nil {
 		return result.Error

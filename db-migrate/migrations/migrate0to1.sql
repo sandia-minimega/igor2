@@ -77,5 +77,7 @@ DROP TABLE `host_policies`;
 ALTER TABLE `new_host_policies` RENAME TO `host_policies`;
 CREATE UNIQUE INDEX `host_policies_name` ON `host_policies` (`name`);
 
+ALTER TABLE `hosts` ADD COLUMN `restore_state` integer NULL;
+
 -- Enable back the enforcement of foreign-keys constraints
 PRAGMA foreign_keys = on;

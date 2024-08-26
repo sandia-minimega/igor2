@@ -189,7 +189,7 @@ func (p *Permission) setParts(permission string) error {
 //
 // because the underlying Sets will print out in sorted string order.
 //
-//	p2.String() == "a,b,c:x,y,z"
+//	wp1.String() == "a,b,c:x,y,z"
 //
 // However this does NOT break the Equals method, so ...
 //
