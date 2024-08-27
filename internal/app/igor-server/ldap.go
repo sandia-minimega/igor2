@@ -413,13 +413,12 @@ func syncLdapUsers(conn *ldap.Conn) error {
 		return fmt.Errorf("%s failed - no user account names returned given group filters", actionPrefix)
 	}
 
-	// get all Igor users
-	igorUsers, ruErr := dbReadUsersTx(map[string]interface{}{})
+	// get all Igor users except igor-admin
+	igorUsers, ruErr := dbReadUsersTx(map[string]interface{}{"exclude-admin": true})
 	if ruErr != nil {
 		return fmt.Errorf("%s failed - %w", actionPrefix, ruErr)
 	}
 
-	igorUsers = removeUserByName(igorUsers, IgorAdmin)
 	currLdapUserList := usernamesFromNames(igorUsers, userList.Elements())
 	currIgorUserList := userNamesOfUsers(igorUsers)
 
