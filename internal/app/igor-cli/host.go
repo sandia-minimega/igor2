@@ -564,7 +564,7 @@ func printHosts(rb *common.ResponseBodyHosts) {
 	}
 
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"NODE", "STATE", "POWER", "BOOT YTPE", "MACID", "HOSTNAME", "IP", "ETH", "POLICY", "ACCESS-GROUPS", "RESTRICTED", "RESERVATIONS"})
+	tw.AppendHeader(table.Row{"NODE", "STATE", "POWER", "BOOT-TYPE", "MACID", "HOSTNAME", "IP", "ETH", "POLICY", "ACCESS-GROUPS", "RESTRICTED", "RESERVATIONS"})
 
 	for _, h := range hosts {
 		tw.AppendRow([]interface{}{
