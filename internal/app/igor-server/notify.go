@@ -861,7 +861,7 @@ const (
 {{define "mail-body"}}
 <p>To the Igor administration team,</p>
 
-<p>The account '{{.User.Name}} has been auto-removed. During this process one or more of the user's groups, reservations and/or distros were re-assigned to igor-admin ownership.</p>
+<p>The account '{{.User.Name}}' has been auto-removed. During this process one or more of the user's groups, reservations and/or distros were re-assigned to igor-admin ownership.</p>
 
 <p>Review these resources and either delete or re-assign their ownership to users they were shared with. Check logs for more information.</p>
 
