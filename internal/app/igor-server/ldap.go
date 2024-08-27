@@ -410,7 +410,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 	}
 
 	if userList.Size() == 0 {
-		return fmt.Errorf("%s failed - no user account names reurned given group filters", actionPrefix)
+		return fmt.Errorf("%s failed - no user account names returned given group filters", actionPrefix)
 	}
 
 	// get all Igor users
@@ -419,6 +419,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 		return fmt.Errorf("%s failed - %w", actionPrefix, ruErr)
 	}
 
+	igorUsers = removeUserByName(igorUsers, IgorAdmin)
 	currLdapUserList := usernamesFromNames(igorUsers, userList.Elements())
 	currIgorUserList := userNamesOfUsers(igorUsers)
 

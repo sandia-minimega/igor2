@@ -143,3 +143,12 @@ func usernameDiff(a, b []string) []string {
 	}
 	return diff
 }
+
+func removeUserByName(users []User, username string) []User {
+	for i, u := range users {
+		if u.Name == username {
+			return append(users[:i], users[i+1:]...)
+		}
+	}
+	return users
+}
