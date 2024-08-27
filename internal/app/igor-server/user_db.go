@@ -38,12 +38,12 @@ func dbReadUsers(queryParams map[string]interface{}, tx *gorm.DB) (userList []Us
 
 	for key, val := range queryParams {
 		switch val.(type) {
-		case string, int:
+		case bool:
 			if strings.ToLower(key) == "exclude-admin" {
 				tx = tx.Where("name != ?", IgorAdmin)
-			} else {
-				tx = tx.Where(key, val)
 			}
+		case string, int:
+			tx = tx.Where(key, val)
 		case []int:
 			if strings.ToLower(key) == "groups" {
 				tx = tx.Joins("JOIN groups_users ON groups_users.user_id = ID AND group_id IN ?", val)
