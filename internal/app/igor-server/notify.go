@@ -32,7 +32,7 @@ func initNotify() {
 			"safeText":       safeText,
 			"formatDts":      formatDts,
 			"formatHosts":    formatHosts,
-			"remainingHours": remainingHours,
+			"remainingTime":  remainingTime,
 			"ifFullName":     ifFullName,
 			"passwordLine":   passwordLine,
 			"passwordAction": passwordAction,
@@ -180,8 +180,29 @@ func formatHosts(hosts []Host) string {
 	return hostRange
 }
 
-func remainingHours(end time.Time) int {
-	return int(time.Until(end).Round(time.Hour) / time.Hour)
+func remainingTime(end time.Time) string {
+
+	timeLeft := time.Until(end).Round(time.Hour)
+	hours := int(timeLeft.Hours())
+	rDays := hours / 24
+	rHours := hours % 24
+
+	daysStr := "days"
+	hoursStr := "hours"
+	if rDays == 1 {
+		daysStr = "day"
+	}
+	if hours == 1 {
+		hoursStr = "hour"
+	}
+
+	if rDays > 0 {
+		if rHours == 0 {
+			return fmt.Sprintf("%d %s", rDays, daysStr)
+		}
+		return fmt.Sprintf("%d %s and %d %s", rDays, daysStr, rHours, hoursStr)
+	}
+	return fmt.Sprintf("%d %s", rHours, hoursStr)
 }
 
 func ifFullName(name string) string {
@@ -803,7 +824,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The following reservation on the {{.Cluster}} cluster has {{remainingHours .Res.End}} hours left before it expires. You may use the 'extend' command if you wish to continue using this reservation beyond its current end date.</p>
+<p>The following reservation on the {{.Cluster}} cluster has {{remainingTime .Res.End}} left before it expires. You may use the 'extend' command if you wish to continue using this reservation beyond its current end date.</p>
 
 {{block "res-info" .}}{{end}}
 
@@ -815,7 +836,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The following reservation on the {{.Cluster}} cluster has {{remainingHours .Res.End}} hours left before it expires. This is your final notice.</p>
+<p>The following reservation on the {{.Cluster}} cluster has {{remainingTime .Res.End}} left before it expires. This is your final notice.</p>
 
 <p>If the administrators have allowed use of the 'extend' command you may be able to continue the reservation beyond its current end date. If you do so a new warning email will be sent at the appropriate time.</p>
 
