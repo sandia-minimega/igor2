@@ -531,7 +531,6 @@ func printDistros(rb *common.ResponseBodyDistros) {
 			distroInfo += "  -IMAGE-TYPE:  " + d.ImageType + "\n"
 			distroInfo += "  -KERNEL:      " + d.Kernel + "\n"
 			distroInfo += "  -INITRD:      " + d.Initrd + "\n"
-			distroInfo += "  -ISO:         " + d.Iso + "\n"
 			distroInfo += "  -KERNEL-ARGS: " + d.KernelArgs + "\n"
 			if d.Kickstart != "" {
 				distroInfo += "  -KICKSTART:   " + d.Kickstart + "\n"
@@ -542,7 +541,7 @@ func printDistros(rb *common.ResponseBodyDistros) {
 	} else {
 
 		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "PUBLIC?", "GROUPS", "IMAGE-TYPE", "KERNEL", "INITRD", "ISO", "KICKSTART", "KERNEL-ARGS"})
+		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "PUBLIC?", "GROUPS", "IMAGE-TYPE", "KERNEL", "INITRD", "KICKSTART", "KERNEL-ARGS"})
 		tw.AppendSeparator()
 
 		for _, d := range distroList {
@@ -556,7 +555,6 @@ func printDistros(rb *common.ResponseBodyDistros) {
 				d.ImageType,
 				d.Kernel,
 				d.Initrd,
-				d.Iso,
 				d.Kickstart,
 				d.KernelArgs,
 			})

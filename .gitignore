@@ -21,8 +21,6 @@ node_modules/
 *.crt
 *.key
 *.csr
-db-migrate/
-
 
 # image and tftp default paths
 .images/
@@ -30,6 +28,7 @@ igor_images/
 igor_staged_images/
 pxelinux.cfg/
 kickstarts/
+uefi/
 
 .vscode
 *.suo

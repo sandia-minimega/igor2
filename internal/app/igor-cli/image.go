@@ -264,7 +264,7 @@ func printImages(rb *common.ResponseBodyImages) {
 	})
 
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"NAME", "ID", "TYPE", "KERNEL", "INITRD", "ISO", "BREED", "BOOT TYPE", "LOCAL", "DISTROS"})
+	tw.AppendHeader(table.Row{"NAME", "ID", "TYPE", "KERNEL", "INITRD", "BREED", "BOOT-TYPE", "LOCAL", "DISTROS"})
 
 	for _, di := range imageList {
 		tw.AppendRow([]interface{}{
@@ -273,7 +273,6 @@ func printImages(rb *common.ResponseBodyImages) {
 			di.ImageType,
 			di.Kernel,
 			di.Initrd,
-			di.Iso,
 			di.Breed,
 			di.Boot,
 			di.Local,

@@ -32,7 +32,6 @@ type DistroImage struct {
 	Name      string `gorm:"unique; notNull"`
 	Kernel    string
 	Initrd    string
-	Distro    string
 	Breed     string
 	LocalBoot bool
 	BiosBoot  bool

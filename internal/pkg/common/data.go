@@ -49,7 +49,6 @@ type DistroData struct {
 	ImageType   string   `json:"image_type"`
 	Kernel      string   `json:"kernel"`
 	Initrd      string   `json:"initrd"`
-	Iso         string   `json:"iso"`
 	KernelArgs  string   `json:"kernelArgs"`
 	Kickstart   string   `json:"kickstart"`
 	IsPublic    bool     `json:"isPublic"`
@@ -62,7 +61,6 @@ type DistroImageData struct {
 	ImageType string   `json:"image_type"`
 	Kernel    string   `json:"kernel"`
 	Initrd    string   `json:"initrd"`
-	Iso       string   `json:"iso"`
 	Distros   []string `json:"distros"`
 	Breed     string   `json:"breed"`
 	Local     string   `json:"local"`

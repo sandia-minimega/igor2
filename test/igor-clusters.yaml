@@ -9,238 +9,286 @@ krypton:
       ip: 192.168.0.1
       mac: "00:00:00:00:00:01"
       policy: default
+      bootMode: uefi
     2:
       eth: Et1/2/1
       ip: 192.168.0.2
       mac: "00:00:00:00:00:02"
       policy: default
+      bootMode: uefi
     3:
       eth: Et1/3/1
       ip: 192.168.0.3
       mac: "00:00:00:00:00:03"
       policy: default
+      bootMode: uefi
     4:
       eth: Et1/4/1
       ip: 192.168.0.4
       mac: "00:00:00:00:00:04"
       policy: default
+      bootMode: uefi
     5:
       eth: Et1/5/1
       ip: 192.168.0.5
       mac: "00:00:00:00:00:05"
       policy: default
+      bootMode: bios
     6:
       eth: Et1/6/1
       ip: 192.168.0.6
       mac: "00:00:00:00:00:06"
       policy: default
+      bootMode: bios
     7:
       eth: Et1/7/1
       ip: 192.168.0.7
       mac: "00:00:00:00:00:07"
       policy: default
+      bootMode: bios
     8:
       eth: Et1/8/1
       ip: 192.168.0.8
       mac: "00:00:00:00:00:08"
       policy: default
+      bootMode: bios
     9:
       eth: Et1/9/1
       ip: 192.168.1.9
       mac: "00:00:00:00:00:09"
       policy: default
+      bootMode: bios
     10:
       eth: Et1/10/1
       ip: 192.168.0.10
       mac: "00:00:00:00:00:0A"
       policy: default
+      bootMode: bios
     11:
       eth: Et1/11/1
       ip: 192.168.0.11
       mac: "00:00:00:00:00:0B"
       policy: default
+      bootMode: bios
     12:
       eth: Et1/12/1
       ip: 192.168.0.12
       mac: "00:00:00:00:00:0C"
       policy: default
+      bootMode: bios
     13:
       eth: Et1/13/1
       ip: 192.168.0.13
       mac: "00:00:00:00:00:0D"
       policy: default
+      bootMode: bios
     14:
       eth: Et1/14/1
       ip: 192.168.0.14
       mac: "00:00:00:00:00:0E"
       policy: default
+      bootMode: bios
     15:
       eth: Et1/15/1
       ip: 192.168.0.15
       mac: "00:00:00:00:00:0F"
       policy: default
+      bootMode: bios
     16:
       eth: Et1/16/1
       ip: 192.168.0.16
       mac: "00:00:00:00:00:10"
       policy: default
+      bootMode: bios
     17:
       eth: Et1/17/1
       ip: 192.168.0.17
       mac: "00:00:00:00:00:11"
       policy: default
+      bootMode: bios
     18:
       eth: Et1/18/1
       ip: 192.168.0.18
       mac: "00:00:00:00:00:12"
       policy: default
+      bootMode: bios
     19:
       eth: Et1/19/1
       ip: 192.168.0.19
       mac: "00:00:00:00:00:13"
       policy: default
+      bootMode: bios
     20:
       eth: Et1/20/1
       ip: 192.168.0.20
       mac: "00:00:00:00:00:14"
       policy: default
+      bootMode: bios
     21:
       eth: Et1/21/1
       ip: 192.168.1.21
       mac: "00:00:00:00:00:15"
       policy: default
+      bootMode: bios
     22:
       eth: Et1/22/1
       ip: 192.168.0.22
       mac: "00:00:00:00:00:16"
       policy: default
+      bootMode: bios
     23:
       eth: Et1/23/1
       ip: 192.168.0.23
       mac: "00:00:00:00:00:17"
       policy: default
+      bootMode: bios
     24:
       eth: Et1/24/1
       ip: 192.168.0.24
       mac: "00:00:00:00:00:18"
       policy: default
+      bootMode: bios
     25:
       eth: Et2/1/1
       ip: 192.168.1.1
       mac: "00:00:00:00:00:19"
       policy: default
+      bootMode: bios
     26:
       eth: Et2/2/1
       ip: 192.168.1.2
       mac: "00:00:00:00:00:1A"
       policy: default
+      bootMode: bios
     27:
       eth: Et2/3/1
       ip: 192.168.1.3
       mac: "00:00:00:00:00:1B"
       policy: default
+      bootMode: bios
     28:
       eth: Et2/4/1
       ip: 192.168.1.4
       mac: "00:00:00:00:00:1C"
       policy: default
+      bootMode: bios
     29:
       eth: Et2/5/1
       ip: 192.168.1.5
       mac: "00:00:00:00:00:1D"
       policy: default
+      bootMode: bios
     30:
       eth: Et2/6/1
       ip: 192.168.1.6
       mac: "00:00:00:00:00:1E"
       policy: default
+      bootMode: bios
     31:
       eth: Et2/7/1
       ip: 192.168.1.7
       mac: "00:00:00:00:00:1F"
       policy: default
+      bootMode: bios
     32:
       eth: Et2/8/1
       ip: 192.168.1.8
       mac: "00:00:00:00:00:20"
       policy: default
+      bootMode: bios
     33:
       eth: Et2/9/1
       ip: 192.168.1.9
       mac: "00:00:00:00:00:21"
       policy: default
+      bootMode: bios
     34:
       eth: Et2/10/1
       ip: 192.168.1.10
       mac: "00:00:00:00:00:22"
       policy: default
+      bootMode: bios
     35:
       eth: Et2/11/1
       ip: 192.168.1.11
       mac: "00:00:00:00:00:23"
       policy: default
+      bootMode: bios
     36:
       eth: Et2/12/1
       ip: 192.168.1.12
       mac: "00:00:00:00:00:24"
       policy: default
+      bootMode: bios
     37:
       eth: Et2/13/1
       ip: 192.168.1.13
       mac: "00:00:00:00:00:25"
       policy: default
+      bootMode: bios
     38:
       eth: Et2/14/1
       ip: 192.168.1.14
       mac: "00:00:00:00:00:26"
       policy: default
+      bootMode: bios
     39:
       eth: Et2/15/1
       ip: 192.168.1.15
       mac: "00:00:00:00:00:27"
       policy: default
+      bootMode: bios
     40:
       eth: Et2/16/1
       ip: 192.168.1.16
       mac: "00:00:00:00:00:28"
       policy: default
+      bootMode: bios
     41:
       eth: Et2/17/1
       ip: 192.168.1.17
       mac: "00:00:00:00:00:29"
       policy: default
+      bootMode: bios
     42:
       eth: Et2/18/1
       ip: 192.168.1.18
       mac: "00:00:00:00:00:2A"
       policy: default
+      bootMode: bios
     43:
       eth: Et2/19/1
       ip: 192.168.1.19
       mac: "00:00:00:00:00:2B"
       policy: default
+      bootMode: bios
     44:
       eth: Et2/20/1
       ip: 192.168.1.20
       mac: "00:00:00:00:00:2C"
       policy: default
+      bootMode: bios
     45:
       eth: Et2/21/1
       ip: 192.168.1.21
       mac: "00:00:00:00:00:2D"
       policy: default
+      bootMode: bios
     46:
       eth: Et2/22/1
       ip: 192.168.1.22
       mac: "00:00:00:00:00:2E"
       policy: default
+      bootMode: bios
     47:
       eth: Et2/23/1
       ip: 192.168.1.23
       mac: "00:00:00:00:00:2F"
       policy: default
+      bootMode: bios
     48:
       eth: Et2/24/1
       ip: 192.168.1.24
       mac: "00:00:00:00:00:30"
       policy: default
+      bootMode: bios
