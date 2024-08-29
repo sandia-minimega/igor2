@@ -151,26 +151,25 @@ func initConfig(configPath *string) {
 
 func makeBackup(src string, oldVersion int) (err error) {
 
-	var srcFile, destFile *os.File
+	var srcFile *os.File
+	var dbBytes []byte
 
-	srcFile, err = os.Open(src)
+	dbBytes, err = os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
 
 	h := sha256.New()
 	_, _ = io.Copy(h, srcFile)
 	backupHash := h.Sum(nil)
 	backupPath = fmt.Sprintf(src+".%d.%x.backup", oldVersion, backupHash[:4])
 
-	destFile, err = os.Create(backupPath)
+	err = os.WriteFile(backupPath, dbBytes, 0664)
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
-	_, err = io.Copy(destFile, srcFile)
-	return err
+
+	return nil
 }
 
 func restoreBackup(src, backupPath string) {
