@@ -528,7 +528,7 @@ func printDistros(rb *common.ResponseBodyDistros) {
 			distroInfo += "  -OWNER:       " + d.Owner + "\n"
 			distroInfo += "  -PUBLIC:      " + strconv.FormatBool(d.IsPublic) + "\n"
 			distroInfo += "  -GROUPS:      " + strings.Join(d.Groups, ",") + "\n"
-			distroInfo += "  -IMAGE-TYPE:  " + d.ImageType + "\n"
+			distroInfo += "  -TYPE:        " + d.ImageType + "\n"
 			distroInfo += "  -KERNEL:      " + d.Kernel + "\n"
 			distroInfo += "  -INITRD:      " + d.Initrd + "\n"
 			distroInfo += "  -KERNEL-ARGS: " + d.KernelArgs + "\n"
@@ -541,7 +541,7 @@ func printDistros(rb *common.ResponseBodyDistros) {
 	} else {
 
 		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "PUBLIC?", "GROUPS", "IMAGE-TYPE", "KERNEL", "INITRD", "KICKSTART", "KERNEL-ARGS"})
+		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "PUBLIC?", "GROUPS", "TYPE", "KERNEL", "INITRD", "KICKSTART", "KERNEL-ARGS"})
 		tw.AppendSeparator()
 
 		for _, d := range distroList {
