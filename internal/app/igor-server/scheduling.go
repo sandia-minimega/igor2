@@ -354,10 +354,10 @@ func startMaintenance(res *MaintenanceRes) error {
 	now := time.Now()
 	maintenanceEnd := res.MaintenanceEndTime
 	maintenanceDuration := maintenanceEnd.Sub(now)
-	logger.Debug().Msgf("reservation %v going into maintenenace mode from %v to %v (duration: %v).", res.ReservationName, now, maintenanceEnd, maintenanceDuration)
+	logger.Debug().Msgf("reservation '%s' going into maintenenace mode from %v to %v (duration: %v).", res.ReservationName, now, maintenanceEnd, maintenanceDuration)
 
 	// turn all hosts to the unavailable state
-	logger.Debug().Msgf("changing state of nodes for reservation %v to blocked", res.ReservationName)
+	logger.Debug().Msgf("changing state of nodes for reservation '%s' to blocked", res.ReservationName)
 	changes := map[string]interface{}{"State": HostBlocked}
 	err = performDbTx(func(tx *gorm.DB) error {
 
@@ -379,7 +379,7 @@ func startMaintenance(res *MaintenanceRes) error {
 	hasDefaultDistro := false
 	currentDefaultDistros, err := dbReadDistrosTx(map[string]interface{}{"is_default": true})
 	if err != nil {
-		logger.Error().Msgf("unexpected error searching for default distro during maintenance period of reservation %s", res.ReservationName)
+		logger.Error().Msgf("unexpected error searching for default distro during maintenance period of reservation '%s'", res.ReservationName)
 		return err
 	}
 	if len(currentDefaultDistros) > 0 {
@@ -425,7 +425,7 @@ func finishMaintenance(now *time.Time) error {
 	admin, _, _ := getIgorAdminTx()
 	for _, res := range mReses {
 		if now.After(res.MaintenanceEndTime) {
-			logger.Debug().Msgf("reservation %v going out of maintenenace mode.", res.ReservationName)
+			logger.Debug().Msgf("reservation '%s' going out of maintenenace mode.", res.ReservationName)
 			hosts := res.Hosts
 			// make sure no hosts are currently engaged in an active reservation
 			// if they are, exclude them from the finish maintenance process

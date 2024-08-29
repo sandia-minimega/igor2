@@ -104,6 +104,37 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		if _, powerErr := doPowerHosts(PowerOff, hostNamesOfHosts(droppedHosts), clog); powerErr != nil {
 			clog.Error().Msgf("problem powering off dropped hosts for reservation '%s': %v", resName, powerErr)
 		}
+
+		if igor.Config.Maintenance.HostMaintenanceDuration > 0 {
+			logger.Debug().Msgf("putting dropped node(s) for reservation '%s' into maintenance mode", resName)
+
+			// prep for saving the current state so it can be restored after maintenance mode is finished
+			for _, h := range droppedHosts {
+				h.RestoreState = HostAvailable // a dropped host will always return to available
+			}
+
+			resetEnd := res.ResetEnd
+			now := time.Now()
+			// if the reservation is ending early, adjust the reset/maintenance time
+			if now.Before(res.End) {
+				// respect the maintenance padding at the time of res creation/extension
+				delta := resetEnd.Sub(res.End)
+				resetEnd = now.Add(delta)
+			}
+
+			// create a new MaintenanceRes from res
+			droppedMaintRes := &MaintenanceRes{
+				ReservationName:    res.Name + "-nodedrop",
+				MaintenanceEndTime: resetEnd,
+				Hosts:              droppedHosts}
+			cmErr := dbCreateMaintenanceRes(droppedMaintRes)
+			if cmErr != nil {
+				logger.Error().Msgf("warning - errors detected when creating dropped node maintenance reservation %s: %v", res.Name, cmErr)
+			} else {
+				// begin maintenance immediately
+				_ = startMaintenance(droppedMaintRes)
+			}
+		}
 	}
 
 	rList, _ := dbReadReservationsTx(map[string]interface{}{"ID": res.ID}, nil)
