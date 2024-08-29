@@ -34,8 +34,8 @@ type DistroImage struct {
 	Initrd    string
 	Breed     string
 	LocalBoot bool
-	BiosBoot  bool
-	UefiBoot  bool
+	BiosBoot  bool `gorm:"notNull; default:false"`
+	UefiBoot  bool `gorm:"notNull; default:false"`
 	Distros   []Distro
 }
 
