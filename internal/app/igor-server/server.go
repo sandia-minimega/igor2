@@ -245,7 +245,7 @@ func notificationManager() {
 				logger.Error().Msgf("%v", err)
 			}
 		case groupNotifyMsg := <-groupNotifyChan:
-			logger.Debug().Msg("received an account event message")
+			logger.Debug().Msg("received a group event message")
 			// do something with the event
 			if err := processGroupNotifyEvent(groupNotifyMsg); err != nil {
 				logger.Error().Msgf("%v", err)
