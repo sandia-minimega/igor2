@@ -261,7 +261,7 @@ func parseExtend(res *Reservation, extendTime string, isActionUserElevated bool,
 		for _, h := range res.Hosts {
 			if h.State == HostBlocked {
 				return nil, http.StatusConflict,
-					fmt.Errorf("unable to extend - one or more nodes in this reservation has a blocked status. Contact your cluster admin team.")
+					fmt.Errorf("cannot extend a reservation containing nodes with a blocked status -- contact cluster admin team")
 			}
 		}
 	}

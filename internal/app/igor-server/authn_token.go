@@ -72,10 +72,7 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	claims, ok := token.Claims.(*MyClaims)
 	if !ok {
 		// expired or invalid token
-		errLine := actionPrefix + " failed unpacking token claims- "
-		if parseErr != nil {
-			errLine += parseErr.Error()
-		}
+		errLine := actionPrefix + " failed - expired or invalid token"
 		clog.Warn().Msgf(errLine)
 		return nil, &BadCredentialsError{msg: errLine}
 	}

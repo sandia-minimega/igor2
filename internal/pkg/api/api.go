@@ -7,9 +7,9 @@
 package api
 
 const (
-	UrlRoot    = "/igor"
-	ApiVersion = ""
-	BaseUrl    = UrlRoot + ApiVersion
+	UrlRoot        = "/igor"
+	IgorApiVersion = ""
+	BaseUrl        = UrlRoot + IgorApiVersion
 
 	AuthReset         = BaseUrl + "/authreset"
 	CbLocal           = BaseUrl + "/cb/svc/local"

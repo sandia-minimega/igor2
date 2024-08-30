@@ -198,7 +198,7 @@ func doRegisterImage(kstaged, istaged, kpath, ipath, dpath string, boot []string
 			// an OS repo is being uploaded
 			err := compressFolderToTarGz(dpath, tarPath)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to process given distribution path: %v", err.Error())
+				return nil, fmt.Errorf("unable to process given distribution path: %v", err.Error())
 			}
 			params["distro"] = openFile(tarPath)
 			// might need to remove the tar file

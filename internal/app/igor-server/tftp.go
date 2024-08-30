@@ -111,7 +111,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 		// Generate content for BIOS
 		defaultLabel := fmt.Sprintf("DEFAULT %s", r.Name)
 		defaultOptions := ""
-		bios_label := fmt.Sprintf("LABEL %s", r.Name)
+		biosLabel := fmt.Sprintf("LABEL %s", r.Name)
 		kernel := fmt.Sprintf("\tKERNEL %v", kernelPath)
 		appendStmt := fmt.Sprintf("\tAPPEND initrd=%v", initrdPath)
 		autoInstallPart := ""
@@ -126,7 +126,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 				return fmt.Errorf("unknown OS type: %s", osType)
 			}
 		}
-		content = fmt.Sprintf("%s\n%s\n%s\n%s\n%s %s\n", defaultLabel, defaultOptions, bios_label, kernel, appendStmt, autoInstallPart)
+		content = fmt.Sprintf("%s\n%s\n%s\n%s\n%s %s\n", defaultLabel, defaultOptions, biosLabel, kernel, appendStmt, autoInstallPart)
 	case "uefi":
 		// Generate content for UEFI
 		label := fmt.Sprintf("\"Reservation: %s netbooting %s on host %s\"", r.Name, r.Profile.Distro.Name, host.Name)
@@ -211,15 +211,15 @@ func setLocalConfig(host *Host, r *Reservation) error {
 			label +
 			labelOptions
 	case "uefi":
-		grub_path := ""
+		grubPath := ""
 		switch r.Profile.Distro.DistroImage.Breed {
 		case "redhat":
-			grub_path = "/EFI/redhat/grubx64.efi"
+			grubPath = "/EFI/redhat/grubx64.efi"
 		default:
-			grub_path = "+1"
+			grubPath = "+1"
 		}
 		label := fmt.Sprintf("\"Reservation: %s booting %s locally on host %s\"", r.Name, r.Profile.Distro.Name, host.Name)
-		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s  --id install-menu {\n    insmod part_gpt\n    insmod fat\n    search --no-floppy --set=root --file %s\n    chainloader %s\n}\n", label, grub_path, grub_path)
+		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s  --id install-menu {\n    insmod part_gpt\n    insmod fat\n    search --no-floppy --set=root --file %s\n    chainloader %s\n}\n", label, grubPath, grubPath)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", host.BootMode)
 	}

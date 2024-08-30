@@ -252,13 +252,13 @@ func validateHostParams(handler http.Handler) http.Handler {
 							validateErr = NewBadParamTypeError(key, val, "string")
 							break patchParamLoop
 						}
-						is_valid := false
+						isValid := false
 						for _, v := range AllowedBootModes {
 							if strings.ToLower(val.(string)) == v {
-								is_valid = true
+								isValid = true
 							}
 						}
-						if !is_valid {
+						if !isValid {
 							validateErr = fmt.Errorf("invalid boot type given")
 							break patchParamLoop
 						}

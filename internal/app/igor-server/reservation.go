@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	zl "github.com/rs/zerolog"
 	"gorm.io/gorm"
 
 	"igor2/internal/pkg/common"
@@ -187,21 +186,21 @@ func (r *Reservation) Remaining(t time.Time) time.Duration {
 
 func (r *Reservation) getKernelArgs() string {
 	// profile args should append behind distro args if both exist
-	kargs := ""
+	kArgs := ""
 	if r.Profile.Distro.KernelArgs != "" {
-		kargs = kargs + r.Profile.Distro.KernelArgs
+		kArgs = kArgs + r.Profile.Distro.KernelArgs
 	}
 	if r.Profile.KernelArgs != "" {
-		if kargs != "" {
-			kargs = kargs + " "
+		if kArgs != "" {
+			kArgs = kArgs + " "
 		}
-		kargs = kargs + r.Profile.KernelArgs
+		kArgs = kArgs + r.Profile.KernelArgs
 	}
-	return kargs
+	return kArgs
 }
 
 func (r *Reservation) checkHostBootPolicy() error {
-	incompatible := []string{}
+	var incompatible []string
 	image := r.Profile.Distro.DistroImage
 	if image.BiosBoot && image.UefiBoot {
 		return nil
@@ -219,42 +218,7 @@ func (r *Reservation) checkHostBootPolicy() error {
 		}
 	}
 	if len(incompatible) > 0 {
-		return fmt.Errorf("host(s) %v are not boot-compatible to the image used for distro %s", incompatible, r.Profile.Distro.Name)
+		return fmt.Errorf("host(s) %v are not boot-compatible to the image used for distro '%s'", incompatible, r.Profile.Distro.Name)
 	}
-	return nil
-}
-
-// SetHostNetworkParams sets Hosts and PXENames based on IP lookups for the provided hosts.
-func (r *Reservation) SetHostNetworkParams(tx *gorm.DB, clog *zl.Logger) error {
-
-	clog.Debug().Msgf("setting network params on hosts %v", r.Hosts)
-
-	// // First, go from node name to PXE filename
-	// for _, h := range r.Hosts {
-	// 	// verify current host IP
-	// 	ips, err := h.GetHostIPs()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	// convert IP to hex for PXE booting process
-	// 	var pxeNames []string
-	// 	for _, ip := range ips {
-	// 		pxe := common.ToPXE(ip)
-	// 		clog.Debug().Msgf("resolved host %v to IP: %v (PXEName: %v)", h.Name, string(ip), pxe)
-	// 		if pxe != "" {
-	// 			pxeNames = append(pxeNames, pxe)
-	// 		}
-	// 	}
-	// 	if len(pxeNames) > 0 {
-	// 		pxeList := PXEList{Names: pxeNames}
-	// 		err = dbEditHosts([]Host{h}, map[string]interface{}{"PXENames": pxeList}, tx)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	} else {
-	// 		return fmt.Errorf("unable to resolve PXEName for host %v", h.Name)
-	// 	}
-	// }
-
 	return nil
 }

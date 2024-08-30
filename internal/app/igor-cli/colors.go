@@ -11,13 +11,10 @@ import (
 )
 
 const (
-
-	// Foreground colors for node power status
 	FgUp      = 15  // node is up (white)
 	FgDown    = 1   // node is down (red)
 	FgPowerNA = 214 // node power status unknown (orange)
 
-	// Background colors for the node reservation status
 	BgUnreserved = 0   // node unreserved (black)
 	BgResYes     = 2   // node reserved and writable (green)
 	BgResNo      = 5   // node reserved and not writable (magenta)

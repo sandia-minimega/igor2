@@ -27,13 +27,14 @@ import (
 //
 
 const (
+	// MaxMemory determines amount of memory to use when parsing multipart form (32MB)
+	MaxMemory   = 32 << 20
 	PermDistros = "distros"
 	// DistroKI indicates the image represents a netboot-only KI pair
 	DistroKI = "ki"
-	// DistroDistribution indicates the image represents an installable linux/unix distro
-	DistroDistribution = "distribution"
-	// MaxMemory determines amount of memory to use when parsing multipart form (32MB)
-	MaxMemory = 32 << 20
+
+	// DistroIso indicates the image represents an installable linux/unix distro
+	// DistroIso = "iso"
 )
 
 // Distro represents an OS in file form

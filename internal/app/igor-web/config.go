@@ -60,7 +60,7 @@ func getHostFQDN() (string, error) {
 //
 // - the filepath passed into command-line args
 //
-// - the hard-coded etc conf filepath
+// - the hard-coded /etc configuration filepath
 //
 // - the hard-coded relative filepath under IGOR_HOME
 //

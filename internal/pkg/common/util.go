@@ -42,7 +42,7 @@ const (
 	MTextPlain = "text/plain"
 )
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+// var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var smallLetters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 // RandSeq generates a random sequence of characters from the above letters of given length n

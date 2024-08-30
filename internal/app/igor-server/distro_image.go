@@ -51,7 +51,7 @@ func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData
 		if image.LocalBoot {
 			local = "yes"
 		}
-		boot := []string{}
+		var boot []string
 		if image.BiosBoot {
 			boot = append(boot, "bios")
 		}

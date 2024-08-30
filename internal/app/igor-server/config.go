@@ -29,7 +29,6 @@ const (
 	IgorClusterConfDefault     = "igor-clusters.yaml"
 	IgorClusterConfPathDefault = IgorConfHome + IgorClusterConfDefault
 	IgorCliPrefix              = "IgorCLI"
-	InsomniaPrefix             = "insomnia"
 	MaxScheduleDays            = 1457 // 4 years in days including 1 leap day
 	MaxReserveMinutes          = 2098080
 	DefaultReserveTime         = 60
@@ -37,6 +36,8 @@ const (
 	DefaultMaxReserveTime      = 43200
 	LowestMinReserveTime       = 10
 	DefaultExtendWithin        = 4320
+
+	//InsomniaPrefix             = "insomnia"
 )
 
 var (
@@ -230,7 +231,7 @@ func getHostFQDN() (string, error) {
 //
 // - the filepath passed into command-line args
 //
-// - the hard-coded etc conf filepath
+// - the hard-coded /etc configuration filepath
 //
 // - the hard-coded relative filepath under IGOR_HOME
 //
