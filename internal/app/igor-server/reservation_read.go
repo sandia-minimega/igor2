@@ -36,6 +36,7 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 
 	status := http.StatusOK
 	clog := hlog.FromRequest(r)
+	resOwner := getUserFromContext(r)
 
 	queryParams := map[string]interface{}{}
 	queryTimeParams := map[string]time.Time{}
@@ -43,6 +44,11 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 	for key, val := range queryMap {
 
 		switch key {
+		case "all":
+			showAll, _ := strconv.ParseBool(val[0])
+			if !showAll {
+				queryParams["owner_id"] = resOwner.ID
+			}
 		case "name":
 			// these can be passed directly as []string
 			queryParams[key] = val
