@@ -40,6 +40,7 @@ func initNotify() {
 			"isAdmin":        isAdmin,
 			"resEdit":        resEdit,
 			"replaceInfo":    replaceInfo,
+			"ownerEmailList": ownerEmailList,
 		}
 
 		var t *template.Template
@@ -217,6 +218,21 @@ func isAdmin(elevated bool) string {
 		return "an igor administrator"
 	}
 	return "a reservation group member"
+}
+
+func ownerEmailList(owners []User) template.HTML {
+	var emails strings.Builder
+	for i := 0; i < len(owners); i++ {
+		emails.WriteString("<a href=\"mailto:")
+		emails.WriteString(owners[i].Email)
+		emails.WriteString("\">")
+		emails.WriteString(emailOrName(&owners[i]))
+		emails.WriteString("</a>")
+		if len(owners) > 1 && i < len(owners)-1 {
+			emails.WriteString(",")
+		}
+	}
+	return template.HTML(emails.String())
 }
 
 func replaceInfo(info string, target string) string {
@@ -895,7 +911,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>A new group '{{.Group.Name}}' has been created, and you are included as a member. If you have questions please contact the group owner, <a href="mailto:{{.Group.Owner.Email}}?subject=igor group '{{.Group.Name}}'">{{emailOrName .Group.Owner}}</a>.
+<p>A new group '{{.Group.Name}}' has been created, and you are included as a member. If you have questions please contact the group owner(s), {{ownerEmailList .Group.Owners}}.
 
 <p>Group membership is used to provide access to various igor resources. When applied to a reservation, it gives you the ability to send power commands, extend the reservation end time and delete the reservation completely.
 
@@ -908,7 +924,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The group '{{.Info}}' has been renamed to '{{.Group.Name}}'. If you have questions please contact the group owner, <a href="mailto:{{.Group.Owner.Email}}">{{emailOrName .Group.Owner}}</a>.
+<p>The group '{{.Info}}' has been renamed to '{{.Group.Name}}'. If you have questions please contact the group owner(s), {{ownerEmailList .Group.Owners}}.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
@@ -919,7 +935,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>You have been {{.MemberAction}} the group '{{.Group.Name}}'. If you have questions please contact the group owner, <a href="mailto:{{.Group.Owner.Email}}">{{emailOrName .Group.Owner}}</a>.
+<p>You have been {{.MemberAction}} the group '{{.Group.Name}}'. If you have questions please contact the group owner(s), {{ownerEmailList .Group.Owners}}.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
@@ -930,7 +946,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>Ownership of the group '{{.Group.Name}}' has been transferred to you. If you have questions please contact the former owner, <a href="mailto:{{.Member.Email}}">{{emailOrName .Member}}</a>.
+<p>You have been added as an owner of the group '{{.Group.Name}}'.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
