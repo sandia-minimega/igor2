@@ -655,13 +655,13 @@ func sendEmail(t *template.Template, subject string, toList []string, ccList []s
 			return fmt.Errorf("composed email had no recipients")
 		}
 		if len(toList) > 0 {
-			m.SetHeader("To", toList...)
+			m.SetHeader("To", dedupeEmailList(toList)...)
 		}
 		if len(ccList) > 0 {
-			m.SetHeader("Cc", ccList...)
+			m.SetHeader("Cc", dedupeEmailList(ccList)...)
 		}
 		if len(bccList) > 0 {
-			m.SetHeader("Bcc", bccList...)
+			m.SetHeader("Bcc", dedupeEmailList(bccList)...)
 		}
 		if isPriority {
 			m.SetHeader("X-Priority", "1 (Highest)")
@@ -683,6 +683,12 @@ func sendEmail(t *template.Template, subject string, toList []string, ccList []s
 		return mailErr
 	}
 	return nil
+}
+
+func dedupeEmailList(emailList []string) []string {
+	emailSet := common.NewSet()
+	emailSet.Add(emailList...)
+	return emailSet.Elements()
 }
 
 const (
