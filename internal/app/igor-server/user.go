@@ -143,7 +143,7 @@ func (u *User) isMemberOfGroups(gs []Group) (bool, string) {
 // user's pug since that is a system-created group owned by IgorAdmin.
 func (u *User) singleOwnedGroups() (owned []Group) {
 	for _, g := range u.Groups {
-		if len(g.Owners) == 1 {
+		if len(g.Owners) == 1 && g.Owners[0].ID == u.ID {
 			owned = append(owned, g)
 		}
 	}

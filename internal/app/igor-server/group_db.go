@@ -118,6 +118,19 @@ func dbReadGroups(queryParams map[string]interface{}, excludePugs bool, tx *gorm
 // dbEditGroup edits the properties of a Group.
 func dbEditGroup(group *Group, changes map[string]interface{}, tx *gorm.DB) error {
 
+	if _, ok := changes["ldapRemoveOwner"].(bool); ok {
+		delete(changes, "ldapRemoveOwner")
+		admin, _ := changes["Admin"].([]User)
+		owner, _ := changes["Owner"].([]User)
+		if err := tx.Model(&group).Clauses(clause.OnConflict{DoNothing: true}).Association("Owners").Append(admin); err != nil {
+			return err
+		}
+		if err := tx.Model(&group).Association("Owners").Delete(owner); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	// Change the name of the group
 	if name, ok := changes["name"].(string); ok {
 		if perms, pResultErr := dbGetPermissionsByName(PermGroups, group.Name, tx); pResultErr != nil {

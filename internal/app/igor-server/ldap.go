@@ -505,8 +505,9 @@ func removeSyncedUsers(users []User) (err error) {
 			if len(groupList) > 0 {
 				sendEmailAlert = true
 				changes := make(map[string]interface{})
-				changes["addOwners"] = []User{*ia}
-				changes["rmvOwners"] = u
+				changes["ldapRemoveOwner"] = true
+				changes["Owner"] = []User{u}
+				changes["Admin"] = []User{*ia}
 				for _, g := range groupList {
 					if rmErr := dbEditGroup(&g, changes, tx); rmErr != nil {
 						logger.Error().Msgf("problem changing group '%s' from auto-removed owner '%s' to igor-admin: %v", g.Name, u.Name, rmErr)
