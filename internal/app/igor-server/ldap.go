@@ -506,13 +506,14 @@ func removeSyncedUsers(users []User) (err error) {
 				logger.Debug().Msgf("Re-assigning single-owned group(s) for auto-remove user '%s' to igor-admin", u.Name)
 				sendEmailAlert = true
 				changes := make(map[string]interface{})
-				changes["ldapRemoveOwner"] = true
-				changes["rmvOwners"] = []User{u}
-				changes["Admin"] = []User{*ia}
 				for _, g := range groupList {
+					changes["ldapRemoveOwner"] = true
+					changes["rmvOwners"] = []User{u}
+					changes["Admin"] = []User{*ia}
 					if rmErr := dbEditGroup(&g, changes, tx); rmErr != nil {
 						logger.Error().Msgf("problem changing group '%s' from auto-removed owner '%s' to igor-admin: %v", g.Name, u.Name, rmErr)
 					}
+					changes = make(map[string]interface{})
 				}
 			}
 
@@ -525,16 +526,17 @@ func removeSyncedUsers(users []User) (err error) {
 				if len(orList) > 0 {
 					logger.Debug().Msgf("Re-assigning reservation(s) for auto-remove user '%s' to igor-admin", u.Name)
 					sendEmailAlert = true
-					changes := make(map[string]interface{})
-					changes["ldapRemoveOwner"] = true
-					changes["OwnerID"] = ia.ID
-					iaPug, _ := ia.getPug()
-					changes["GroupID"] = iaPug.ID
 					for _, r := range orList {
+						changes := make(map[string]interface{})
+						changes["ldapRemoveOwner"] = true
+						changes["OwnerID"] = ia.ID
+						iaPug, _ := ia.getPug()
+						changes["GroupID"] = iaPug.ID
 						logger.Debug().Msgf("Changing res '%s' to %v", r.Name, changes)
 						if editErr := dbEditReservation(&r, changes, tx); editErr != nil {
 							logger.Error().Msgf("problem changing reservation '%s' from auto-removed owner '%s' to igor-admin: %v", r.Name, u.Name, editErr)
 						}
+						changes = make(map[string]interface{})
 					}
 				}
 			}
@@ -546,14 +548,15 @@ func removeSyncedUsers(users []User) (err error) {
 				if len(odList) > 0 {
 					logger.Debug().Msgf("Re-assigning distro(s) for auto-remove user '%s' to igor-admin", u.Name)
 					sendEmailAlert = true
-					changes := make(map[string]interface{})
-					changes["ldapRemoveOwner"] = true
-					changes["OwnerID"] = ia.ID
 					for _, d := range odList {
+						changes := make(map[string]interface{})
+						changes["ldapRemoveOwner"] = true
+						changes["OwnerID"] = ia.ID
 						logger.Debug().Msgf("Changing distro '%s' to %v", d.Name, changes)
 						if editErr := dbEditDistro(&d, changes, tx); editErr != nil {
 							logger.Error().Msgf("problem changing distro '%s' from auto-removed owner '%s' to igor-admin: %v", d.Name, u.Name, editErr)
 						}
+						changes = make(map[string]interface{})
 					}
 				}
 			}
