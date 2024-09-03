@@ -529,9 +529,9 @@ func removeSyncedUsers(users []User) (err error) {
 					for _, r := range orList {
 						changes := make(map[string]interface{})
 						changes["ldapRemoveOwner"] = true
-						changes["OwnerID"] = ia.ID
+						changes["owner_id"] = ia.ID
 						iaPug, _ := ia.getPug()
-						changes["GroupID"] = iaPug.ID
+						changes["group_id"] = iaPug.ID
 						logger.Debug().Msgf("Changing res '%s' to %v", r.Name, changes)
 						if editErr := dbEditReservation(&r, changes, tx); editErr != nil {
 							logger.Error().Msgf("problem changing reservation '%s' from auto-removed owner '%s' to igor-admin: %v", r.Name, u.Name, editErr)
@@ -551,7 +551,7 @@ func removeSyncedUsers(users []User) (err error) {
 					for _, d := range odList {
 						changes := make(map[string]interface{})
 						changes["ldapRemoveOwner"] = true
-						changes["OwnerID"] = ia.ID
+						changes["owner_id"] = ia.ID
 						logger.Debug().Msgf("Changing distro '%s' to %v", d.Name, changes)
 						if editErr := dbEditDistro(&d, changes, tx); editErr != nil {
 							logger.Error().Msgf("problem changing distro '%s' from auto-removed owner '%s' to igor-admin: %v", d.Name, u.Name, editErr)
