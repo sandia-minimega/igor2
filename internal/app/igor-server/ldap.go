@@ -503,10 +503,11 @@ func removeSyncedUsers(users []User) (err error) {
 
 			// when user is the sole owner of a non-pug group, replace them with igor-admin
 			if len(groupList) > 0 {
+				logger.Debug().Msgf("Re-assigning single-owned group(s) for auto-remove user '%s' to igor-admin", u.Name)
 				sendEmailAlert = true
 				changes := make(map[string]interface{})
 				changes["ldapRemoveOwner"] = true
-				changes["Owner"] = []User{u}
+				changes["rmvOwners"] = []User{u}
 				changes["Admin"] = []User{*ia}
 				for _, g := range groupList {
 					if rmErr := dbEditGroup(&g, changes, tx); rmErr != nil {
@@ -522,6 +523,7 @@ func removeSyncedUsers(users []User) (err error) {
 			} else {
 				// for any reservation they own, change ownership to igor-admin and send email alert
 				if len(orList) > 0 {
+					logger.Debug().Msgf("Re-assigning reservation(s) for auto-remove user '%s' to igor-admin", u.Name)
 					sendEmailAlert = true
 					changes := make(map[string]interface{})
 					changes["ldapRemoveOwner"] = true
@@ -541,6 +543,7 @@ func removeSyncedUsers(users []User) (err error) {
 			} else {
 				// for any distro they own, change ownership to igor-admin and send email alert
 				if len(odList) > 0 {
+					logger.Debug().Msgf("Re-assigning distro(s) for auto-remove user '%s' to igor-admin", u.Name)
 					sendEmailAlert = true
 					changes := make(map[string]interface{})
 					changes["ldapRemoveOwner"] = true
