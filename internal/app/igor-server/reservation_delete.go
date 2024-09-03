@@ -178,18 +178,13 @@ func uninstallRes(res *Reservation) (err error) {
 			}
 		}
 
-		resetEnd := res.ResetEnd
 		now := time.Now()
-		// if the reservation is ending early, adjust the reset/maintenance time
-		if now.Before(res.End) {
-			// respect the maintenance padding at the time of res creation/extension
-			delta := resetEnd.Sub(res.End)
-			resetEnd = now.Add(delta)
-		}
+		maintenance_delta := time.Duration(float64(time.Minute) * float64(igor.Config.Maintenance.HostMaintenanceDuration))
+		maintenance_end := now.Add(maintenance_delta)
 		// create a new MaintenanceRes from res
 		maintenanceRes := &MaintenanceRes{
 			ReservationName:    res.Name,
-			MaintenanceEndTime: resetEnd,
+			MaintenanceEndTime: maintenance_end,
 			Hosts:              res.Hosts}
 		err := dbCreateMaintenanceRes(maintenanceRes)
 		if err != nil {

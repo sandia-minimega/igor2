@@ -113,19 +113,13 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 				h.RestoreState = HostAvailable // a dropped host will always return to available
 			}
 
-			resetEnd := res.ResetEnd
 			now := time.Now()
-			// if the reservation is ending early, adjust the reset/maintenance time
-			if now.Before(res.End) {
-				// respect the maintenance padding at the time of res creation/extension
-				delta := resetEnd.Sub(res.End)
-				resetEnd = now.Add(delta)
-			}
-
+			maintenance_delta := time.Duration(float64(time.Minute) * float64(igor.Config.Maintenance.HostMaintenanceDuration))
+			maintenance_end := now.Add(maintenance_delta)
 			// create a new MaintenanceRes from res
 			droppedMaintRes := &MaintenanceRes{
 				ReservationName:    res.Name + "-nodedrop",
-				MaintenanceEndTime: resetEnd,
+				MaintenanceEndTime: maintenance_end,
 				Hosts:              droppedHosts}
 			cmErr := dbCreateMaintenanceRes(droppedMaintRes)
 			if cmErr != nil {
