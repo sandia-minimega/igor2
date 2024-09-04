@@ -125,6 +125,9 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 	}
 	// check new owner
 	newOwnerName := r.FormValue("owner")
+	if newOwnerName == IgorAdmin && !userElevated(reqUser.Name) {
+		return nil, http.StatusBadRequest, fmt.Errorf("non-elevated user cannot transfer ownership of a distro to '%s'", IgorAdmin)
+	}
 	if newOwnerName != "" && !isPublic {
 		uList, status, err := getUsers([]string{newOwnerName}, false, tx)
 		if err != nil {
