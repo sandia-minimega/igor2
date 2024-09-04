@@ -76,7 +76,7 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 			changes, status, vErr = parseExtend(res, extendDur, isElevated, r, tx)
 		} else if isNewOwner && newOwnerName == IgorAdmin {
 			status = http.StatusBadRequest
-			clog.Info().Msgf("'%s' unsuccessully attempted to change reservation owner of '%s' to igor-admin", actionUser.Name, resName)
+			clog.Warn().Msgf("'%s' unsuccessully attempted to change reservation owner of '%s' to igor-admin", actionUser.Name, resName)
 			return fmt.Errorf("cannot change reservation '%s' owner to igor-admin", resName)
 		} else if doDrop {
 			changes, status, vErr = parseDrop(res, dropList, tx)
