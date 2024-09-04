@@ -488,7 +488,7 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 		newOwner = &uList[0]
 
 		// make sure the new owner can use the reservation's distro
-		if !newOwner.isMemberOfAnyGroup(distroGroups) {
+		if !newOwner.isMemberOfAnyGroup(distroGroups) && newOwner.Name != IgorAdmin {
 			return nil, http.StatusForbidden, fmt.Errorf("%s does not have access to distro '%s'", newOwner.Name, distroName)
 		} else {
 			// duplicate the profile into a new default profile for the new owner
@@ -503,7 +503,7 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 
 		// also make sure the new owner isn't restricted from any of the reservation's hosts' policies
 		hostNames := namesOfHosts(res.Hosts)
-		// get all hostpolicies associated with the given list of host names
+		// get all host-policies associated with the given list of host names
 		myHostPolicies, err := getHostPoliciesFromHostNames(hostNames)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
@@ -524,7 +524,9 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 
 		// if the reservation group is not going to change (and not a pug), make sure the new owner is also a member
 		if !grpOK && !res.Group.IsUserPrivate {
-			if !groupSliceContains(newOwner.Groups, res.Group.Name) {
+			if userElevated(res.Owner.Name) && newOwner.Name == IgorAdmin {
+				// fall through
+			} else if !groupSliceContains(newOwner.Groups, res.Group.Name) && newOwner.Name != IgorAdmin {
 				return nil, http.StatusConflict, fmt.Errorf("new owner is not a member of current reservation group %v", res.Group.Name)
 			}
 		}
