@@ -26,7 +26,7 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 	actionUser := getUserFromContext(r)
 	isElevated := userElevated(actionUser.Name)
 	var extended, renamed, dropped, isNewOwner, isNewGroup bool
-	var clusterName, oldName string
+	var clusterName, oldName, newOwnerName string
 	var oldOwner User
 	var droppedHosts []Host
 
@@ -54,7 +54,7 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		_, doDistro := editParams["distro"]
 		_, doProfile := editParams["profile"]
 		_, renamed = editParams["name"]
-		_, isNewOwner = editParams["owner"]
+		newOwnerName, isNewOwner = editParams["owner"].(string)
 		_, isNewGroup = editParams["group"]
 		var changes map[string]interface{}
 		var vErr error
@@ -74,6 +74,10 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 				extendDur = time.Unix(int64(extendTime), 0).Format(common.DateTimeCompactFormat)
 			}
 			changes, status, vErr = parseExtend(res, extendDur, isElevated, r, tx)
+		} else if isNewOwner && newOwnerName == IgorAdmin {
+			status = http.StatusBadRequest
+			clog.Info().Msgf("'%s' unsuccessully attempted to change reservation owner of '%s' to igor-admin", actionUser.Name, resName)
+			return fmt.Errorf("cannot change reservation '%s' owner to igor-admin", resName)
 		} else if doDrop {
 			changes, status, vErr = parseDrop(res, dropList, tx)
 			if vErr == nil {
