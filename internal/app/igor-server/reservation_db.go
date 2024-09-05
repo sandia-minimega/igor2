@@ -108,14 +108,6 @@ func dbReadReservations(queryParams map[string]interface{}, timeParams map[strin
 
 func dbEditReservation(res *Reservation, changes map[string]interface{}, tx *gorm.DB) error {
 
-	if _, ok := changes["ldapRemoveOwner"].(bool); ok {
-		delete(changes, "ldapRemoveOwner")
-		if result := tx.Model(&res).Updates(changes); result.Error != nil {
-			return result.Error
-		}
-		return nil
-	}
-
 	// Change the name of the reservation
 	if name, ok := changes["Name"].(string); ok {
 		if perms, pResultErr := dbGetPermissionsByName(PermReservations, res.Name, tx); pResultErr != nil {

@@ -96,14 +96,6 @@ func dbEditDistro(distro *Distro, changes map[string]interface{}, tx *gorm.DB) e
 	var removeGroups []Group
 	var addGroups []Group
 
-	if _, ok := changes["ldapRemoveOwner"].(bool); ok {
-		delete(changes, "ldapRemoveOwner")
-		if result := tx.Model(&distro).Updates(changes); result.Error != nil {
-			return result.Error
-		}
-		return nil
-	}
-
 	// Change the name of the distro
 	if name, ok := changes["Name"].(string); ok {
 		if perms, pResultErr := dbGetPermissionsByName(PermDistros, distro.Name, tx); pResultErr != nil {

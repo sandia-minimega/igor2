@@ -507,9 +507,8 @@ func removeSyncedUsers(users []User) (err error) {
 				sendEmailAlert = true
 				changes := make(map[string]interface{})
 				for _, g := range groupList {
-					changes["ldapRemoveOwner"] = true
 					changes["rmvOwners"] = []User{u}
-					changes["Admin"] = []User{*ia}
+					changes["addOwners"] = []User{*ia}
 					if rmErr := dbEditGroup(&g, changes, tx); rmErr != nil {
 						logger.Error().Msgf("problem changing group '%s' from auto-removed owner '%s' to igor-admin: %v", g.Name, u.Name, rmErr)
 					}
@@ -528,11 +527,9 @@ func removeSyncedUsers(users []User) (err error) {
 					sendEmailAlert = true
 					for _, r := range orList {
 						changes := make(map[string]interface{})
-						changes["ldapRemoveOwner"] = true
-						changes["owner_id"] = ia.ID
-						iaPug, _ := ia.getPug()
-						changes["group_id"] = iaPug.ID
-						logger.Debug().Msgf("Changing res '%s' to %v", r.Name, changes)
+						changes["owner"] = IgorAdmin
+						logger.Debug().Msgf("Changing res '%s' to %v", IgorAdmin)
+						changes, _, _ = parseResEditParams(&r, changes, tx)
 						if editErr := dbEditReservation(&r, changes, tx); editErr != nil {
 							logger.Error().Msgf("problem changing reservation '%s' from auto-removed owner '%s' to igor-admin: %v", r.Name, u.Name, editErr)
 						}
@@ -550,8 +547,7 @@ func removeSyncedUsers(users []User) (err error) {
 					sendEmailAlert = true
 					for _, d := range odList {
 						changes := make(map[string]interface{})
-						changes["ldapRemoveOwner"] = true
-						changes["owner_id"] = ia.ID
+						changes["owner"] = ia
 						logger.Debug().Msgf("Changing distro '%s' to %v", d.Name, changes)
 						if editErr := dbEditDistro(&d, changes, tx); editErr != nil {
 							logger.Error().Msgf("problem changing distro '%s' from auto-removed owner '%s' to igor-admin: %v", d.Name, u.Name, editErr)

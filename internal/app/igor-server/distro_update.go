@@ -16,7 +16,10 @@ import (
 
 func doUpdateDistro(target *Distro, r *http.Request) (code int, err error) {
 
-	clog := hlog.FromRequest(r)
+	clog := &logger
+	if r != nil {
+		clog = hlog.FromRequest(r)
+	}
 	var updateParams map[string]interface{}
 	code = http.StatusInternalServerError // default status, overridden at end if no errors
 
@@ -122,6 +125,9 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 	}
 	// check new owner
 	newOwnerName := r.FormValue("owner")
+	if newOwnerName == IgorAdmin && !userElevated(reqUser.Name) {
+		return nil, http.StatusBadRequest, fmt.Errorf("non-elevated user cannot transfer ownership of a distro to '%s'", IgorAdmin)
+	}
 	if newOwnerName != "" && !isPublic {
 		uList, status, err := getUsers([]string{newOwnerName}, false, tx)
 		if err != nil {
@@ -285,7 +291,7 @@ func validateDistroUpdatePermissions(target *Distro, updateParams map[string]int
 	}
 	// now we can check if the intended owner is a member of all intended outcome groups
 	member, badGroup := intendedOwner.isMemberOfGroups(currentGroups)
-	if !member {
+	if !member && intendedOwner.Name != IgorAdmin {
 		return http.StatusBadRequest, fmt.Errorf("intended distro owner %s is not a member of group(s) %s", intendedOwner.Name, badGroup)
 	}
 
