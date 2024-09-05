@@ -168,13 +168,22 @@ func uninstallRes(res *Reservation) (err error) {
 	// Put reservation nodes into maintenance mode if a Maintenance period has been specified
 	if igor.Config.Maintenance.HostMaintenanceDuration > 0 {
 		logger.Debug().Msgf("sending nodes for reservation %v into maintenance mode", res.Name)
-
+		for_maintenance := []Host{}
 		// prep for saving the current state so it can be restored after maintenance mode is finished
 		for i := range res.Hosts {
-			if res.Hosts[i].State == HostReserved {
-				res.Hosts[i].RestoreState = HostAvailable // a reserved host will always return to available
-			} else {
-				res.Hosts[i].RestoreState = res.Hosts[i].State
+			// the server may have been off for a while (power loss, etc.) so this reservation may be long finished
+			// and the host might be attached to a new reservation that's already started (active). If this is the
+			// case, we do not want it going into maintenance mode so don't add it to the list
+			// res hosts are shallow, we need the current full host
+			these_hosts, _, _ := getHostsTx([]string{res.Hosts[i].Name}, true)
+			active_res := getActiveReservation(&these_hosts[0])
+			if active_res == nil {
+				if res.Hosts[i].State == HostReserved {
+					res.Hosts[i].RestoreState = HostAvailable // a reserved host will always return to available
+				} else {
+					res.Hosts[i].RestoreState = res.Hosts[i].State
+				}
+				for_maintenance = append(for_maintenance, res.Hosts[i])
 			}
 		}
 
@@ -185,7 +194,7 @@ func uninstallRes(res *Reservation) (err error) {
 		maintenanceRes := &MaintenanceRes{
 			ReservationName:    res.Name,
 			MaintenanceEndTime: maintenance_end,
-			Hosts:              res.Hosts}
+			Hosts:              for_maintenance}
 		err := dbCreateMaintenanceRes(maintenanceRes)
 		if err != nil {
 			logger.Error().Msgf("warning - errors detected when creating maintenance reservation %v: %v", res.Name, err)
