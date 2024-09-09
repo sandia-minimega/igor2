@@ -22,6 +22,7 @@ const (
 
 var (
 	igorHome       string
+	dbPath         = flag.String("db", "", "override path to db file (good for testing)")
 	configFilepath = flag.String("config", "", "path to server configuration file")
 	config         Config
 	err            error
@@ -43,11 +44,18 @@ func main() {
 		fmt.Fprintf(os.Stderr, "database.adapter setting '%s' is not allowed; must be 'sqlite'", config.Database.Adapter)
 		os.Exit(1)
 	}
-	if config.Database.DbFolderPath == "" {
+
+	var sqliteDbLoc string
+
+	if *dbPath != "" {
+		sqliteDbLoc = *dbPath
+	} else if config.Database.DbFolderPath == "" {
 		config.Database.DbFolderPath = filepath.Join(igorHome, ".database")
 		fmt.Printf("database.dbFolderPath not specified, using default (IGOR_HOME): %s\n", config.Database.DbFolderPath)
+		sqliteDbLoc = filepath.Join(config.Database.DbFolderPath, "igor.db")
+	} else {
+		sqliteDbLoc = filepath.Join(config.Database.DbFolderPath, "igor.db")
 	}
-	sqliteDbLoc := filepath.Join(config.Database.DbFolderPath, "igor.db")
 
 	_, pathErr := os.Stat(sqliteDbLoc)
 	if pathErr != nil {
