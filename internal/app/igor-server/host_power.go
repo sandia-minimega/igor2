@@ -21,7 +21,7 @@ const (
 	PowerCycle = "cycle"
 )
 
-// Ensures the selected power command is recognized and spelled correctly (on/off/cycle, case-insenstive).
+// Ensures the selected power command is recognized and spelled correctly (on/off/cycle, case-insensitive).
 func checkPowerCmdSyntax(cmd string) error {
 	c := strings.TrimSpace(strings.ToLower(cmd))
 	if !(c == PowerOn || c == PowerOff || c == PowerCycle) {

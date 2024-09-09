@@ -163,7 +163,7 @@ func validateHostParams(handler http.Handler) http.Handler {
 					}
 				case "hostPolicy":
 					for _, val := range vals {
-						if validateErr = checkHostpolicyNameRules(val); validateErr != nil {
+						if validateErr = checkHostPolicyNameRules(val); validateErr != nil {
 							break queryParamLoop
 						}
 					}
@@ -229,7 +229,7 @@ func validateHostParams(handler http.Handler) http.Handler {
 						if _, ok := val.(string); !ok {
 							validateErr = NewBadParamTypeError(key, val, "string")
 							break patchParamLoop
-						} else if validateErr = checkHostpolicyNameRules(val.(string)); validateErr != nil {
+						} else if validateErr = checkHostPolicyNameRules(val.(string)); validateErr != nil {
 							break patchParamLoop
 						}
 					case "hostname":

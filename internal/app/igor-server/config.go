@@ -98,7 +98,7 @@ type Config struct {
 			// BaseDN: LDAP domain to use for users.
 			BaseDN string `yaml:"baseDN" json:"baseDN"`
 			// Filter: for the User Object Filter.
-			// if username nedded more than once use fmt index pattern (%[1]s).
+			// if username needed more than once use fmt index pattern (%[1]s).
 			// Otherwise %s.
 			Filter string `yaml:"filter" json:"filter"`
 			Sync   struct {

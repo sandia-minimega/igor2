@@ -44,7 +44,7 @@ func dbGetMaintenanceRes() (resList []MaintenanceRes, err error) {
 // 	return err
 // }
 
-// dbDeleteMaintenanceRes deletes the givn MaintenanceRes from the DB
+// dbDeleteMaintenanceRes deletes the given MaintenanceRes from the DB
 func dbDeleteMaintenanceRes(mRes *MaintenanceRes) (err error) {
 	// delete the Maintenance reservation
 	err = performDbTx(func(tx *gorm.DB) error {

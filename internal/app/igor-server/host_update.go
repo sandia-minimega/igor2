@@ -84,7 +84,7 @@ func parseHostEditParams(editParams map[string]interface{}, clog *zl.Logger) (ma
 	if val, ok := editParams["boot"].(string); ok {
 		changes["boot_mode"] = val
 	}
-	// check for mac address chnage
+	// check for mac address change
 	if val, ok := editParams["mac"].(string); ok {
 		if _, err := net.ParseMAC(val); err != nil {
 			return nil, http.StatusBadRequest, fmt.Errorf("invalid mac address value %s given for host update", val)

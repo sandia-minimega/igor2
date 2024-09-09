@@ -110,7 +110,7 @@ func getGroups(groupNames []string, excludePugs bool, tx *gorm.DB) ([]Group, int
 	return found, http.StatusOK, nil
 }
 
-// getAllGroupTx is a shortcut method that returns the 'all' group in a new transcation.
+// getAllGroupTx is a shortcut method that returns the 'all' group in a new transaction.
 func getAllGroupTx() (allGroup *Group, status int, err error) {
 	status = http.StatusInternalServerError
 	err = performDbTx(func(tx *gorm.DB) error {

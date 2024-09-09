@@ -122,12 +122,12 @@ func getActiveReservation(h *Host) *Reservation {
 		if res.IsActive(time.Now()) {
 			// this res is a shallow copy, we want the whole thing
 			if err := performDbTx(func(tx *gorm.DB) error {
-				reses, _, err := getReservations([]string{res.Name}, tx)
+				rList, _, err := getReservations([]string{res.Name}, tx)
 				if err != nil {
 					return err
 				}
-				if len(reses) > 0 {
-					result = reses[0]
+				if len(rList) > 0 {
+					result = rList[0]
 					return nil
 				}
 				return fmt.Errorf("no reservations found")

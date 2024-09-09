@@ -74,7 +74,7 @@ func WriteFile(path string, content string, mode os.FileMode) error {
 // will remove spaces so that durations produced from FormatDuration with
 // alignment columns can be understood.
 func ParseDuration(s string) (time.Duration, error) {
-	// unitless integer is assumed to be in minutes
+	// unit-less integer is assumed to be in minutes
 
 	s = strings.ReplaceAll(s, " ", "")
 

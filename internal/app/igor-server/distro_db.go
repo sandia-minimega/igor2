@@ -139,7 +139,7 @@ func dbEditDistro(distro *Distro, changes map[string]interface{}, tx *gorm.DB) e
 		}
 		targetOwner = admin
 		removeGroups = distro.Groups
-		// remove old user's pug from this list, we'll deal with it seperately
+		// remove old user's pug from this list, we'll deal with it separately
 		pug, err := distro.Owner.getPug()
 		if err != nil {
 			return err

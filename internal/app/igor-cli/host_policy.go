@@ -94,8 +94,8 @@ See 'igor policy -h' for a description of what a policy is and use cases.
 
 Use the -t flag to set a time interval that limits how long a host can be
 reserved. Possible units are days(d), hours(h) and minutes(m) in that order. A
-unitless number is treated as minutes. Days are defined as 24*60 minutes and do
-not take Daylight Savings offsets into account. 
+unit-less number is treated as minutes. Days are defined as 24*60 minutes and
+do not take Daylight Savings offsets into account. 
 Ex. 3d | 5h32m | 12d2m | 90 (= 90m)
 
 ` + sBold("RESTRICT BY GROUP MEMBERSHIP:") + `
@@ -232,8 +232,8 @@ Use the -n flag to re-name a policy.
 
 Use the -t flag to reset the time interval that limits how long a host can be
 reserved. Possible units are days(d), hours(h) and minutes(m) in that order. A
-unitless number is treated as minutes. Days are defined as 24*60 minutes and do
-not take Daylight Savings offsets into account. 
+unit-less number is treated as minutes. Days are defined as 24*60 minutes and
+do not take Daylight Savings offsets into account. 
 Ex. 3d | 5h32m | 12d2m | 90 (= 90m)
 
 Use the -g flag to add groups and the -r flag to remove groups from the policy.

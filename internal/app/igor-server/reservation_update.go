@@ -118,19 +118,19 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 			}
 
 			now := time.Now()
-			maintenance_delta := time.Duration(float64(time.Minute) * float64(igor.Config.Maintenance.HostMaintenanceDuration))
-			maintenance_end := now.Add(maintenance_delta)
+			maintenanceDelta := time.Duration(float64(time.Minute) * float64(igor.Config.Maintenance.HostMaintenanceDuration))
+			maintenanceEnd := now.Add(maintenanceDelta)
 			// create a new MaintenanceRes from res
-			droppedMaintRes := &MaintenanceRes{
-				ReservationName:    res.Name + "-nodedrop",
-				MaintenanceEndTime: maintenance_end,
+			maintenanceResDrop := &MaintenanceRes{
+				ReservationName:    res.Name + "-nodeDrop",
+				MaintenanceEndTime: maintenanceEnd,
 				Hosts:              droppedHosts}
-			cmErr := dbCreateMaintenanceRes(droppedMaintRes)
+			cmErr := dbCreateMaintenanceRes(maintenanceResDrop)
 			if cmErr != nil {
 				logger.Error().Msgf("warning - errors detected when creating dropped node maintenance reservation %s: %v", res.Name, cmErr)
 			} else {
 				// begin maintenance immediately
-				_ = startMaintenance(droppedMaintRes)
+				_ = startMaintenance(maintenanceResDrop)
 			}
 		}
 	}
@@ -390,7 +390,7 @@ func parseImageEdits(res *Reservation, editParams map[string]interface{}, tx *go
 			return changes, http.StatusConflict, fmt.Errorf("no profiles returned for user %v with name %v", res.Owner.Name, newProfileName)
 		} else {
 			newProfile = &pList[0]
-			// make sure the distro of this profile is still accessable to the user
+			// make sure the distro of this profile is still accessible to the user
 			if dList, status, err := getDistros([]string{newProfile.Distro.Name}, tx); err != nil {
 				return changes, status, err
 			} else if len(dList) == 0 {

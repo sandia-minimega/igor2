@@ -326,10 +326,10 @@ can only be made by the reservation owner or an admin.
 
 A reservation can be extended with the --extend flag followed by a time value.
 Time expressions can either be the datetime format ` + exStartDts() + ` that
-specifies a new end time, or an interval specified in days(d), hours(h), and 
-minutes(m), in that order. Unitless numbers are treated as minutes. Days are 
+specifies a new end time, or an interval specified in days(d), hours(h), and
+minutes(m), in that order. Unit-less numbers are treated as minutes. Days are
 defined as 24*60 minutes and do not take Daylight Savings offsets into account.
-Example: To extend a reservation for 7 more days: 7d. To extend for 4 days, 
+Example: To extend a reservation for 7 more days: 7d. To extend for 4 days,
 6 hours, 30 minutes: 4d6h30m.
 
 The new end time is subject to the maximum length of time a reservation can 

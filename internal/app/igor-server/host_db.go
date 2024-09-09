@@ -19,7 +19,7 @@ func dbCreateHosts(nodes []Host, tx *gorm.DB) error {
 	return result.Error
 }
 
-// dbReadHostsTx performs dbReadHosts within a new transcation.
+// dbReadHostsTx performs dbReadHosts within a new transaction.
 func dbReadHostsTx(queryParams map[string]interface{}) (hosts []Host, err error) {
 	err = performDbTx(func(tx *gorm.DB) error {
 		hosts, err = dbReadHosts(queryParams, tx)

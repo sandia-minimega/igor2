@@ -31,62 +31,6 @@ func (b *TFTPInstaller) Install(r *Reservation) error {
 	return nil
 }
 
-// func writeBiosConfig(r *Reservation) error {
-// 	// Manual file installation happens now
-// 	// create appropriate pxe config file in igor.TFTPRoot/pxelinux.cfg/igor/
-// 	image := r.Profile.Distro.DistroImage
-// 	kernelPath := filepath.Join(igor.ImageStoreDir, image.ImageID, image.Kernel)
-// 	initrdPath := filepath.Join(igor.ImageStoreDir, image.ImageID, image.Initrd)
-
-// 	// create individual PXE boot configs i.e. igor.TFTPRoot+/pxelinux.cfg/00:00:00:00:00:00 by copying config created above
-// 	logger.Debug().Msgf("cycling through hosts %v", r.Hosts)
-// 	for _, host := range r.Hosts {
-// 		// Prepare pxe.cfg content based on net/local and OS breed
-// 		defaultLabel := fmt.Sprintf("default %s\n\n", r.Name)
-// 		defaultOptions := ""
-// 		label := fmt.Sprintf("label %s\n", r.Name)
-// 		kernel := fmt.Sprintf("\tkernel %v\n", kernelPath)
-// 		labelOptions := ""
-// 		appendStmt := fmt.Sprintf("\tappend initrd=%v", initrdPath)
-// 		if image.LocalBoot {
-// 			ksFile := r.Profile.Distro.Kickstart.Filename
-// 			ksServer := fmt.Sprintf("http://%s:%v/%s/%s", igor.Server.CbHost, igor.Server.CbPort, api.CbKS, ksFile)
-// 			defaultOptions = fmt.Sprintf("%sprompt 0\ntimeout 1\n", defaultOptions)
-// 			labelOptions = fmt.Sprintf("%s\tipappend 2\n", labelOptions)
-// 			switch image.Breed {
-// 			case "redhat":
-// 				appendStmt = fmt.Sprintf("%s ksdevice=bootif lang=  kssendmac text  ks=%s", appendStmt, ksServer)
-// 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
-// 				// Assume same setup as Ubuntu until we can test on these distributions
-// 				appendStmt = fmt.Sprintf("%s lang=  netcfg/choose_interface=auto text  auto-install/enable=true priority=critical url=%s hostname=%s domain=local.lan suite=bionic", appendStmt, ksServer, host.HostName)
-// 			default:
-// 				return fmt.Errorf("distro breed not supported for tftp image service")
-// 			}
-// 		}
-// 		appendStmt = fmt.Sprintf("%s %v\n", appendStmt, r.getKernelArgs())
-// 		content := defaultLabel +
-// 			defaultOptions +
-// 			label +
-// 			kernel +
-// 			labelOptions +
-// 			appendStmt
-
-// 		// create file path for master (reference) file
-// 		masterPath := filepath.Join(igor.TFTPPath, igor.PXEDir, "igor", host.Name)
-// 		if err := writeFile(masterPath, content); err != nil {
-// 			return err
-// 		}
-
-// 		// Create file path to copy master file to pxe.cfg
-// 		pxePath := getPxeFilePath(&host)
-// 		logger.Debug().Msgf("saving PXE file to path %v", pxePath)
-// 		if err := writeFile(pxePath, content); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
 func generateBootFile(host *Host, r *Reservation) error {
 	var content string
 	image := r.Profile.Distro.DistroImage
@@ -99,7 +43,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 	masterPath := filepath.Join(igor.TFTPPath, igor.PXEBIOSDir, "igor", host.Name)
 	pxePath := getPxePath(host)
 
-	// Construct the autoinstall part of the boot file based on OS type
+	// Construct the auto-install part of the boot file based on OS type
 	autoInstallFilePath := ""
 	if image.LocalBoot {
 		ksFile := r.Profile.Distro.Kickstart.Filename

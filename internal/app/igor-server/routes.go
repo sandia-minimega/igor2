@@ -169,7 +169,7 @@ func applyApiRoutes(router *httprouter.Router) {
 	hcReadHostPolicy.Add(validateHostPolicyParams)
 	router.Handle(http.MethodGet, api.HostPolicy, hcReadHostPolicy.ApplyTo(handleReadHostPolicies))
 
-	// Update hostpolicy
+	// Update host policy
 	hcUpdateHostPolicy := NewHandlerChain()
 	hcUpdateHostPolicy.Extend(hcDefaultChain)
 	hcUpdateHostPolicy.Add(storeJSONBodyHandler)
@@ -177,7 +177,7 @@ func applyApiRoutes(router *httprouter.Router) {
 	hcUpdateHostPolicy.Add(validateHostPolicyParams)
 	router.Handle(http.MethodPatch, api.HostPolicyName, hcUpdateHostPolicy.ApplyTo(handleUpdateHostPolicy))
 
-	// Delete hostpolicy
+	// Delete host policy
 	hcDeleteHostPolicy := NewHandlerChain()
 	hcDeleteHostPolicy.Extend(hcDefaultChain)
 	hcDeleteHostPolicy.Extend(hcAuthChain)

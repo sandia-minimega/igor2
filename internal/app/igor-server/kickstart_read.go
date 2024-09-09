@@ -20,8 +20,6 @@ func doReadKickstart(queryParams map[string]interface{}) ([]Kickstart, int, erro
 }
 
 func parseKSSearchParams(queryMap map[string][]string, r *http.Request) (map[string]interface{}, int, error) {
-	// parse resParams and convert []string vals to proper corresponding types
-	// template: db.Where(map[string]interface{}{"name": "jinzhu", "age": 20}).Find(&users)
 
 	clog := hlog.FromRequest(r)
 	status := http.StatusOK

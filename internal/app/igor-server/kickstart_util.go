@@ -49,7 +49,7 @@ func saveKSFile(r *http.Request) (*Kickstart, error) {
 // SaveFile takes a file object extracted from a multipart form
 // and saves it to the staged folder using the given file name f
 func saveNewKickstartFile(src multipart.File, f string) (target string, err error) {
-	// get spearate path and filename in case a full path was captured during upload
+	// get separate path and filename in case a full path was captured during upload
 	_, fName := path.Split(f)
 	filePath := filepath.Join(igor.TFTPPath, igor.KickstartDir, fName)
 
@@ -82,7 +82,7 @@ func saveNewKickstartFile(src multipart.File, f string) (target string, err erro
 // overwriteFile takes a file object extracted from a multipart form
 // and saves it to the staged folder using the given file name fName
 func replaceFile(src multipart.File, f string) (target string, err error) {
-	// get spearate path and filename in case a full path was captured during upload
+	// get separate path and filename in case a full path was captured during upload
 	_, fName := path.Split(f)
 	filePath := filepath.Join(igor.TFTPPath, igor.KickstartDir, fName)
 	var tempFile *os.File

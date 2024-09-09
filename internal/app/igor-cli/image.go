@@ -68,7 +68,7 @@ command is used when uploading is not enabled for users.
   		include the initrd file name if using a custom name. Otherwise,
   		Igor will look for a default name based on OS breed.
   -d : path to the folder containing the distribution if local install
-  --boot: at least one or more comma-separated strings incidicating this 
+  --boot: at least one or more comma-separated strings indicating this 
   		image's compatible boot methods. Available values are: bios,uefi
 
 ` + optionalFlags + `

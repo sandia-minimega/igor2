@@ -76,7 +76,7 @@ func scheduleHostsByAvailability(res *Reservation, tx *gorm.DB, clog *zl.Logger)
 	validOpenSlotMap := make(map[string][]ReservationTimeSlot)
 	var hasRestrictedHosts bool
 	totalHostAvail := 0
-	// Calculate end time to use including any configured maintenence padding
+	// Calculate end time to use including any configured maintenance padding
 	paddedEndTime := determineNodeResetTime(res.End)
 	paddedDur := paddedEndTime.Sub(res.Start)
 
@@ -416,14 +416,14 @@ func startMaintenance(res *MaintenanceRes) error {
 }
 
 func finishMaintenance(now *time.Time) error {
-	mReses, err := dbGetMaintenanceRes()
+	mResList, err := dbGetMaintenanceRes()
 	if err != nil {
 		logger.Error().Msgf("error getting maintenance Reservation list, aborting start process")
 		return err
 	}
 	// get admin user
 	admin, _, _ := getIgorAdminTx()
-	for _, res := range mReses {
+	for _, res := range mResList {
 		if now.After(res.MaintenanceEndTime) {
 			logger.Debug().Msgf("reservation '%s' going out of maintenenace mode.", res.ReservationName)
 			hosts := res.Hosts
@@ -468,7 +468,7 @@ func finishMaintenance(now *time.Time) error {
 				}
 
 				// uninstall the default image from the res hosts
-				igor.IResInstaller.Uninstall(tempRes)
+				_ = igor.IResInstaller.Uninstall(tempRes)
 
 			}
 
