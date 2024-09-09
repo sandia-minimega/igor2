@@ -12,7 +12,7 @@ of settings from open and permissive to regulated and tightly controlled.
 The first version of Igor began as part of the [minimega](https://github.com/sandia-minimega/minimega) 
 toolset. Version 2 is a sibling project and a significant upgrade from the original.
 
-## Documentation
+## Documentation and Release Notes
 
 Please visit: https://www.sandia.gov/igor
 
