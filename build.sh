@@ -6,14 +6,15 @@ normal=$(tput sgr0)
 
 USAGE="Usage: build.sh [-server] [-cli] [-web] [-n] [-z] [-h|-help]"
 HELP="
-This script will build Igor apps. By default all apps are built, otherwise
-specify ${bold}-server${normal}, ${bold}-cli${normal} and/or ${bold}-web${normal} flags to build the apps of your choice.
+This script builds Igor applications. By default, all applications are built.
+To build specific applications, use the ${bold}-server${normal}, ${bold}-cli${normal}, and/or ${bold}-web${normal} flags.
 
 Use the ${bold}-n${normal} flag to run npm install and update prior to building the web app.
-Note the script will always act as though the -n flag is present if the folder
-web/node_modules or the file web/package-lock.json doesn't exist.
+Note that the script will always act as though the flag is present if the
+web/node_modules folder or the web/package-lock.json file does not exist.
 
-The ${bold}-z${normal} flag can be included to create a tar archive of the resulting build."
+Include the ${bold}-z${normal} flag to create a tar archive of the resulting build.
+The tar archive is required for running the companion install.sh script."
 
 while [[ $# -gt 0 ]]; do
    case $1 in
