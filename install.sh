@@ -15,7 +15,10 @@ By default all apps are installed, otherwise specify ${bold}-server${normal}, ${
 ${bold}-web${normal} flags to install the apps of your choice.
 
 When installing igor-server the script will use the OS's package manager to
-download npm and sqlite if not already present.
+download npm and sqlite if not already present. If the database needs to be
+upgraded, run executable in the db-migrate folder which is unpacked as part
+of the install process. The server will fail to start if the required database
+version doesn't match (reason will be in the output log).
 
 When installing either igor-server or igor-web a sub-folder in your current
 working directory named 'igor-extra' will be created. It contains example
@@ -170,6 +173,7 @@ if [[ $INSTALL_ALL == true || $INSTALL_SERVER == true ]]; then
    else
       tar -xzf igor2.tar.gz --strip-components=2 -C $ETC_DIR ./etc/igor-clusters.yaml
    fi
+   tar -xzf igor2.tar.gz ./db-migrate
 fi
 
 if [[ $INSTALL_ALL == true || $INSTALL_WEB == true ]]; then
