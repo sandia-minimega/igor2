@@ -7,32 +7,32 @@ normal=$(tput sgr0)
 USAGE="Usage: install.sh [-server] [-cli] [-web] [-h|-help]
 ${bold}(must be run as root)${normal}"
 HELP="
-This script will install Igor apps and set up initial environment for running
-them. It must be in the same directory as the ${bold}igor2.tar.gz${normal} file created with
-the build.sh script.
+This script installs or upgrades Igor applications. A first-time install sets
+up the initial environment for running them. Ensure it is in the same directory
+as the ${bold}igor2.tar.gz${normal} file created with the build.sh script.
 
-By default all apps are installed, otherwise specify ${bold}-server${normal}, ${bold}-cli${normal} and/or
-${bold}-web${normal} flags to install the apps of your choice.
+By default, all applications are installed or upgraded. To target specific
+applications, use the ${bold}-server${normal}, ${bold}-cli${normal}, and/or ${bold}-web${normal} flags.
 
-When installing igor-server the script will use the OS's package manager to
-download npm and sqlite if not already present. If the database needs to be
-upgraded, run executable in the db-migrate folder which is unpacked as part
-of the install process. The server will fail to start if the required database
-version doesn't match (reason will be in the output log).
+For igor-server installation, the script will use the OS's package manager to
+download npm and sqlite if they are not already present. If the database needs
+to be upgraded, run the executable in the db-migrate folder, which is unpacked
+during the installation process. The server will fail to start if the required
+database version does not match (details will be in the output log).
 
-When installing either igor-server or igor-web a sub-folder in your current
-working directory named 'igor-extra' will be created. It contains example
-scripts for setting up these apps with logrotate and systemd.
+When installing either igor-server or igor-web, a sub-folder named 'igor-extra'
+will be created in your current working directory. This folder contains example
+scripts for setting up these applications with logrotate and systemd.
 
-Creates the 'igor' system user with a home directory and sets the IGOR_HOME
-environment variable to this folder (if no prior install was performed). This
-is the default location of files used by the server unless others are specified
-in its YAML config.
+The script creates the 'igor' system user with a home directory and sets the
+IGOR_HOME environment variable to this folder (if no prior installation was
+performed). This is the default location for files used by the server unless
+specified otherwise in its YAML configuration.
 
-*** Default app install locations ***
-servers + web-app: /opt/igor
-CLI app:           /usr/local/bin
-config files:      /etc/igor
+*** Default Application Install Locations ***
+Servers + Web App: /opt/igor
+CLI App:           /usr/local/bin
+Config Files:      /etc/igor
 "
 
 while [[ $# -gt 0 ]]; do
