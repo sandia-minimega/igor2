@@ -14,7 +14,7 @@ Note that the script will always act as though the flag is present if the
 web/node_modules folder or the web/package-lock.json file does not exist.
 
 Include the ${bold}-z${normal} flag to create a tar archive of the resulting build.
-The tar archive is required for running the companion install.sh script."
+The tar archive is required for running the companion ${bold}install-igor${normal} script."
 
 while [[ $# -gt 0 ]]; do
    case $1 in

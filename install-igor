@@ -9,7 +9,7 @@ ${bold}(must be run as root)${normal}"
 HELP="
 This script installs or upgrades Igor applications. A first-time install sets
 up the initial environment for running them. Ensure it is in the same directory
-as the ${bold}igor2.tar.gz${normal} file created with the build.sh script.
+as the ${bold}igor2.tar.gz${normal} file created with the ${bold}build-igor${normal} script.
 
 By default, all applications are installed or upgraded. To target specific
 applications, use the ${bold}-server${normal}, ${bold}-cli${normal}, and/or ${bold}-web${normal} flags.
