@@ -47,7 +47,7 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 		case "all":
 			showAll, _ := strconv.ParseBool(val[0])
 			if !showAll {
-				queryParams["owner_id"] = resOwner.ID
+				queryParams["reservations.owner_id"] = resOwner.ID
 			}
 		case "name":
 			// these can be passed directly as []string
@@ -57,7 +57,7 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 			if ownerList, status, err := doReadUsers(ownerQuery); err != nil {
 				return nil, nil, status, err
 			} else {
-				queryParams["owner_id"] = userIDsOfUsers(ownerList)
+				queryParams["reservations.owner_id"] = userIDsOfUsers(ownerList)
 			}
 		case "distro":
 			distroQuery := map[string]interface{}{"name": val}

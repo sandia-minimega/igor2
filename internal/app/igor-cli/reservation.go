@@ -252,9 +252,9 @@ func newResShowCmd() *cobra.Command {
 			"       [-g GR1,...] [-x]",
 		Short: "Show reservation information",
 		Long: `
-Shows reservation information, returning matches to specified parameters. By default
-the command returns the user's reservations. Use the --all flag and/or other flags
-to see reservations of other users.
+Shows reservation information, returning matches to specified parameters. By
+default the command searches only on the user's reservations and in combination
+with any filter flags. Use the --all flag to search across all reservations.
 
 ` + optionalFlags + `
 
