@@ -229,7 +229,7 @@ func ownerEmailList(owners []User) template.HTML {
 		emails.WriteString(emailOrName(&owners[i]))
 		emails.WriteString("</a>")
 		if len(owners) > 1 && i < len(owners)-1 {
-			emails.WriteString(",")
+			emails.WriteString(", ")
 		}
 	}
 	return template.HTML(emails.String())
@@ -917,7 +917,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>A new group '{{.Group.Name}}' has been created, and you are included as a member. If you have questions please contact the group owner(s), {{ownerEmailList .Group.Owners}}.
+<p>A new group '{{.Group.Name}}' has been created, and you are included as a member. If you have questions please contact the group owner(s): {{ownerEmailList .Group.Owners}}.
 
 <p>Group membership is used to provide access to various igor resources. When applied to a reservation, it gives you the ability to send power commands, extend the reservation end time and delete the reservation completely.
 
@@ -930,7 +930,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The group '{{.Info}}' has been renamed to '{{.Group.Name}}'. If you have questions please contact the group owner(s), {{ownerEmailList .Group.Owners}}.
+<p>The group '{{.Info}}' has been renamed to '{{.Group.Name}}'. If you have questions please contact the group owner(s): {{ownerEmailList .Group.Owners}}.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
@@ -941,7 +941,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>You have been {{.MemberAction}} the group '{{.Group.Name}}'. If you have questions please contact the group owner(s), {{ownerEmailList .Group.Owners}}.
+<p>You have been {{.MemberAction}} the group '{{.Group.Name}}'. If you have questions please contact the group owner(s): {{ownerEmailList .Group.Owners}}.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
