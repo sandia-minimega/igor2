@@ -26,7 +26,7 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 	actionUser := getUserFromContext(r)
 	isElevated := userElevated(actionUser.Name)
 	var extended, renamed, dropped, isNewOwner, isNewGroup bool
-	var clusterName, oldName string
+	var clusterName, oldName, newOwnerName string
 	var oldOwner User
 	var droppedHosts []Host
 
@@ -54,7 +54,7 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		_, doDistro := editParams["distro"]
 		_, doProfile := editParams["profile"]
 		_, renamed = editParams["name"]
-		_, isNewOwner = editParams["owner"]
+		newOwnerName, isNewOwner = editParams["owner"].(string)
 		_, isNewGroup = editParams["group"]
 		var changes map[string]interface{}
 		var vErr error
@@ -74,6 +74,10 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 				extendDur = time.Unix(int64(extendTime), 0).Format(common.DateTimeCompactFormat)
 			}
 			changes, status, vErr = parseExtend(res, extendDur, isElevated, r, tx)
+		} else if isNewOwner && newOwnerName == IgorAdmin {
+			status = http.StatusBadRequest
+			clog.Warn().Msgf("'%s' unsuccessully attempted to change reservation owner of '%s' to igor-admin", actionUser.Name, resName)
+			return fmt.Errorf("cannot change reservation '%s' owner to igor-admin", resName)
 		} else if doDrop {
 			changes, status, vErr = parseDrop(res, dropList, tx)
 			if vErr == nil {
@@ -103,6 +107,31 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		}
 		if _, powerErr := doPowerHosts(PowerOff, hostNamesOfHosts(droppedHosts), clog); powerErr != nil {
 			clog.Error().Msgf("problem powering off dropped hosts for reservation '%s': %v", resName, powerErr)
+		}
+
+		if igor.Config.Maintenance.HostMaintenanceDuration > 0 {
+			logger.Debug().Msgf("putting dropped node(s) for reservation '%s' into maintenance mode", resName)
+
+			// prep for saving the current state so it can be restored after maintenance mode is finished
+			for _, h := range droppedHosts {
+				h.RestoreState = HostAvailable // a dropped host will always return to available
+			}
+
+			now := time.Now()
+			maintenanceDelta := time.Duration(float64(time.Minute) * float64(igor.Config.Maintenance.HostMaintenanceDuration))
+			maintenanceEnd := now.Add(maintenanceDelta)
+			// create a new MaintenanceRes from res
+			maintenanceResDrop := &MaintenanceRes{
+				ReservationName:    res.Name + "-nodeDrop",
+				MaintenanceEndTime: maintenanceEnd,
+				Hosts:              droppedHosts}
+			cmErr := dbCreateMaintenanceRes(maintenanceResDrop)
+			if cmErr != nil {
+				logger.Error().Msgf("warning - errors detected when creating dropped node maintenance reservation %s: %v", res.Name, cmErr)
+			} else {
+				// begin maintenance immediately
+				_ = startMaintenance(maintenanceResDrop)
+			}
 		}
 	}
 
@@ -220,11 +249,20 @@ func parseDrop(res *Reservation, dropList string, tx *gorm.DB) (map[string]inter
 	return changes, http.StatusOK, nil
 }
 
-// parseExtend checks that the extend parameter has correct syntax and the modified end time
+// parseExtend checks that the 'extend' parameter has correct syntax and the modified end time
 // it creates doesn't collide with existing reservations and/or host policies.
 func parseExtend(res *Reservation, extendTime string, isActionUserElevated bool, r *http.Request, tx *gorm.DB) (map[string]interface{}, int, error) {
 
 	clog := hlog.FromRequest(r)
+
+	if !isActionUserElevated {
+		for _, h := range res.Hosts {
+			if h.State == HostBlocked {
+				return nil, http.StatusConflict,
+					fmt.Errorf("cannot extend a reservation containing nodes with a blocked status -- contact cluster admin team")
+			}
+		}
+	}
 
 	hostNameList := namesOfHosts(res.Hosts)
 
@@ -352,7 +390,7 @@ func parseImageEdits(res *Reservation, editParams map[string]interface{}, tx *go
 			return changes, http.StatusConflict, fmt.Errorf("no profiles returned for user %v with name %v", res.Owner.Name, newProfileName)
 		} else {
 			newProfile = &pList[0]
-			// make sure the distro of this profile is still accessable to the user
+			// make sure the distro of this profile is still accessible to the user
 			if dList, status, err := getDistros([]string{newProfile.Distro.Name}, tx); err != nil {
 				return changes, status, err
 			} else if len(dList) == 0 {
@@ -439,7 +477,7 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 	}
 
 	// get the current power perms (will be empty if reservation hasn't started yet)
-	powerPerms, ppErr := dbGetPermissions(map[string]interface{}{"fact": makeNodePowerPerm(res.Hosts)}, tx)
+	powerPerms, ppErr := dbGetHostPowerPermissions(&res.Group, res.Hosts, tx)
 	if ppErr != nil {
 		return nil, http.StatusInternalServerError, ppErr
 	}
@@ -454,7 +492,7 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 		newOwner = &uList[0]
 
 		// make sure the new owner can use the reservation's distro
-		if !newOwner.isMemberOfAnyGroup(distroGroups) {
+		if !newOwner.isMemberOfAnyGroup(distroGroups) && newOwner.Name != IgorAdmin {
 			return nil, http.StatusForbidden, fmt.Errorf("%s does not have access to distro '%s'", newOwner.Name, distroName)
 		} else {
 			// duplicate the profile into a new default profile for the new owner
@@ -469,28 +507,30 @@ func parseResEditParams(res *Reservation, editParams map[string]interface{}, tx 
 
 		// also make sure the new owner isn't restricted from any of the reservation's hosts' policies
 		hostNames := namesOfHosts(res.Hosts)
-		// get all hostpolicies associated with the given list of host names
+		// get all host-policies associated with the given list of host names
 		myHostPolicies, err := getHostPoliciesFromHostNames(hostNames)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
 		}
 		// make a list of the access groups that this new owner qualifies for
-		groupAccessList := []string{}
+		var groupAccessList []string
 		for _, uGroup := range newOwner.Groups {
 			if !strings.HasPrefix(uGroup.Name, GroupUserPrefix) {
 				groupAccessList = append(groupAccessList, uGroup.Name)
 			}
 		}
-		// determine if any hostpolicies do not contain at least one group from groupAccessList
+		// determine if any policies do not contain at least one group from groupAccessList
 		if membership, policy := dbCheckHostPolicyGroupConflicts(myHostPolicies, groupAccessList); !membership {
 			// get the intersection of affected policy hosts and requested hosts
 			offendingHosts := getHostIntersection(hostNames, policy.Hosts)
-			return nil, http.StatusConflict, &HostPolicyConflictError{"", true, false, false, time.Time{}, time.Time{}, offendingHosts}
+			return nil, http.StatusConflict, &HostPolicyConflictError{"no group available that matches node restriction", true, false, false, time.Time{}, time.Time{}, offendingHosts}
 		}
 
 		// if the reservation group is not going to change (and not a pug), make sure the new owner is also a member
 		if !grpOK && !res.Group.IsUserPrivate {
-			if !groupSliceContains(newOwner.Groups, res.Group.Name) {
+			if userElevated(res.Owner.Name) && newOwner.Name == IgorAdmin {
+				// fall through
+			} else if !groupSliceContains(newOwner.Groups, res.Group.Name) && newOwner.Name != IgorAdmin {
 				return nil, http.StatusConflict, fmt.Errorf("new owner is not a member of current reservation group %v", res.Group.Name)
 			}
 		}

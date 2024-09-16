@@ -34,8 +34,8 @@ type HostPolicy struct {
 	Name         string             `gorm:"unique; notNull"` // policy identifier
 	Hosts        []Host             // the hosts this policy is assigned to
 	MaxResTime   time.Duration      // default is config file value
-	AccessGroups []Group            `gorm:"many2many:groups_policies;"`        // Only the listed Group(s) may reserve a node assigned to this policy. Defaults to GroupAll.
-	NotAvailable ScheduleBlockArray `gorm:"column:notavailable;type:longtext"` // Can be empty, meaning nodes attached to this policy would not have any unavailability periods.
+	AccessGroups []Group            `gorm:"many2many:groups_policies;"`       // Only the listed Group(s) may reserve a node assigned to this policy. Defaults to GroupAll.
+	NotAvailable ScheduleBlockArray `gorm:"column:notavailable; type:string"` // Can be empty, meaning nodes attached to this policy would not have any unavailability periods.
 }
 
 type ScheduleBlockArray []common.ScheduleBlock

@@ -34,7 +34,7 @@ func doReadProfiles(queryParams map[string]interface{}) ([]Profile, int, error) 
 }
 
 // parseProfileSearchParams takes the query map provided by the route and moves its expected
-// paramters into a map[string]interface that can be passed directly to a GORM db query. Along
+// parameters into a map[string]interface that can be passed directly to a GORM db query. Along
 // the way it performs queries of other db objects specified in the search params (owner, group and distro) and
 // will report failure if those objects are not found.
 func parseProfileSearchParams(queryMap map[string][]string, r *http.Request) (map[string]interface{}, int, error) {
@@ -68,7 +68,7 @@ func parseProfileSearchParams(queryMap map[string][]string, r *http.Request) (ma
 		case "kernelArgs":
 			queryParams["KernelArgs"] = val
 		case "distro":
-			// user may not search by distros they have no access todistro
+			// user may not search by distros they have no access to distro
 			if !userElevated(user.Name) {
 				for _, dName := range val {
 					allowed := false

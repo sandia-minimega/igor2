@@ -167,7 +167,7 @@ func getPublicShowData() (publicData string, code int, err error) {
 				groupName = r.Group.Name
 			}
 
-			resLine := make([]string, 7, 7)
+			resLine := make([]string, 7)
 			resLine[0] = r.Name
 			resLine[1] = r.Owner.Name
 			resLine[2] = groupName

@@ -5,11 +5,16 @@
 package igorcli
 
 import (
-	"github.com/spf13/cobra"
+	"archive/tar"
+	"compress/gzip"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 func getLocTime(t time.Time) time.Time {
@@ -42,14 +47,55 @@ func openFile(f string) *os.File {
 	return r
 }
 
-func validateNoArgs(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func compressFolderToTarGz(folderPath, tarGzFilePath string) error {
+	tarGzFile, err := os.Create(tarGzFilePath)
+	if err != nil {
+		return err
+	}
+	defer tarGzFile.Close()
+
+	gzipWriter := gzip.NewWriter(tarGzFile)
+	defer gzipWriter.Close()
+
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close()
+
+	err = filepath.Walk(folderPath, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if filePath == folderPath {
+			return nil
+		}
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.ToSlash(filePath)
+		if err := tarWriter.WriteHeader(header); err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			file, err := os.Open(filePath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = io.Copy(tarWriter, file)
+		}
+		return err
+	})
+	return err
+}
+
+func validateNoArgs(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	return []string{}, cobra.ShellCompDirectiveNoFileComp
 }
 
-func validateNameArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func validateNameArg(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}

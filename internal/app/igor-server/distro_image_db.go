@@ -30,8 +30,8 @@ func dbReadImage(queryParams map[string]interface{}, tx *gorm.DB) (images []Dist
 		case string:
 			tx = tx.Where(key, val)
 		case []string:
-			querystmt := key + " IN ?"
-			tx = tx.Where(querystmt, val)
+			queryStmt := key + " IN ?"
+			tx = tx.Where(queryStmt, val)
 		default:
 			// we shouldn't reach this error because we already checked the param types
 			logger.Error().Msgf("Incorrect parameter type received for %s: %v", key, val)

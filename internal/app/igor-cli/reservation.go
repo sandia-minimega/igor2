@@ -173,7 +173,7 @@ igor res create obiwan -d cent7 -n rx[5,12-15] -e ` + exEndDts() + ` -g jedis
   to the 'jedis' group.
 
 
-igor res create Twit2 -p twitserv -n dq74,dq9 -s ` + exStartDts() + ` -t 6d -v Twit1
+igor res create Twit2 -p twitserv -n dq74,dq9 -s ` + exStartDts() + ` -e 6d -v Twit1
 
   * Uses node list, future start date, duration to end, and vlan res-name.
   Requests a reservation named 'Twit2' using the profile 'twitserv' on three
@@ -252,10 +252,13 @@ func newResShowCmd() *cobra.Command {
 			"       [-g GR1,...] [-x]",
 		Short: "Show reservation information",
 		Long: `
-Shows reservation information, returning matches to specified parameters. If no
-parameters are provided then all reservations will be returned.
+Shows reservation information, returning matches to specified parameters. By
+default the command searches only on the user's reservations and in combination
+with any filter flags. Use the --all flag to search across all reservations.
 
 ` + optionalFlags + `
+
+Use the -a flag to include all reservations in the search.
 
 Use the -n, -o, -d, -p and -g flags to narrow results. Multiple values for a
 given flag should be comma-delimited.
@@ -265,13 +268,16 @@ Use the -x flag to render screen output without pretty formatting.
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			flagset := cmd.Flags()
+			var showAll *bool
+			showAllVal, _ := flagset.GetBool("all")
+			showAll = &showAllVal
 			names, _ := flagset.GetStringSlice("names")
 			owners, _ := flagset.GetStringSlice("owners")
 			distros, _ := flagset.GetStringSlice("distros")
 			profiles, _ := flagset.GetStringSlice("profiles")
 			groups, _ := flagset.GetStringSlice("groups")
 			simplePrint = flagset.Changed("simple")
-			printReservations(doShowReservation(names, distros, profiles, owners, groups))
+			printReservations(doShowReservation(showAll, names, distros, profiles, owners, groups))
 		},
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction:     validateNoArgs,
@@ -282,7 +288,9 @@ Use the -x flag to render screen output without pretty formatting.
 		groups,
 		distros,
 		profiles []string
+	var showAll bool
 
+	cmdShowRes.Flags().BoolVarP(&showAll, "all", "a", false, "show all reservations (includes other users)")
 	cmdShowRes.Flags().StringSliceVarP(&names, "names", "n", nil, "search by reservation name(s)")
 	cmdShowRes.Flags().StringSliceVarP(&owners, "owners", "o", nil, "search by owner name(s)")
 	cmdShowRes.Flags().StringSliceVarP(&groups, "groups", "g", nil, "search by group(s)")
@@ -318,10 +326,10 @@ can only be made by the reservation owner or an admin.
 
 A reservation can be extended with the --extend flag followed by a time value.
 Time expressions can either be the datetime format ` + exStartDts() + ` that
-specifies a new end time, or an interval specified in days(d), hours(h), and 
-minutes(m), in that order. Unitless numbers are treated as minutes. Days are 
+specifies a new end time, or an interval specified in days(d), hours(h), and
+minutes(m), in that order. Unit-less numbers are treated as minutes. Days are
 defined as 24*60 minutes and do not take Daylight Savings offsets into account.
-Example: To extend a reservation for 7 more days: 7d. To extend for 4 days, 
+Example: To extend a reservation for 7 more days: 7d. To extend for 4 days,
 6 hours, 30 minutes: 4d6h30m.
 
 The new end time is subject to the maximum length of time a reservation can 
@@ -518,9 +526,13 @@ func doCreateReservation(resName, distro, profile, owner, group, desc, stime, et
 	return unmarshalBasicResponse(body)
 }
 
-func doShowReservation(names, distros, profiles, owners, groups []string) *common.ResponseBodyReservations {
+func doShowReservation(showAll *bool, names, distros, profiles, owners, groups []string) *common.ResponseBodyReservations {
 
 	var params string
+
+	if showAll != nil {
+		params += "all=" + strconv.FormatBool(*showAll) + "&"
+	}
 
 	if len(names) > 0 {
 		for _, n := range names {
@@ -661,7 +673,7 @@ func printReservations(rb *common.ResponseBodyReservations) {
 	} else {
 
 		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "GROUP", "PROFILE", "DISTRO", "HOSTS", "DOWN/NA", "VLAN", "START", "END", "ORIG-END", "EXTEND-COUNT", "INSTALLED", "INSTALL-ERR"})
+		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "GROUP", "PROFILE", "DISTRO", "HOSTS", "DOWN/NA", "VLAN", "START", "END", "EXTEND-COUNT", "INSTALLED", "INSTALL-ERR"})
 		tw.AppendSeparator()
 
 		// for the table version, only put zone on first column
@@ -695,7 +707,6 @@ func printReservations(rb *common.ResponseBodyReservations) {
 				r.Vlan,
 				getLocTime(time.Unix(r.Start, 0)).Format(startTimeFmt),
 				getLocTime(time.Unix(r.End, 0)).Format(timeFmt),
-				getLocTime(time.Unix(r.OrigEnd, 0)).Format(timeFmt),
 				r.ExtendCount,
 				r.Installed,
 				r.InstallError,

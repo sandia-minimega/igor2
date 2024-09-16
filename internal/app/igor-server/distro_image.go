@@ -32,9 +32,10 @@ type DistroImage struct {
 	Name      string `gorm:"unique; notNull"`
 	Kernel    string
 	Initrd    string
-	Iso       string
 	Breed     string
 	LocalBoot bool
+	BiosBoot  bool `gorm:"notNull; default:false"`
+	UefiBoot  bool `gorm:"notNull; default:false"`
 	Distros   []Distro
 }
 
@@ -50,16 +51,23 @@ func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData
 		if image.LocalBoot {
 			local = "yes"
 		}
+		var boot []string
+		if image.BiosBoot {
+			boot = append(boot, "bios")
+		}
+		if image.UefiBoot {
+			boot = append(boot, "uefi")
+		}
 		distroImageList = append(distroImageList, common.DistroImageData{
 			Name:      image.Name,
 			ImageID:   image.ImageID,
 			ImageType: image.Type,
 			Kernel:    image.Kernel,
 			Initrd:    image.Initrd,
-			Iso:       image.Iso,
 			Distros:   distros,
 			Breed:     image.Breed,
 			Local:     local,
+			Boot:      boot,
 		})
 	}
 

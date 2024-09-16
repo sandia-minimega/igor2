@@ -90,7 +90,7 @@ func doCreateDistro(r *http.Request) (distro *Distro, code int, err error) {
 					return fmt.Errorf("uploading images is not permitted, see an admin for assistance with registering a new image to get an image reference value")
 				}
 				// if they included a kickstart, assume they're trying to register a local image
-				// reject and inform that must be done as a seperate step
+				// reject and inform that must be done as a separate step
 				if kickstart != "" {
 					return fmt.Errorf("distro image intended for local install/boot must be registered as a seperate step")
 				}

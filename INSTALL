@@ -1,0 +1,28 @@
+Install/Upgrade Instructions:
+
+- Run build-igor script with appropriate flags to build the executables. Use
+  the -h flag for usage help. You need the tar archive to do an automated
+  install.
+
+- Copy the igor2.tar.gz file and install-igor script to your target system.
+
+- If you are upgrading Igor's main server or web front-end you will need to
+  stop these applications before running the install-igor script in the next
+  step.
+
+- As root, run the install-igor script for both first-time installation or
+  upgrading from an earlier version. If you have installed Igor in custom
+  or non-traditional locations on your system, you may need to edit some of
+  the path variables in the install-igor script.
+
+
+Important Upgrade Notes:
+
+  This following versions requires a database upgrade when migrating to a
+  later version. After running install-igor but before restarting the server,
+  run the db-migrate application in the newly unpacked folder. Use the -h
+  flag for options if you have installed Igor or its configuration files in
+  non-default locations.
+
+  - v2.0.0
+

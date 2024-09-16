@@ -24,8 +24,8 @@ func hostPolicyNamesOfHostPolicies(policies []HostPolicy) []string {
 	return hpNames
 }
 
-// checkHostpolicyNameRules validates the host policy name
-func checkHostpolicyNameRules(ref string) error {
+// checkHostPolicyNameRules validates the host policy name
+func checkHostPolicyNameRules(ref string) error {
 	err := checkGenericNameRules(ref)
 	if err != nil {
 		return err

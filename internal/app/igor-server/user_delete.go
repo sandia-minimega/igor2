@@ -48,7 +48,7 @@ func doDeleteUser(username string, r *http.Request) (status int, err error) {
 
 		//  *** check for deletion conflicts with owned resources ***
 
-		ogList := user.ownedGroups()
+		ogList := user.singleOwnedGroups()
 		clog.Debug().Msgf("checking for '%s' owned groups", username)
 		if len(ogList) > 0 {
 			var ogNames []string

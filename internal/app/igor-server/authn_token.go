@@ -72,10 +72,7 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	claims, ok := token.Claims.(*MyClaims)
 	if !ok {
 		// expired or invalid token
-		errLine := actionPrefix + " failed unpacking token claims- "
-		if parseErr != nil {
-			errLine += parseErr.Error()
-		}
+		errLine := actionPrefix + " failed - expired or invalid token"
 		clog.Warn().Msgf(errLine)
 		return nil, &BadCredentialsError{msg: errLine}
 	}
@@ -143,7 +140,7 @@ func extractToken(r *http.Request) (string, error) {
 	// token may be in the cookie
 	c, err := r.Cookie("auth_token")
 	if err != nil {
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			// no cookie present
 			return "", nil
 		}

@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,6 +34,7 @@ func assembleYamlOutput(clusters []Cluster) ([]byte, error) {
 			tempMap["eth"] = h.Eth
 			tempMap["policy"] = h.HostPolicy.Name
 			tempMap["ip"] = h.IP
+			tempMap["bootMode"] = h.BootMode
 			cc.HostMap[h.SequenceID] = tempMap
 		}
 		ccs[c.Name] = *cc
@@ -56,15 +58,8 @@ func updateClusterConfigFile(yDoc []byte, clog *zl.Logger) (string, error) {
 			if mvErr := os.Rename(filepath, moveFilePath); mvErr != nil {
 				return mvErr
 			} else {
-				if f, fileErr := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644); fileErr != nil {
-					return fileErr
-				} else {
-					_, fileErr = f.WriteString(configDoc)
-					if fileErr != nil {
-						return fileErr
-					}
-					f.Close()
-				}
+				_ = common.WriteFile(filepath, configDoc, 0644)
+
 			}
 		} else {
 			return pathErr
@@ -75,23 +70,21 @@ func updateClusterConfigFile(yDoc []byte, clog *zl.Logger) (string, error) {
 	clusterConfigLocHome := filepath.Join(igor.IgorHome, "conf", IgorClusterConfDefault)
 
 	if dumpErr := moveAndDump(IgorClusterConfPathDefault, string(yDoc)); dumpErr != nil {
-		if pathErr, ok := dumpErr.(*os.PathError); ok && pathErr.Op == "stat" {
+		var pathErr *os.PathError
+		if errors.As(dumpErr, &pathErr) && pathErr.Op == "stat" {
 			// couldn't locate cluster conf file in /etc/igor
 			clog.Warn().Msgf("%v - trying %s", pathErr, clusterConfigLocHome)
-		} else {
-			return "", dumpErr
 		}
 
 		if dumpErr = moveAndDump(clusterConfigLocHome, string(yDoc)); dumpErr != nil {
-			if pathErr, ok := dumpErr.(*os.PathError); ok && pathErr.Op == "stat" {
+			var pathErr *os.PathError
+			if errors.As(dumpErr, &pathErr) && pathErr.Op == "stat" {
 				return "", fmt.Errorf("no config found at %s or %s - %w", IgorClusterConfPathDefault, clusterConfigLocHome, pathErr)
-			} else {
-				return "", dumpErr
 			}
 		} else {
 			return clusterConfigLocHome, nil
 		}
-	} else {
-		return IgorClusterConfPathDefault, nil
 	}
+
+	return IgorClusterConfPathDefault, nil
 }

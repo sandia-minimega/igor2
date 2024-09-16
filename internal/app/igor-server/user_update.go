@@ -67,7 +67,7 @@ func doUpdateUser(username string, editParams map[string]interface{}, r *http.Re
 							return fmt.Errorf("old password was incorrect")
 						}
 
-						if hash, hashErr := getPasswordHash(newPassword.(string)); hashErr != nil {
+						if hash, hashErr := createPasswordHash(newPassword.(string)); hashErr != nil {
 							return hashErr // uses default status
 						} else {
 							clog.Debug().Msgf("attempting to change password for '%s'", user.Name)
@@ -90,7 +90,7 @@ func doUpdateUser(username string, editParams map[string]interface{}, r *http.Re
 						} else {
 							clog.Info().Msgf("'%s' password is being reset by '%s'", user.Name, actionUser.Name)
 						}
-						if hash, hashErr := getPasswordHash(passwordDefault); hashErr != nil {
+						if hash, hashErr := createPasswordHash(passwordDefault); hashErr != nil {
 							return hashErr // uses default err status
 						} else {
 							editParams["pass_hash"] = hash

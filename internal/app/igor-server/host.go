@@ -28,6 +28,8 @@ const (
 	PermHosts = "hosts"
 )
 
+var AllowedBootModes = [...]string{"bios", "uefi"}
+
 // Host is the compute resource being reserved. It's data contains all relevant information needed by
 // igor to make reservations and issue commands to interact with a given host or get information
 // about its current status.
@@ -39,7 +41,9 @@ type Host struct {
 	Eth            string
 	Mac            string `gorm:"unique; notNull"`
 	IP             string
+	BootMode       string    `gorm:"notNull; default:bios"`
 	State          HostState // State is the HostState of this node. Default when created is HostBlocked.
+	RestoreState   HostState // State to return to after Maintenance phase is done. Either HostAvailable or HostBlocked.
 	ClusterID      int       `gorm:"notNull; uniqueIndex:idx_cluster_seq"`
 	Cluster        Cluster   `gorm:"->;<-:create; notNull"` // read/create only; hosts never change clusters
 	HostPolicyID   int
@@ -124,6 +128,7 @@ func (h *Host) getHostData(powered *bool, user *User) common.HostData {
 		Eth:          h.Eth,
 		IP:           ip,
 		Mac:          h.Mac,
+		BootMode:     h.BootMode,
 		State:        h.State.String(),
 		Powered:      poweredOn,
 		Cluster:      h.Cluster.Name,
@@ -144,17 +149,17 @@ func filterHostList(hostList []Host, filterPowered *bool, user *User) []common.H
 	for _, h := range hostList {
 
 		var hd common.HostData
-		if _, ok := powerMap[h.Name]; ok {
+		if _, ok := powerMap[h.HostName]; ok {
 			// if the powered boolean search param was included only send hosts that match that
 			// power condition, otherwise send everything
 			if filterPowered != nil {
-				if filterPowered == powerMap[h.Name] {
-					hd = h.getHostData(powerMap[h.Name], user)
+				if filterPowered == powerMap[h.HostName] {
+					hd = h.getHostData(powerMap[h.HostName], user)
 				} else {
 					continue
 				}
 			} else {
-				hd = h.getHostData(powerMap[h.Name], user)
+				hd = h.getHostData(powerMap[h.HostName], user)
 			}
 		} else {
 			hd = h.getHostData(nil, user)

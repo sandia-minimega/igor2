@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -271,6 +272,15 @@ func validateResvParams(handler http.Handler) http.Handler {
 		queryParamLoop:
 			for key, vals := range queryParams {
 				switch key {
+				case "all":
+					if len(vals) > 1 {
+						validateErr = fmt.Errorf("invalid parameter: '%s' cannot have multiple values", key)
+						break queryParamLoop
+					}
+					if _, err := strconv.ParseBool(vals[0]); err != nil {
+						validateErr = fmt.Errorf("invalid parameter: '%s=%s' does not evaluate to boolean", key, vals[0])
+						break queryParamLoop
+					}
 				case "name":
 					for _, resvName := range vals {
 						resvName = strings.TrimSpace(resvName)

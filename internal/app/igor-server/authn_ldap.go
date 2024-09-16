@@ -5,14 +5,10 @@
 package igorserver
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/go-ldap/ldap/v3"
 	"github.com/rs/zerolog/hlog"
+	"net/http"
 )
 
 // LdapAuth implements IAuth interface
@@ -24,7 +20,7 @@ func NewLdapAuth() IAuth {
 }
 
 func (l *LdapAuth) authenticate(r *http.Request) (*User, error) {
-
+	ldapConf := igor.Auth.Ldap
 	clog := hlog.FromRequest(r)
 	actionPrefix := "ldap login"
 
@@ -41,58 +37,13 @@ func (l *LdapAuth) authenticate(r *http.Request) (*User, error) {
 		return nil, err
 	}
 
-	// prepare ldap settings
-	ldapConf := igor.Auth.Ldap
-	ldapServer := igor.Auth.Scheme + "://" + ldapConf.Host + ":" + ldapConf.Port
-
-	// build tls.config with given user settings,
-	tlsConfig := &tls.Config{InsecureSkipVerify: true}
-	if ldapConf.TLSConfig.TLSCheckPeer {
-		rootCA, err := x509.SystemCertPool()
-		if err != nil {
-			clog.Warn().Msgf("%s failed - error loading system cert pool: %v", actionPrefix, err)
-			return nil, err
-		}
-		if rootCA == nil {
-			clog.Warn().Msgf("%s warning - couldn't locate system cert, making empty cert pool", actionPrefix)
-			rootCA = x509.NewCertPool()
-		}
-		// If cert path was included in TLSConfig, add to rootCA
-		if ldapConf.TLSConfig.Cert != "" {
-			ldapCert, err := os.ReadFile(ldapConf.TLSConfig.Cert)
-			if err != nil {
-				clog.Warn().Msgf("%s failed - Failed to read ad cert:%v", actionPrefix, err)
-				return nil, err
-			}
-			ok := rootCA.AppendCertsFromPEM(ldapCert)
-			if !ok {
-				clog.Warn().Msgf("%s failed - AD cert at %s not added.", actionPrefix, ldapConf.TLSConfig.Cert)
-			}
-		}
-		tlsConfig = &tls.Config{
-			ServerName: ldapConf.Host,
-			RootCAs:    rootCA,
-		}
-	}
-
-	// connect to ldap server - ldaps scheme connects using SSL, unsecured otherwise
-	c, err := ldap.DialURL(ldapServer, ldap.DialWithTLSConfig(tlsConfig))
+	c, err := getLDAPConnection()
 	if err != nil {
-		errLine := actionPrefix + " (DialURL) - failed: "
+		errLine := actionPrefix + " (LDAP Connection) - failed: "
 		clog.Error().Msg(errLine + err.Error())
 		return nil, err
 	}
 	defer c.Close()
-
-	// upgrade connection to TLS if configured
-	if igor.Auth.Scheme != "ldaps" && ldapConf.UseTLS {
-		err = c.StartTLS(tlsConfig)
-		if err != nil {
-			errLine := actionPrefix + " (startTLS) - failed: "
-			clog.Error().Msg(errLine + err.Error())
-			return nil, err
-		}
-	}
 
 	err = c.Bind(ldapConf.BindDN, ldapConf.BindPassword)
 	if err != nil {

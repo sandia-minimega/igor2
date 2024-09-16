@@ -103,7 +103,7 @@ func doCreateReservation(resParams map[string]interface{}, r *http.Request) (res
 			if profile.IsDefault {
 				return fmt.Errorf("cannot use a temp profile in more than 1 reservation. Make the profile permanent first by editing its name, then try again")
 			}
-			// make sure the distro of this profile is still accessable to the user
+			// make sure the distro of this profile is still accessible to the user
 			if dList, _, err := getDistros([]string{profile.Distro.Name}, tx); err != nil {
 				return err
 			} else if len(dList) == 0 {
@@ -224,7 +224,7 @@ func doCreateReservation(resParams map[string]interface{}, r *http.Request) (res
 				err = fmt.Errorf("reservation duration must be larger than minimum value %v minutes", igor.Scheduler.MinReserveTime)
 				return err
 			}
-			resEnd = resStart.Add(dur).Round(time.Minute)
+			resEnd = resStart.Add(dur).Truncate(time.Minute) // drop any seconds in the value
 		}
 
 		if err = checkScheduleLimit(resEnd, isElevated); err != nil {

@@ -49,7 +49,6 @@ type DistroData struct {
 	ImageType   string   `json:"image_type"`
 	Kernel      string   `json:"kernel"`
 	Initrd      string   `json:"initrd"`
-	Iso         string   `json:"iso"`
 	KernelArgs  string   `json:"kernelArgs"`
 	Kickstart   string   `json:"kickstart"`
 	IsPublic    bool     `json:"isPublic"`
@@ -62,10 +61,10 @@ type DistroImageData struct {
 	ImageType string   `json:"image_type"`
 	Kernel    string   `json:"kernel"`
 	Initrd    string   `json:"initrd"`
-	Iso       string   `json:"iso"`
 	Distros   []string `json:"distros"`
 	Breed     string   `json:"breed"`
 	Local     string   `json:"local"`
+	Boot      []string `json:"boot"`
 }
 
 // KickstartData contains the filtered contents of a Kickstart for user consumption
@@ -91,6 +90,7 @@ type HostData struct {
 	Eth          string   `json:"eth"`
 	IP           string   `json:"ip"`
 	Mac          string   `json:"mac"`
+	BootMode     string   `json:"bootMode"`
 	State        string   `json:"state"`
 	Powered      string   `json:"powered"`
 	Cluster      string   `json:"cluster"`
@@ -123,7 +123,7 @@ type UserData struct {
 type GroupData struct {
 	Name         string   `json:"name"`
 	Description  string   `json:"description"`
-	Owner        string   `json:"owner"`
+	Owners       []string `json:"owners"`
 	Members      []string `json:"members"`
 	Distros      []string `json:"distros"`
 	Policies     []string `json:"hostPolicies"`

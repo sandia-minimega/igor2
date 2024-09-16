@@ -42,6 +42,7 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	// potential way of determining whether files were included and type based on count?
 	clog.Debug().Msgf("Number of files attached: %v", len(r.MultipartForm.File))
 
+	// net-boot only: we're getting a KI pair
 	// check for included staged file names, admin may have manually placed files in staging folder for us
 	image = detectStagedFiles(r)
 	if image == nil {
@@ -56,6 +57,20 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	if strings.ToLower(r.FormValue("localBoot")) == "true" {
 		image.LocalBoot = true
 	}
+
+	// get boot type(s) of image
+	// if boots, ok := r.Form["boot"]; ok {
+	// 	for _, boot := range boots {
+	// 		if strings.ToLower(boot) == "bios" {
+	// 			image.BiosBoot = true
+	// 		}
+	// 		if strings.ToLower(boot) == "uefi" {
+	// 			image.UefiBoot = true
+	// 		}
+	// 	}
+	// } else {
+	// 	return image, http.StatusBadRequest, fmt.Errorf("at least one value required image boot type")
+	// }
 
 	// set image OS breed value, if given, otherwise put generic as default
 	breed := strings.ToLower(r.FormValue("breed"))
@@ -79,7 +94,7 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 // stageUploadedFiles extracts files inside the multipart form and saves them to the
 // igor_staged_images directory to be processed into the igor_images directory later
 func stageUploadedFiles(r *http.Request) (*DistroImage, error) {
-	// Will expand eventually to detect and accomodate different file type (ex. iso)
+	// Will expand eventually to detect and accommodate different file type (ex. iso)
 	// ex. try different file keys until success, if no successes, return error
 	var image *DistroImage
 
@@ -244,7 +259,7 @@ func processImageFiles(image *DistroImage) (err error) {
 // stageFile takes a file object extracted from a multipart form
 // and saves it to the staged folder using the given file name fName
 func stageFile(src multipart.File, f string) (target string, err error) {
-	// get spearate path and filename in case a full path was captured during upload
+	// get separate path and filename in case a full path was captured during upload
 	_, fName := path.Split(f)
 	filePath := filepath.Join(igor.Server.ImageStagePath, fName)
 
@@ -342,13 +357,13 @@ func copyFile(srcPath, targetPath string) error {
 	return nil
 }
 
-// determine if references to staged file(s) were given to us
-// and what types of files they are. Returns an Image obj
-// containing the image type, or nil otherwise
+// // determine if references to staged file(s) were given to us
+// // and what types of files they are. Returns an Image obj
+// // containing the image type, or nil otherwise
 func detectStagedFiles(r *http.Request) *DistroImage {
-	// expand in the future to accomodate different image type
-	kFile := r.FormValue("kernelStaged")
-	iFile := r.FormValue("initrdStaged")
+	// expand in the future to accommodate different image type
+	kFile := r.FormValue("kstaged")
+	iFile := r.FormValue("istaged")
 	if kFile != "" && iFile != "" {
 		return &DistroImage{
 			Type:   DistroKI,
@@ -362,7 +377,7 @@ func detectStagedFiles(r *http.Request) *DistroImage {
 // destroyStagedImages deletes the specified image files from
 // the igor_staged_images directory
 func destroyStagedImages(image *DistroImage) {
-	paths := []string{}
+	var paths []string
 	switch image.Type {
 	case DistroKI:
 		// setup paths

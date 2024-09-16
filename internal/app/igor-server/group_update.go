@@ -27,6 +27,26 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 	// validate changes that don't require DB lookups
 	clog := hlog.FromRequest(r)
 	var groupId int
+	var group *Group
+
+	if err = performDbTx(func(tx *gorm.DB) error {
+
+		if gList, gStatus, gErr := getGroups([]string{groupName}, true, tx); gErr != nil {
+			status = gStatus
+			return gErr
+		} else {
+			group = &gList[0]
+			groupId = group.ID
+			if group.IsLDAP {
+				clog.Warn().Msgf("user issued a group update command on an LDAP-synced group.")
+				status = http.StatusForbidden
+				return fmt.Errorf("cannot change details of LDAP-synced group '%s' within igor", groupName)
+			}
+		}
+		return nil
+	}); err != nil {
+		return
+	}
 
 	_, hasName := editParams["name"].(string)
 	if hasName {
@@ -35,13 +55,27 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 		}
 	}
 
-	newOwnerName, hasOwner := editParams["owner"].(string)
-	if hasOwner {
-		if newOwnerName == IgorAdmin {
-			ruser := getUserFromContext(r)
-			if !userElevated(ruser.Name) {
-				return http.StatusForbidden, fmt.Errorf("must have admin status to assign group ownership to %s", IgorAdmin)
+	var addOwnerNames []string
+	addOwners, hasOwners := editParams["addOwners"].([]interface{})
+	if hasOwners {
+		for _, u := range addOwners {
+			newOwn := u.(string)
+			if newOwn == IgorAdmin {
+				return http.StatusForbidden, fmt.Errorf("cannot add %s to any group", IgorAdmin)
 			}
+			addOwnerNames = append(addOwnerNames, newOwn)
+		}
+	}
+
+	var rmvOwnerNames []string
+	rmvOwners, rmvOwner := editParams["rmvOwners"].([]interface{})
+	if rmvOwner {
+		for _, u := range rmvOwners {
+			rmvOwn := u.(string)
+			if rmvOwn == IgorAdmin && groupName == GroupAdmins {
+				return http.StatusForbidden, fmt.Errorf("cannot remove %s from the '%s' group", IgorAdmin, GroupAdmins)
+			}
+			rmvOwnerNames = append(rmvOwnerNames, rmvOwn)
 		}
 	}
 
@@ -68,8 +102,10 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 			if rmName == IgorAdmin && groupName == GroupAdmins {
 				return http.StatusForbidden, fmt.Errorf("cannot remove %s from the '%s' group", IgorAdmin, GroupAdmins)
 			}
-			if rmName == newOwnerName {
-				return http.StatusBadRequest, fmt.Errorf("cannot assign a new owner who is also removed from the group")
+			for _, oName := range addOwnerNames {
+				if oName == rmName {
+					return http.StatusBadRequest, fmt.Errorf("cannot assign a new owner who is also removed from the group")
+				}
 			}
 			for _, adName := range addMemNames {
 				if rmName == adName {
@@ -83,9 +119,10 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 
 	var addUsers, removeUsers []User
-	var group *Group
-	var oldOwner *User
-	var newName, oldName string
+	var addNewOwners, rmvOldOwners []User
+	//var newOwner *User
+	//var oldOwner *User
+	var newGroupName, oldGroupName string
 
 	if err = performDbTx(func(tx *gorm.DB) error {
 
@@ -100,20 +137,12 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 				return fmt.Errorf("group name '%s' already in use", name)
 			}
 			changes["name"] = name
-			newName = name
-			oldName = groupName
+			newGroupName = name
+			oldGroupName = groupName
 		}
 
 		if desc, hasDesc := editParams["description"]; hasDesc {
 			changes["description"] = desc.(string)
-		}
-
-		if gList, gStatus, gErr := getGroups([]string{groupName}, true, tx); gErr != nil {
-			status = gStatus
-			return gErr
-		} else {
-			group = &gList[0]
-			groupId = group.ID
 		}
 
 		if hasAdd {
@@ -125,30 +154,38 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 			}
 		}
 
-		if hasOwner {
-			nown, guStatus, guErr := getUsers([]string{newOwnerName}, true, tx)
+		if hasOwners {
+			addNewOwners, guStatus, guErr := getUsers(addOwnerNames, true, tx)
 			if err != nil {
 				status = guStatus
 				return guErr
 			}
-			changes["owner"] = nown[0]
-			temp := group.Owner
-			oldOwner = &temp
+			changes["addOwners"] = addNewOwners
 
 			// We will add the new owner in case they didn't already belong to the group
-			addUsers = append(addUsers, nown...)
+			addUsers = append(addUsers, addNewOwners...)
+		}
 
-			ownerPermList, gpmErr := dbGetResourceOwnerPermissions(PermGroups, group.Name, &group.Owner, tx)
-			if gpmErr != nil {
-				return gpmErr // uses default err status
+		if rmvOwner {
+			rmvOldOwners, guStatus, guErr := getUsers(rmvOwnerNames, true, tx)
+			if err != nil {
+				status = guStatus
+				return guErr
 			}
-			changes["owner-permissions"] = ownerPermList
 
-			ownerPugID, gpErr := nown[0].getPugID()
-			if gpErr != nil {
-				return gpErr // uses default err status
+			if hasOwners {
+				for _, o := range addOwnerNames {
+					if userSliceContains(rmvOldOwners, o) {
+						status = http.StatusBadRequest
+						return fmt.Errorf("cannot add and remove the same owner '%s' from group", o)
+					}
+				}
+			} else if len(group.Owners)+len(addOwnerNames) <= len(rmvOldOwners) {
+				status = http.StatusBadRequest
+				return fmt.Errorf("cannot remove all owners from a group")
 			}
-			changes["newowner-groupId"] = ownerPugID
+
+			changes["rmvOwners"] = rmvOldOwners
 		}
 
 		if hasRemove {
@@ -159,10 +196,21 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 				removeUsers = rml
 			}
 
-			// If we are removing the group's current owner but not naming a new one... denied!
-			if userSliceContains(removeUsers, group.Owner.Name) && newOwnerName == "" {
+			var ownersRemoved = 0
+			for _, o := range group.Owners {
+				for _, u := range removeUsers {
+					if o.Name == u.Name {
+						ownersRemoved++
+						rmvOldOwners = append(rmvOldOwners, u)
+					}
+				}
+			}
+
+			if len(group.Owners) <= ownersRemoved && len(addOwnerNames) == 0 {
 				status = http.StatusBadRequest
-				return fmt.Errorf("cannot remove the owner of the group without designating a new one")
+				return fmt.Errorf("cannot remove the last owner of a group without designating a new one")
+			} else if len(rmvOldOwners) > 0 {
+				changes["rmvOwners"] = rmvOldOwners
 			}
 
 			// find out the distros that are accessible by this group and if the current owner of the distro is
@@ -198,6 +246,8 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 
 		var notifyList []*GroupNotifyEvent
 
+		// only send these notifications if the group is NOT an LDAP-synced group.
+
 		// if the group update was successful and the update included a name change, record this history with any
 		// affected reservations. don't stop if the record doesn't update properly
 		if hasName {
@@ -210,9 +260,9 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 				}
 			}
 
-			gList, _ := dbReadGroupsTx(map[string]interface{}{"name": newName, "showMembers": true}, true)
+			gList, _ := dbReadGroupsTx(map[string]interface{}{"name": newGroupName, "showMembers": true}, true)
 			group = &gList[0]
-			if grpEvent := makeGroupNotifyEvent(EmailGroupChangeName, group, nil, oldName); grpEvent != nil {
+			if grpEvent := makeGroupNotifyEvent(EmailGroupChangeName, group, nil, oldGroupName); grpEvent != nil {
 				notifyList = append(notifyList, grpEvent)
 			}
 		} else {
@@ -220,22 +270,32 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 			group = &gList[0]
 		}
 
-		if oldOwner != nil {
-			if grpEvent := makeGroupNotifyEvent(EmailGroupChangeOwn, group, oldOwner, oldName); grpEvent != nil {
-				notifyList = append(notifyList, grpEvent)
+		if len(addOwnerNames) > 0 {
+			for _, o := range addNewOwners {
+				if grpEvent := makeGroupNotifyEvent(EmailGroupAddOwner, group, &o, o.Name); grpEvent != nil {
+					notifyList = append(notifyList, grpEvent)
+				}
+			}
+		}
+
+		if len(rmvOldOwners) > 0 {
+			for _, o := range rmvOldOwners {
+				if grpEvent := makeGroupNotifyEvent(EmailGroupRmvOwner, group, &o, o.Name); grpEvent != nil {
+					notifyList = append(notifyList, grpEvent)
+				}
 			}
 		}
 
 		if len(addUsers) > 0 {
 			for _, u := range addUsers {
-				if grpEvent := makeGroupNotifyEvent(EmailGroupAddMem, group, &u, oldName); grpEvent != nil {
+				if grpEvent := makeGroupNotifyEvent(EmailGroupAddMem, group, &u, oldGroupName); grpEvent != nil {
 					notifyList = append(notifyList, grpEvent)
 				}
 			}
 		}
 		if len(removeUsers) > 0 {
 			for _, u := range removeUsers {
-				if grpEvent := makeGroupNotifyEvent(EmailGroupRmvMem, group, &u, oldName); grpEvent != nil {
+				if grpEvent := makeGroupNotifyEvent(EmailGroupRmvMem, group, &u, oldGroupName); grpEvent != nil {
 					notifyList = append(notifyList, grpEvent)
 				}
 			}

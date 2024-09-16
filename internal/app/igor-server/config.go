@@ -29,7 +29,6 @@ const (
 	IgorClusterConfDefault     = "igor-clusters.yaml"
 	IgorClusterConfPathDefault = IgorConfHome + IgorClusterConfDefault
 	IgorCliPrefix              = "IgorCLI"
-	InsomniaPrefix             = "insomnia"
 	MaxScheduleDays            = 1457 // 4 years in days including 1 leap day
 	MaxReserveMinutes          = 2098080
 	DefaultReserveTime         = 60
@@ -37,6 +36,8 @@ const (
 	DefaultMaxReserveTime      = 43200
 	LowestMinReserveTime       = 10
 	DefaultExtendWithin        = 4320
+
+	//InsomniaPrefix             = "insomnia"
 )
 
 var (
@@ -88,20 +89,35 @@ type Config struct {
 				// Cert: path to ldap-cert.pem
 				Cert string `yaml:"cert" json:"cert"`
 			} `yaml:"tlsConfig" json:"tlsConfig"`
-			// BindDN: represents LDAP DN for searching for the user DN.
-			// Typically read only user DN.
+			// BindDN: represents LDAP DN for searching for the user DN. Typically, read only user DN.
 			BindDN string `yaml:"bindDN" json:"bindDN"`
-			// BindPassword: LDAP password for searching for the user DN.
-			// Typically read only user password.
+			// BindPassword: LDAP password for searching for the user DN. Typically, read only user password.
 			BindPassword string `yaml:"bindPassword"  json:"-"`
 			// Attributes: used for users.
 			Attributes []string `yaml:"attributes" json:"attributes"`
 			// BaseDN: LDAP domain to use for users.
 			BaseDN string `yaml:"baseDN" json:"baseDN"`
 			// Filter: for the User Object Filter.
-			// if username nedded more than once use fmt index pattern (%[1]s).
+			// if username needed more than once use fmt index pattern (%[1]s).
 			// Otherwise %s.
 			Filter string `yaml:"filter" json:"filter"`
+			Sync   struct {
+				// EnableUserSync: default=false Enable group sync feature
+				EnableUserSync bool `yaml:"enableUserSync" json:"enableUserSync"`
+				// EnableGroupSync: default=false Enable group sync feature
+				EnableGroupSync bool `yaml:"enableGroupSync" json:"enableGroupSync"`
+				// SyncFrequency: default=60 Minutes to wait between running sync actions
+				SyncFrequency int `yaml:"syncFrequency" json:"syncFrequency"`
+				// GroupFilters: default=blank - for the Group Object Filter
+				GroupFilters []string `yaml:"groupFilters" json:"groupFilters"`
+				// UserListAttribute: default=blank - the key for the Entity Attribute value which holds the usernames for all members of the group
+				UserListAttribute string `yaml:"userListAttribute" json:"userListAttribute"`
+				// groupAttributeEmail default=blank - the key for the Entity Attribute email Value.
+				UserEmailAttribute string `yaml:"userEmailAttribute" json:"userEmailAttribute"`
+				// groupAttributeDisplayName default=blank - the key for the Entity Attribute display name Value.
+				UserDisplayNameAttribute string   `yaml:"userDisplayNameAttribute" json:"userDisplayNameAttribute"`
+				GroupOwnerAttributes     []string `yaml:"groupOwnerAttributes" json:"groupOwnerAttributes"`
+			} `yaml:"sync" json:"sync"`
 		} `yaml:"ldap" json:"ldap"`
 	} `yaml:"auth" json:"auth"`
 
@@ -215,7 +231,7 @@ func getHostFQDN() (string, error) {
 //
 // - the filepath passed into command-line args
 //
-// - the hard-coded etc conf filepath
+// - the hard-coded /etc configuration filepath
 //
 // - the hard-coded relative filepath under IGOR_HOME
 //
@@ -373,22 +389,34 @@ func initConfigCheck() {
 	}
 
 	igor.TFTPPath = igor.Server.TFTPRoot
-	igor.PXEDir = "pxelinux.cfg"
+	igor.PXEBIOSDir = "pxelinux.cfg"
+	igor.PXEUEFIDir = filepath.Join("uefi")
 	igor.ImageStoreDir = "igor_images"
 	igor.KickstartDir = "kickstarts"
 
-	// pxe rep paths
-	tftprep := filepath.Join(igor.TFTPPath, igor.PXEDir, "igor")
+	// pxe rep paths for bios + igor backup
+	tftprep := filepath.Join(igor.TFTPPath, igor.PXEBIOSDir, "igor")
 	if _, err := os.Stat(tftprep); errors.Is(err, os.ErrNotExist) {
-		logger.Warn().Msgf("TFTP repository path(s) not found, creating directory")
+		logger.Warn().Msgf("TFTP BIOS repository path(s) not found, creating directory")
 		createErr := os.MkdirAll(tftprep, 0755)
 		if createErr != nil {
 			logger.Error().Msgf("TFTP repository path creation failure: %v", createErr)
 		}
 	}
 
+	// same for uefi
+	tftuefiprep := filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor")
+	if _, err := os.Stat(tftuefiprep); errors.Is(err, os.ErrNotExist) {
+		logger.Warn().Msgf("TFTP UEFI repository path(s) not found, creating directory")
+		createErr := os.MkdirAll(tftuefiprep, 0755)
+		if createErr != nil {
+			logger.Error().Msgf("TFTP repository path creation failure: %v", createErr)
+		}
+	}
+
 	logger.Info().Msgf("TFTP root path established: %v", igor.TFTPPath)
-	logger.Info().Msgf(".cfg repository established: %v", tftprep)
+	logger.Info().Msgf("BIOS cfg repository established: %v", tftprep)
+	logger.Info().Msgf("UEFI boot repository established: %v", tftuefiprep)
 
 	// kickstart rep path
 	ksPath := filepath.Join(igor.TFTPPath, igor.KickstartDir)
@@ -488,19 +516,34 @@ func initConfigCheck() {
 		if igor.Auth.Ldap.Host == "" {
 			exitPrintFatal(fmt.Sprintf("config error - LDAP auth scheme set but no LDAP hostname specified"))
 		}
-	}
 
-	if len(igor.Auth.Ldap.Port) == 0 {
-		if igor.Auth.Scheme == "ldap" {
-			igor.Auth.Ldap.Port = "389"
-			logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
-		} else if igor.Auth.Scheme == "ldaps" {
-			igor.Auth.Ldap.Port = "636"
-			logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
-		} else if igor.Auth.Scheme == "ldapi" {
-			igor.Auth.Ldap.Port = "0"
-			logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+		if len(igor.Auth.Ldap.Port) == 0 {
+			if igor.Auth.Scheme == "ldap" {
+				igor.Auth.Ldap.Port = "389"
+				logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+			} else if igor.Auth.Scheme == "ldaps" {
+				igor.Auth.Ldap.Port = "636"
+				logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+			} else if igor.Auth.Scheme == "ldapi" {
+				igor.Auth.Ldap.Port = "0"
+				logger.Warn().Msgf("ldap.port assignment not specified, using default : %v", igor.Auth.Ldap.Port)
+			}
 		}
+
+		if igor.Auth.Ldap.Sync.EnableGroupSync {
+			if igor.Auth.Ldap.Sync.SyncFrequency <= 0 {
+				igor.Auth.Ldap.Sync.SyncFrequency = 60
+			}
+			if len(igor.Auth.Ldap.Sync.GroupFilters) == 0 {
+				exitPrintFatal(fmt.Sprintf("config error - GroupFilters must have a value when LDAP-Sync is enabled"))
+			}
+			if igor.Auth.Ldap.Sync.UserEmailAttribute == "" && igor.Email.DefaultSuffix == "" {
+				exitPrintFatal(fmt.Sprintf("config error - Email.DefaultSuffix must have a value when Auth.Ldap.Sync is enabled"))
+			}
+		}
+
+	} else {
+		igor.Auth.Ldap.Sync.EnableGroupSync = false
 	}
 
 	if igor.Database.Adapter == "" {

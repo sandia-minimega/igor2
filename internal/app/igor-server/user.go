@@ -139,11 +139,20 @@ func (u *User) isMemberOfGroups(gs []Group) (bool, string) {
 	return true, ""
 }
 
-// ownedGroups returns the list of groups the user owns. Note this doesn't include the
+// singleOwnedGroups returns the list of groups the user solely owns. Note this doesn't include the
 // user's pug since that is a system-created group owned by IgorAdmin.
-func (u *User) ownedGroups() (owned []Group) {
+func (u *User) singleOwnedGroups() (owned []Group) {
 	for _, g := range u.Groups {
-		if u.ID == g.OwnerID {
+		if len(g.Owners) == 1 && g.Owners[0].ID == u.ID {
+			owned = append(owned, g)
+		}
+	}
+	return
+}
+
+func (u *User) sharedOwnedGroups() (owned []Group) {
+	for _, g := range u.Groups {
+		if len(g.Owners) > 1 {
 			owned = append(owned, g)
 		}
 	}

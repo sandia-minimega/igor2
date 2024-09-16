@@ -7,6 +7,7 @@ package common
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ const (
 	MTextPlain = "text/plain"
 )
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+// var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var smallLetters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 // RandSeq generates a random sequence of characters from the above letters of given length n
@@ -54,12 +55,26 @@ func RandSeq(n int) string {
 	return string(b)
 }
 
+func WriteFile(path string, content string, mode os.FileMode) error {
+	if file, err := os.Create(path); err != nil {
+		return fmt.Errorf("failed to create %v -- %v", path, err)
+	} else {
+		_ = file.Chmod(mode)
+		_, err = file.WriteString(content)
+		if err != nil {
+			return fmt.Errorf("failed to write %v -- %v", path, err)
+		}
+		_ = file.Close()
+	}
+	return nil
+}
+
 // ParseDuration parses a duration, supporting a 'd' suffix in addition to
 // those supported by time.ParseDuration. Rounds duration to minute. It
 // will remove spaces so that durations produced from FormatDuration with
 // alignment columns can be understood.
 func ParseDuration(s string) (time.Duration, error) {
-	// unitless integer is assumed to be in minutes
+	// unit-less integer is assumed to be in minutes
 
 	s = strings.ReplaceAll(s, " ", "")
 

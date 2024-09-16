@@ -26,15 +26,21 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create user"
 	rb := common.NewResponseBody()
+	var status int
 
-	user, status, err := doCreateUser(createParams, r)
-
-	if err != nil {
+	if igor.Auth.Ldap.Sync.EnableUserSync {
+		status = http.StatusBadRequest
+		err := fmt.Errorf("cannot create local user when LDAP manages account creation")
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		msg := fmt.Sprintf("igor user '%s' created", user.Name)
-		clog.Info().Msgf("%s success - %s", actionPrefix, msg)
-		rb.Message = msg
+		if user, ucStatus, err := doCreateUser(createParams, r); err != nil {
+			stdErrorResp(rb, ucStatus, actionPrefix, err, clog)
+		} else {
+			status = ucStatus
+			msg := fmt.Sprintf("igor user '%s' created", user.Name)
+			clog.Info().Msgf("%s success - %s", actionPrefix, msg)
+			rb.Message = msg
+		}
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -159,7 +165,7 @@ func validateUserParams(handler http.Handler) http.Handler {
 							if user, ok := val.(string); !ok {
 								validateErr = NewBadParamTypeError(key, val, "string")
 								break postPutParamLoop
-							} else if validateErr = checkFullnameRules(strings.ToLower(user)); validateErr != nil {
+							} else if validateErr = checkFullNameRules(strings.ToLower(user)); validateErr != nil {
 								break postPutParamLoop
 							}
 						case "email":
@@ -214,7 +220,7 @@ func validateUserParams(handler http.Handler) http.Handler {
 							if fullName, ok := val.(string); !ok {
 								validateErr = NewBadParamTypeError(key, val, "string")
 								break patchParamLoop
-							} else if validateErr = checkFullnameRules(fullName); validateErr != nil {
+							} else if validateErr = checkFullNameRules(fullName); validateErr != nil {
 								break patchParamLoop
 							}
 						case "password":

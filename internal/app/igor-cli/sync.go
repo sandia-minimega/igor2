@@ -118,16 +118,16 @@ func printSync(rb *common.ResponseBodySync) {
 		pgt.AppendHeader(headers)
 		fmt.Printf("NOTE - Igor examines only hosts currently engaged in an active reservation\n\n")
 		for node, data := range report {
-			mreport := data.(map[string]interface{})
-			powered := mreport["powered"].(string)
+			nodeReportData := data.(map[string]interface{})
+			powered := nodeReportData["powered"].(string)
 			var poweredColor string
 			if powered == "off" {
 				poweredColor = color.S256(15, 9).Sprint(powered)
 			} else {
 				poweredColor = color.FgLightGreen.Sprint(powered)
 			}
-			resVlan := mreport["res_vlan"].(string)
-			switchVlan := mreport["switch_vlan"].(string)
+			resVlan := nodeReportData["res_vlan"].(string)
+			switchVlan := nodeReportData["switch_vlan"].(string)
 			mismatch := switchVlan != resVlan
 			var switchVlanColor string
 			if mismatch {
@@ -138,7 +138,7 @@ func printSync(rb *common.ResponseBodySync) {
 			if !quiet || mismatch {
 				row := []interface{}{node, poweredColor, resVlan, switchVlanColor}
 				if force && mismatch {
-					status := mreport["status"].(string)
+					status := nodeReportData["status"].(string)
 					row = append(row, status)
 				}
 				pgt.AppendRow(row)

@@ -77,7 +77,7 @@ func hostSliceContains(hosts []Host, name string) (bool, Host) {
 }
 
 func getHostIntersection(hostNames []string, hosts []Host) []Host {
-	targetHosts := []Host{}
+	var targetHosts []Host
 	for _, hostName := range hostNames {
 		if contains, host := hostSliceContains(hosts, hostName); contains {
 			targetHosts = append(targetHosts, host)
@@ -122,4 +122,13 @@ func checkEthRules(ref string) error {
 		return fmt.Errorf("'%s' is not a legal ethernet (eth) value", ref)
 	}
 	return nil
+}
+
+func validBootMode(ref string) bool {
+	for _, bMode := range AllowedBootModes {
+		if ref == bMode {
+			return true
+		}
+	}
+	return false
 }

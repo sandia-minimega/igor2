@@ -36,6 +36,7 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 
 	status := http.StatusOK
 	clog := hlog.FromRequest(r)
+	resOwner := getUserFromContext(r)
 
 	queryParams := map[string]interface{}{}
 	queryTimeParams := map[string]time.Time{}
@@ -43,6 +44,11 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 	for key, val := range queryMap {
 
 		switch key {
+		case "all":
+			showAll, _ := strconv.ParseBool(val[0])
+			if !showAll {
+				queryParams["reservations.owner_id"] = resOwner.ID
+			}
 		case "name":
 			// these can be passed directly as []string
 			queryParams[key] = val
@@ -51,7 +57,14 @@ func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[st
 			if ownerList, status, err := doReadUsers(ownerQuery); err != nil {
 				return nil, nil, status, err
 			} else {
-				queryParams["owner_id"] = userIDsOfUsers(ownerList)
+				queryParams["reservations.owner_id"] = userIDsOfUsers(ownerList)
+			}
+		case "distro":
+			distroQuery := map[string]interface{}{"name": val}
+			if distroList, status, err := doReadDistros(distroQuery, r); err != nil {
+				return nil, nil, status, err
+			} else {
+				queryParams["distro_id"] = distroIDsOfDistros(distroList)
 			}
 		case "profile":
 			profileQuery := map[string]interface{}{"name": val}

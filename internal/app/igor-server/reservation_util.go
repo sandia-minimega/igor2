@@ -10,17 +10,26 @@ import (
 	"time"
 
 	"igor2/internal/pkg/common"
+
+	"gorm.io/gorm"
 )
 
-func checkTimeLimit(nodes int, limit time.Duration, resDur time.Duration) error {
+func checkTimeLimit(nodeCount int, limit time.Duration, resDur time.Duration) error {
+	// nodeCount is ignored at the moment.
+	// In old igor, a formula was created that lowered the amount of time allowed for the res
+	// based on how many nodes were requested. More nodes = less reservation time. Doubtful we
+	// will ever go back to that, but the node count is there if needed.
 
-	// no time limit in the config
 	if limit <= 0 {
+		// no time limit defined, so return nil
 		return nil
 	}
 
-	if resDur > limit {
-		return fmt.Errorf("max allowable time is %s (you requested %s)", limit.Round(time.Minute), resDur.Round(time.Minute))
+	logger.Debug().Msgf("checkTimeLimit: requested res duration: %v", resDur)
+
+	// lop off some seconds to ensure requesting max allowable time doesn't exceed limit by some tiny fraction
+	if resDur-(time.Second*5) > limit {
+		return fmt.Errorf("max allowable time is %s (you requested %s)", limit.Round(time.Second), resDur.Round(time.Second))
 	}
 
 	return nil
@@ -62,18 +71,18 @@ func makeResGroupPermStrings(res *Reservation) []string {
 
 // Create the permission string for allowing power commands to be performed on a group of hosts.
 func makeNodePowerPerm(hostList []Host) string {
-	var hostsStrList string
-
-	sort.Slice(hostList, func(i, j int) bool {
-		return hostList[i].Name < hostList[j].Name
+	var hostPermStr string
+	hostNames := hostNamesOfHosts(hostList)
+	sort.Slice(hostNames, func(i, j int) bool {
+		return hostNames[i] < hostNames[j]
 	})
 
-	for i := 0; i < len(hostList)-1; i++ {
-		hostsStrList += hostList[i].Name + PermSubpartToken
+	for i := 0; i < len(hostNames)-1; i++ {
+		hostPermStr += hostNames[i] + PermSubpartToken
 	}
-	hostsStrList += hostList[len(hostList)-1].Name
+	hostPermStr += hostNames[len(hostNames)-1]
 
-	return NewPermissionString(PermPowerAction, hostsStrList)
+	return NewPermissionString(PermPowerAction, hostPermStr)
 }
 
 // resNamesOfResList returns a list of Reservation names from
@@ -103,4 +112,30 @@ func resIDsOfResList(res []Reservation) []int {
 func determineNodeResetTime(resEnd time.Time) time.Time {
 	resetEnd := resEnd.Add(time.Minute * time.Duration(igor.Config.Maintenance.HostMaintenanceDuration))
 	return resetEnd
+}
+
+// getActiveReservation returns a Reservation the given host
+// Host is associated with
+func getActiveReservation(h *Host) *Reservation {
+	for _, res := range h.Reservations {
+		result := res
+		if res.IsActive(time.Now()) {
+			// this res is a shallow copy, we want the whole thing
+			if err := performDbTx(func(tx *gorm.DB) error {
+				rList, _, err := getReservations([]string{res.Name}, tx)
+				if err != nil {
+					return err
+				}
+				if len(rList) > 0 {
+					result = rList[0]
+					return nil
+				}
+				return fmt.Errorf("no reservations found")
+			}); err != nil {
+				return &res
+			}
+			return &result
+		}
+	}
+	return nil
 }

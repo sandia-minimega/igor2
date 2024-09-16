@@ -24,7 +24,8 @@ type Igor struct {
 	AuthTokenKeypath string
 	Started          time.Time
 	TFTPPath         string
-	PXEDir           string
+	PXEBIOSDir       string
+	PXEUEFIDir       string
 	ImageStoreDir    string
 	KickstartDir     string
 	ElevateMap       *common.PassiveTtlMap

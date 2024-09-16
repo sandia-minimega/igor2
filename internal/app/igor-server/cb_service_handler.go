@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -30,7 +31,14 @@ func handleCbs(w http.ResponseWriter, r *http.Request) {
 	} else {
 		clog.Debug().Msgf("host search with IP %s returned %v results", ip, len(hosts))
 		host := hosts[0]
-		if err := setLocalConfig(&host); err != nil {
+		// get the active reservation from the host
+		res := getActiveReservation(&host)
+		if res == nil {
+			err = fmt.Errorf("host %s has no active reservations", host.Name)
+			clog.Error().Msgf("%s received callback from host with no active reservation - %v", actionPrefix, err)
+			panic(err)
+		}
+		if err := setLocalConfig(&host, res); err != nil {
 			clog.Warn().Msgf("%s failed to convert pxe.cfg file to local boot for host %s - %v", actionPrefix, host.Name, err)
 		}
 		status = http.StatusOK

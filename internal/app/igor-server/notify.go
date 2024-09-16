@@ -32,7 +32,7 @@ func initNotify() {
 			"safeText":       safeText,
 			"formatDts":      formatDts,
 			"formatHosts":    formatHosts,
-			"remainingHours": remainingHours,
+			"remainingTime":  remainingTime,
 			"ifFullName":     ifFullName,
 			"passwordLine":   passwordLine,
 			"passwordAction": passwordAction,
@@ -40,6 +40,7 @@ func initNotify() {
 			"isAdmin":        isAdmin,
 			"resEdit":        resEdit,
 			"replaceInfo":    replaceInfo,
+			"ownerEmailList": ownerEmailList,
 		}
 
 		var t *template.Template
@@ -64,6 +65,13 @@ func initNotify() {
 		t, _ = t.Parse(SenderInfoTemplate)
 		tMap[EmailPasswordReset] = t
 
+		t = template.New("EmailAcctRemovedIssue")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyAcctRemovedIssue)
+		t, _ = t.Parse(SenderInfoTemplate)
+		tMap[EmailAcctRemovedIssue] = t
+
 		t = template.New("EmailGroupCreated")
 		t.Funcs(tFuncs)
 		t = template.Must(t.Parse(BaseEmailTemplate))
@@ -78,12 +86,12 @@ func initNotify() {
 		t, _ = t.Parse(SenderInfoTemplate)
 		tMap[EmailGroupAddRmvMem] = t
 
-		t = template.New("EmailGroupChangeOwn")
+		t = template.New("EmailGroupAddOwner")
 		t.Funcs(tFuncs)
 		t = template.Must(t.Parse(BaseEmailTemplate))
 		t, _ = t.Parse(NotifyGroupOwnerChangeTemplate)
 		t, _ = t.Parse(SenderInfoTemplate)
-		tMap[EmailGroupChangeOwn] = t
+		tMap[EmailGroupAddOwner] = t
 
 		t = template.New("EmailGroupChangeName")
 		t.Funcs(tFuncs)
@@ -105,6 +113,13 @@ func initNotify() {
 		t, _ = t.Parse(NotifyResDropTemplate)
 		setCommonInfo(t)
 		tMap[EmailResDrop] = t
+
+		t = template.New("EmailResBlock")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyResBlockTemplate)
+		setCommonInfo(t)
+		tMap[EmailResBlock] = t
 
 		t = template.New("EmailResNewOwner")
 		t.Funcs(tFuncs)
@@ -166,8 +181,29 @@ func formatHosts(hosts []Host) string {
 	return hostRange
 }
 
-func remainingHours(end time.Time) int {
-	return int(time.Until(end).Round(time.Hour) / time.Hour)
+func remainingTime(end time.Time) string {
+
+	timeLeft := time.Until(end).Round(time.Hour)
+	hours := int(timeLeft.Hours())
+	rDays := hours / 24
+	rHours := hours % 24
+
+	daysStr := "days"
+	hoursStr := "hours"
+	if rDays == 1 {
+		daysStr = "day"
+	}
+	if hours == 1 {
+		hoursStr = "hour"
+	}
+
+	if rDays > 0 {
+		if rHours == 0 {
+			return fmt.Sprintf("%d %s", rDays, daysStr)
+		}
+		return fmt.Sprintf("%d %s and %d %s", rDays, daysStr, rHours, hoursStr)
+	}
+	return fmt.Sprintf("%d %s", rHours, hoursStr)
 }
 
 func ifFullName(name string) string {
@@ -182,6 +218,21 @@ func isAdmin(elevated bool) string {
 		return "an igor administrator"
 	}
 	return "a reservation group member"
+}
+
+func ownerEmailList(owners []User) template.HTML {
+	var emails strings.Builder
+	for i := 0; i < len(owners); i++ {
+		emails.WriteString("<a href=\"mailto:")
+		emails.WriteString(owners[i].Email)
+		emails.WriteString("\">")
+		emails.WriteString(emailOrName(&owners[i]))
+		emails.WriteString("</a>")
+		if len(owners) > 1 && i < len(owners)-1 {
+			emails.WriteString(", ")
+		}
+	}
+	return template.HTML(emails.String())
 }
 
 func replaceInfo(info string, target string) string {
@@ -275,15 +326,16 @@ func processAcctNotifyEvent(msg AcctNotifyEvent) error {
 	var t *template.Template
 	var toList []string
 	var ccList []string
-	addEmailToList(&toList, msg.User.Email)
 
 	switch msg.Type {
 
 	case EmailAcctCreated:
 		subj = "igor account created"
+		addEmailToList(&toList, msg.User.Email)
 		t = tMap[EmailAcctCreated]
 	case EmailPasswordReset:
 		subj = "igor account password reset"
+		addEmailToList(&toList, msg.User.Email)
 		if msg.User.Name == IgorAdmin {
 			subj = "igor-admin account password reset"
 			queryAdmins := map[string]interface{}{"name": GroupAdmins, "showMembers": true}
@@ -298,6 +350,15 @@ func processAcctNotifyEvent(msg AcctNotifyEvent) error {
 			}
 		}
 		t = tMap[EmailPasswordReset]
+	case EmailAcctRemovedIssue:
+		subj = "auto-removal of igor account needs review"
+		admin, _, _ := getIgorAdminTx()
+		if len(admin.Email) != 0 {
+			addEmailToList(&toList, admin.Email)
+		} else {
+			addEmailToList(&toList, igor.Email.HelpLink)
+		}
+		t = tMap[EmailAcctRemovedIssue]
 	default:
 		err := fmt.Errorf("unrecognized notify type '%d' - aborting email send", msg.Type)
 		logger.Error().Msgf("%v", err)
@@ -366,10 +427,14 @@ func processGroupNotifyEvent(msg GroupNotifyEvent) error {
 		t = tMap[EmailGroupAddRmvMem]
 		addEmailToList(&toList, msg.Member.Email)
 		msg.MemberAction = "removed from"
-	case EmailGroupChangeOwn:
-		subj = "igor: you are the new owner of group '" + msg.Group.Name + "'"
-		t = tMap[EmailGroupChangeOwn]
-		addEmailToList(&toList, msg.Group.Owner.Email)
+	case EmailGroupAddOwner:
+		subj = "igor: you have been added as an owner of group '" + msg.Group.Name + "'"
+		t = tMap[EmailGroupAddOwner]
+		addEmailToList(&toList, msg.Member.Email)
+	case EmailGroupRmvOwner:
+		subj = "igor: you have been removed from owner list of group '" + msg.Group.Name + "'"
+		t = tMap[EmailGroupRmvOwner]
+		addEmailToList(&toList, msg.Member.Email)
 	case EmailGroupChangeName:
 		subj = "igor: group '" + msg.Info + "' has been renamed"
 		t = tMap[EmailGroupChangeName]
@@ -471,8 +536,12 @@ func processResNotifyEvent(msg ResNotifyEvent) error {
 		t = tMap[EmailResEdit]
 		priority = true
 	case EmailResDrop:
-		subj = "igor reservation " + subjMid + " has dropped hosts"
+		subj = "igor reservation " + subjMid + " has dropped host"
 		t = tMap[EmailResDrop]
+		priority = true
+	case EmailResBlock:
+		subj = "igor reservation " + subjMid + " has blocked host(s)"
+		t = tMap[EmailResBlock]
 		priority = true
 	case EmailResRename:
 		subj = "igor reservation '" + msg.Info + "' on " + msg.Cluster + " has been renamed"
@@ -586,13 +655,13 @@ func sendEmail(t *template.Template, subject string, toList []string, ccList []s
 			return fmt.Errorf("composed email had no recipients")
 		}
 		if len(toList) > 0 {
-			m.SetHeader("To", toList...)
+			m.SetHeader("To", dedupeEmailList(toList)...)
 		}
 		if len(ccList) > 0 {
-			m.SetHeader("Cc", ccList...)
+			m.SetHeader("Cc", dedupeEmailList(ccList)...)
 		}
 		if len(bccList) > 0 {
-			m.SetHeader("Bcc", bccList...)
+			m.SetHeader("Bcc", dedupeEmailList(bccList)...)
 		}
 		if isPriority {
 			m.SetHeader("X-Priority", "1 (Highest)")
@@ -616,12 +685,19 @@ func sendEmail(t *template.Template, subject string, toList []string, ccList []s
 	return nil
 }
 
+func dedupeEmailList(emailList []string) []string {
+	emailSet := common.NewSet()
+	emailSet.Add(emailList...)
+	return emailSet.Elements()
+}
+
 const (
 	EmailResDelete = iota + 1000
 	EmailResRename
 	EmailResNewOwner
 	EmailResNewGroup
 	EmailResDrop
+	EmailResBlock
 	EmailResEdit = 1029
 )
 
@@ -636,6 +712,7 @@ const (
 const (
 	EmailAcctCreated = iota + 1200
 	EmailPasswordReset
+	EmailAcctRemovedIssue
 )
 
 const (
@@ -644,7 +721,8 @@ const (
 	EmailGroupRmvMem
 	EmailGroupAddRmvMem
 	EmailGroupChangeName
-	EmailGroupChangeOwn
+	EmailGroupAddOwner
+	EmailGroupRmvOwner
 )
 
 const (
@@ -688,6 +766,24 @@ const (
 <p>Greetings,</p>
 
 <p>The following hosts have been dropped from reservation '{{.Res.Name}}': {{.Info}}</p>
+
+<p>The modified reservation's current info:</p>
+
+{{block "res-info" .}}{{end}}
+
+<p>If you have questions please contact, <a href="mailto:{{.ActionUser.Email}}">{{emailOrName .ActionUser}}</a>. This action was undertaken in their role as {{isAdmin .IsElevated}}.</p>
+
+{{block "sender-info" .}}{{end}}
+{{end}}`
+
+	NotifyResBlockTemplate = `
+{{template "base" .}}
+{{define "mail-body"}}
+<p>Greetings,</p>
+
+<p>The following hosts have been blocked in reservation '{{.Res.Name}}': {{.Info}}</p>
+
+<p>This action is usually undertaken when a cluster admin needs to bring the host(s) offline at some point in the near future to do repairs or upgrades to the hardware. Please reach out to the cluster admin team for more information.</p>
 
 <p>The modified reservation's current info:</p>
 
@@ -750,7 +846,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The following reservation on the {{.Cluster}} cluster has {{remainingHours .Res.End}} hours left before it expires. You may use the 'extend' command if you wish to continue using this reservation beyond its current end date.</p>
+<p>The following reservation on the {{.Cluster}} cluster has {{remainingTime .Res.End}} left before it expires. You may use the 'extend' command if you wish to continue using this reservation beyond its current end date.</p>
 
 {{block "res-info" .}}{{end}}
 
@@ -762,7 +858,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The following reservation on the {{.Cluster}} cluster has {{remainingHours .Res.End}} hours left before it expires. This is your final notice.</p>
+<p>The following reservation on the {{.Cluster}} cluster has {{remainingTime .Res.End}} left before it expires. This is your final notice.</p>
 
 <p>If the administrators have allowed use of the 'extend' command you may be able to continue the reservation beyond its current end date. If you do so a new warning email will be sent at the appropriate time.</p>
 
@@ -803,13 +899,25 @@ const (
 {{block "sender-info" .}}{{end}}
 {{end}}
 `
+	NotifyAcctRemovedIssue = `
+{{template "base" .}}
+{{define "mail-body"}}
+<p>To the Igor administration team,</p>
+
+<p>The account '{{.User.Name}}' has been auto-removed. During this process one or more of the user's groups, reservations and/or distros were re-assigned to igor-admin ownership.</p>
+
+<p>Review these resources and either delete or re-assign their ownership to users they were shared with. Check logs for more information.</p>
+
+{{block "sender-info" .}}{{end}}
+{{end}}
+`
 
 	NotifyGroupCreateTemplate = `
 {{template "base" .}}
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>A new group '{{.Group.Name}}' has been created, and you are included as a member. If you have questions please contact the group owner, <a href="mailto:{{.Group.Owner.Email}}?subject=igor group '{{.Group.Name}}'">{{emailOrName .Group.Owner}}</a>.
+<p>A new group '{{.Group.Name}}' has been created, and you are included as a member. If you have questions please contact the group owner(s): {{ownerEmailList .Group.Owners}}.
 
 <p>Group membership is used to provide access to various igor resources. When applied to a reservation, it gives you the ability to send power commands, extend the reservation end time and delete the reservation completely.
 
@@ -822,7 +930,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>The group '{{.Info}}' has been renamed to '{{.Group.Name}}'. If you have questions please contact the group owner, <a href="mailto:{{.Group.Owner.Email}}">{{emailOrName .Group.Owner}}</a>.
+<p>The group '{{.Info}}' has been renamed to '{{.Group.Name}}'. If you have questions please contact the group owner(s): {{ownerEmailList .Group.Owners}}.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
@@ -833,7 +941,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>You have been {{.MemberAction}} the group '{{.Group.Name}}'. If you have questions please contact the group owner, <a href="mailto:{{.Group.Owner.Email}}">{{emailOrName .Group.Owner}}</a>.
+<p>You have been {{.MemberAction}} the group '{{.Group.Name}}'. If you have questions please contact the group owner(s): {{ownerEmailList .Group.Owners}}.
 
 {{block "sender-info" .}}{{end}}
 {{end}}
@@ -844,7 +952,7 @@ const (
 {{define "mail-body"}}
 <p>Greetings,</p>
 
-<p>Ownership of the group '{{.Group.Name}}' has been transferred to you. If you have questions please contact the former owner, <a href="mailto:{{.Member.Email}}">{{emailOrName .Member}}</a>.
+<p>You have been added as an owner of the group '{{.Group.Name}}'.
 
 {{block "sender-info" .}}{{end}}
 {{end}}

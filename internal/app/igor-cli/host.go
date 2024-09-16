@@ -155,7 +155,7 @@ Use the -x flag to render screen output without pretty formatting.
 func newHostEditCmd() *cobra.Command {
 
 	cmdEditHost := &cobra.Command{
-		Use:   "edit NAME {[-p POLICY] [-d HOSTNAME] [-e ETH] [-i IP] [-m MACID]}",
+		Use:   "edit NAME {[-p POLICY] [-d HOSTNAME] [-b BOOT] [-e ETH] [-i IP] [-m MACID]}",
 		Short: "Edit host information " + adminOnly,
 		Long: `
 Edits host information.
@@ -181,6 +181,8 @@ the sequence of hosts given in the same config file. Igor uses this hostname to
 communicate with the host itself. If the actual hostname is different, specify
 it here and igor will use this hostname instead.
 
+Use the -b flag to change the boot type of the host (bios or uefi).
+
 Use the -i flag to change the host's IP.
 
 Use the -e flag to change the host's ethernet switch identifier.
@@ -192,18 +194,20 @@ Use the -m flag to change the MAC address.
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			flagset := cmd.Flags()
+			boot, _ := flagset.GetString("boot")
 			hostname, _ := flagset.GetString("hostname")
 			hostPolicy, _ := flagset.GetString("policy")
 			ip, _ := flagset.GetString("ip")
 			eth, _ := flagset.GetString("eth")
 			mac, _ := flagset.GetString("mac")
-			printRespSimple(doEditHost(args[0], hostname, hostPolicy, ip, eth, mac))
+			printRespSimple(doEditHost(args[0], boot, hostname, hostPolicy, ip, eth, mac))
 		},
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction:     validateNameArg,
 	}
 
 	var ip,
+		boot,
 		eth,
 		hostname,
 		hostPolicy,
@@ -211,6 +215,7 @@ Use the -m flag to change the MAC address.
 
 	cmdEditHost.Flags().StringVarP(&hostPolicy, "policy", "p", "", "name of policy to assign to this host")
 	cmdEditHost.Flags().StringVarP(&hostname, "hostname", "d", "", "hostname of the host")
+	cmdEditHost.Flags().StringVarP(&boot, "boot", "b", "", "boot type of the host (bios or uefi)")
 	cmdEditHost.Flags().StringVarP(&ip, "ip", "i", "", "ipv4 address")
 	cmdEditHost.Flags().StringVarP(&mac, "mac", "m", "", "MAC address")
 	cmdEditHost.Flags().StringVarP(&eth, "eth", "e", "", "eth config string")
@@ -465,11 +470,14 @@ func doShowHosts(names string, hostnames []string, eths []string, ips []string, 
 	return &rb
 }
 
-func doEditHost(name string, hostname string, hostPolicy string, ip string, eth string, mac string) *common.ResponseBodyBasic {
+func doEditHost(name, boot, hostname, hostPolicy, ip, eth, mac string) *common.ResponseBodyBasic {
 	apiPath := api.Hosts + "/" + name
 	params := make(map[string]interface{})
 	if hostname != "" {
 		params["hostname"] = hostname
+	}
+	if boot != "" {
+		params["boot"] = boot
 	}
 	if hostPolicy != "" {
 		params["hostPolicy"] = hostPolicy
@@ -556,13 +564,14 @@ func printHosts(rb *common.ResponseBodyHosts) {
 	}
 
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"NODE", "STATE", "POWER", "MACID", "HOSTNAME", "IP", "ETH", "POLICY", "ACCESS-GROUPS", "RESTRICTED", "RESERVATIONS"})
+	tw.AppendHeader(table.Row{"NODE", "STATE", "POWER", "BOOT-TYPE", "MACID", "HOSTNAME", "IP", "ETH", "POLICY", "ACCESS-GROUPS", "RESTRICTED", "RESERVATIONS"})
 
 	for _, h := range hosts {
 		tw.AppendRow([]interface{}{
 			sBold(h.Name),
 			stateColor(h.State),
 			powerColor(h.Powered),
+			h.BootMode,
 			h.Mac,
 			h.HostName,
 			h.IP,

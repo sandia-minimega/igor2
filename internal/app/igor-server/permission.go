@@ -189,7 +189,7 @@ func (p *Permission) setParts(permission string) error {
 //
 // because the underlying Sets will print out in sorted string order.
 //
-//	p2.String() == "a,b,c:x,y,z"
+//	wp1.String() == "a,b,c:x,y,z"
 //
 // However this does NOT break the Equals method, so ...
 //
@@ -202,7 +202,7 @@ func (p *Permission) String() string {
 		if buffer.Len() > 0 {
 			buffer.Write([]byte(PermDividerToken))
 		}
-		for i, k := range set.GetVals() {
+		for i, k := range set.Elements() {
 			buffer.Write([]byte(k))
 			if i < set.Size()-1 {
 				buffer.Write([]byte(PermSubpartToken))

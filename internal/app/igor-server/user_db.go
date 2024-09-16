@@ -28,7 +28,7 @@ func dbReadUsersTx(queryParams map[string]interface{}) (userList []User, err err
 // dbReadUsers queries the DB for users matching queryParams within an existing transaction.
 func dbReadUsers(queryParams map[string]interface{}, tx *gorm.DB) (userList []User, err error) {
 
-	tx = tx.Preload("Groups")
+	tx = tx.Preload("Groups").Preload("Groups.Owners")
 
 	// if no params given, return all users
 	if len(queryParams) == 0 {
@@ -38,6 +38,10 @@ func dbReadUsers(queryParams map[string]interface{}, tx *gorm.DB) (userList []Us
 
 	for key, val := range queryParams {
 		switch val.(type) {
+		case bool:
+			if strings.ToLower(key) == "exclude-admin" {
+				tx = tx.Where("name != ?", IgorAdmin)
+			}
 		case string, int:
 			tx = tx.Where(key, val)
 		case []int:

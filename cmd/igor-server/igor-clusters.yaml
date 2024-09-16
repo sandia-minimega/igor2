@@ -27,11 +27,13 @@ krypton:
     #   policy:   (requried if not 'default') Name of a host policy that should be applied to this host. Default policy is
     #             used if none specified. It is not required to provide this field when first setting up igor. Subsequent
     #             use of host policies will update your cluster configuration file with the correct policy applied to each node.
+    #   bootMode: (required) options are 'bios'(legacy) or 'uefi'. Select the pxe boot system this host is configured to.
     1:
       mac: 00:00:00:00:00:00
       eth: Et4/1/1
       ip: 192.168.0.1
       policy: default
+      bootMode: bios
     2:
       mac: 00:00:00:00:00:00
       hostname: zod          # notice here we use the optional 'hostname' field. Igor still presents the node as 'kn2' to
@@ -39,53 +41,64 @@ krypton:
       eth: Et4/2/1
       ip: 192.168.0.2
       policy: default
+      bootMode: bios
     3:
       mac: 00:00:00:00:00:00
       eth: Et4/3/1
       ip: 192.168.0.3
       policy: default
+      bootMode: bios
     4:
       mac: 00:00:00:00:00:00
       eth: Et4/4/1
       ip: 192.168.0.4
       policy: default
+      bootMode: bios
     5:
       mac: 00:00:00:00:00:00
       eth: Et4/5/1
       ip: 192.168.0.5
       policy: default
+      bootMode: bios
     6:
       mac: 00:00:00:00:00:00
       eth: Et4/6/1
       ip: 192.168.0.6
       policy: default
+      bootMode: bios
     7:
       mac: 00:00:00:00:00:00
       eth: Et4/7/1
       ip: 192.168.0.7
       policy: default
+      bootMode: bios
     8:
       mac: 00:00:00:00:00:00
       eth: Et4/8/1
       ip: 192.168.0.8
       policy: default
+      bootMode: bios
     9:
       mac: 00:00:00:00:00:00
       eth: Et4/9/1
       ip: 192.168.1.9
       policy: default
+      bootMode: bios
     10:
       mac: 00:00:00:00:00:00
       eth: Et4/10/1
       ip: 192.168.0.10
       policy: default
+      bootMode: bios
     11:
       mac: 00:00:00:00:00:00
       eth: Et4/11/1
       ip: 192.168.0.11
       policy: default
+      bootMode: bios
     12:
       mac: 00:00:00:00:00:00
       eth: Et4/12/1
       ip: 192.168.0.12
       policy: default
+      bootMode: bios

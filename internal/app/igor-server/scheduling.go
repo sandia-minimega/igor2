@@ -26,7 +26,7 @@ func scheduleHostsByName(res *Reservation, tx *gorm.DB, clog *zl.Logger) (int, e
 	hostNameList := namesOfHosts(res.Hosts)
 
 	// make a list of the access groups that this user qualifies for
-	groupAccessList := []string{}
+	var groupAccessList []string
 	for _, uGroup := range res.Owner.Groups {
 		if !strings.HasPrefix(uGroup.Name, GroupUserPrefix) {
 			groupAccessList = append(groupAccessList, uGroup.Name)
@@ -76,7 +76,7 @@ func scheduleHostsByAvailability(res *Reservation, tx *gorm.DB, clog *zl.Logger)
 	validOpenSlotMap := make(map[string][]ReservationTimeSlot)
 	var hasRestrictedHosts bool
 	totalHostAvail := 0
-	// Calculate end time to use including any configured maintenence padding
+	// Calculate end time to use including any configured maintenance padding
 	paddedEndTime := determineNodeResetTime(res.End)
 	paddedDur := paddedEndTime.Sub(res.Start)
 
@@ -330,7 +330,7 @@ func closeoutReservations(checkTime *time.Time) error {
 		}
 
 	} else {
-		logger.Debug().Msg("No reservations are expired.")
+		logger.Debug().Msg("no reservations are expired")
 	}
 
 	return nil
@@ -352,18 +352,23 @@ func startMaintenance(res *MaintenanceRes) error {
 		return fmt.Errorf("error retrieving igor-admin while starting maintenance - %v", err.Error())
 	}
 	now := time.Now()
-	maintnanceEnd := res.MaintenanceEndTime
-	maintenanceDuration := maintnanceEnd.Sub(now)
-	logger.Debug().Msgf("reservation %v going into maintenenace mode from %v to %v (duration: %v).", res.ReservationName, now, maintnanceEnd, maintenanceDuration)
+	maintenanceEnd := res.MaintenanceEndTime
+	maintenanceDuration := maintenanceEnd.Sub(now)
+	logger.Debug().Msgf("reservation '%s' going into maintenenace mode from %v to %v (duration: %v).", res.ReservationName, now, maintenanceEnd, maintenanceDuration)
 
 	// turn all hosts to the unavailable state
-	logger.Debug().Msgf("changing state of nodes for reservation %v to blocked", res.ReservationName)
+	logger.Debug().Msgf("changing state of nodes for reservation '%s' to blocked", res.ReservationName)
 	changes := map[string]interface{}{"State": HostBlocked}
 	err = performDbTx(func(tx *gorm.DB) error {
-		err := dbEditHosts(res.Hosts, changes, tx)
-		if err != nil {
-			logger.Error().Msg(err.Error())
+
+		for _, host := range res.Hosts {
+			changes["RestoreState"] = host.RestoreState
+			err = dbEditHosts([]Host{host}, changes, tx)
+			if err != nil {
+				logger.Error().Msg(err.Error())
+			}
 		}
+
 		return err
 	})
 	if err != nil {
@@ -374,7 +379,7 @@ func startMaintenance(res *MaintenanceRes) error {
 	hasDefaultDistro := false
 	currentDefaultDistros, err := dbReadDistrosTx(map[string]interface{}{"is_default": true})
 	if err != nil {
-		logger.Error().Msgf("unexpected error searching for default distro during maintenance period of reservation %s", res.ReservationName)
+		logger.Error().Msgf("unexpected error searching for default distro during maintenance period of reservation '%s'", res.ReservationName)
 		return err
 	}
 	if len(currentDefaultDistros) > 0 {
@@ -402,7 +407,7 @@ func startMaintenance(res *MaintenanceRes) error {
 
 		// power on the hosts
 		logger.Debug().Msgf("power cycling hosts for reservation '%s'", tempRes.Name)
-		if _, powerErr := doPowerHosts(PowerCycle, namesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
+		if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
 			// don't return this error we still want to mark it installed
 			logger.Error().Msgf("problem powering cycling hosts for reservation '%s': %v", tempRes.Name, powerErr)
 		}
@@ -411,16 +416,16 @@ func startMaintenance(res *MaintenanceRes) error {
 }
 
 func finishMaintenance(now *time.Time) error {
-	mReses, err := dbGetMaintenanceRes()
+	mResList, err := dbGetMaintenanceRes()
 	if err != nil {
 		logger.Error().Msgf("error getting maintenance Reservation list, aborting start process")
 		return err
 	}
 	// get admin user
 	admin, _, _ := getIgorAdminTx()
-	for _, res := range mReses {
+	for _, res := range mResList {
 		if now.After(res.MaintenanceEndTime) {
-			logger.Debug().Msgf("reservation %v going out of maintenenace mode.", res.ReservationName)
+			logger.Debug().Msgf("reservation '%s' going out of maintenenace mode.", res.ReservationName)
 			hosts := res.Hosts
 			// make sure no hosts are currently engaged in an active reservation
 			// if they are, exclude them from the finish maintenance process
@@ -457,24 +462,29 @@ func finishMaintenance(now *time.Time) error {
 			if hasDefaultDistro {
 				// power off the hosts
 				logger.Debug().Msgf("powering off hosts for reservation '%s'", tempRes.Name)
-				if _, powerErr := doPowerHosts(PowerOff, namesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
+				if _, powerErr := doPowerHosts(PowerOff, hostNamesOfHosts(tempRes.Hosts), &logger); powerErr != nil {
 					// don't return this error we still want to mark it installed
 					logger.Error().Msgf("problem powering off hosts for reservation '%s': %v", tempRes.Name, powerErr)
 				}
 
 				// uninstall the default image from the res hosts
-				igor.IResInstaller.Uninstall(tempRes)
+				_ = igor.IResInstaller.Uninstall(tempRes)
 
 			}
 
-			// turn all hosts back to an available state
+			// set each host to its restore state
 			logger.Debug().Msgf("changing state of nodes for reservation %v to available", tempRes.Name)
-			changes := map[string]interface{}{"State": HostAvailable}
+
 			_ = performDbTx(func(tx *gorm.DB) error {
-				err := dbEditHosts(tempRes.Hosts, changes, tx)
-				if err != nil {
-					logger.Error().Msg(err.Error())
+
+				for _, host := range tempRes.Hosts {
+					state := map[string]interface{}{"State": host.RestoreState, "RestoreState": HostAvailable}
+					err = dbEditHosts([]Host{host}, state, tx)
+					if err != nil {
+						logger.Error().Msg(err.Error())
+					}
 				}
+
 				return err
 			})
 			// remove the res from db table
@@ -547,7 +557,7 @@ func installReservations(checkTime *time.Time) error {
 
 					if r.CycleOnStart {
 						logger.Debug().Msgf("power cycling hosts for reservation '%s'", r.Name)
-						if _, powerErr := doPowerHosts(PowerCycle, namesOfHosts(r.Hosts), &logger); powerErr != nil {
+						if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(r.Hosts), &logger); powerErr != nil {
 							// don't return this error we still want to mark it installed
 							logger.Error().Msgf("problem powering cycling hosts for reservation '%s': %v", r.Name, powerErr)
 						}
@@ -605,7 +615,7 @@ func sendExpirationWarnings(checkTime *time.Time) error {
 
 		now := time.Now()
 		for _, r := range resList {
-			for i := 0; i < len(ResNotifyTimes)-1; i++ {
+			for i := 0; i < len(ResNotifyTimes); i++ {
 
 				var resWarnEvent *ResNotifyEvent
 				timeLeft := r.End.Sub(now) // amount of time left in res

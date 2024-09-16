@@ -27,12 +27,12 @@ func handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 	actionPrefix := "create group"
 	rb := common.NewResponseBody()
 
-	group, status, err := doCreateGroup(createParams, r)
+	group, status, addMsg, err := doCreateGroup(createParams, r)
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		msg := fmt.Sprintf("igor group '%s' created", group.Name)
+		msg := fmt.Sprintf("igor group '%s' created %s", group.Name, addMsg)
 		clog.Info().Msgf("%s success - %s", actionPrefix, msg)
 		rb.Message = msg
 	}
@@ -66,8 +66,10 @@ func handleReadGroups(w http.ResponseWriter, r *http.Request) {
 		} else {
 			for _, g := range groupList {
 				groupType := "member"
-				if g.Owner.Name == actionUser.Name {
-					groupType = "owner"
+				for _, owner := range g.Owners {
+					if owner.Name == actionUser.Name {
+						groupType = "owner"
+					}
 				}
 				rb.Data[groupType] = append(rb.Data[groupType], *g.getGroupData())
 			}
@@ -134,94 +136,123 @@ func validateGroupParams(handler http.Handler) http.Handler {
 			groupParams := getBodyFromContext(r)
 			var ok bool
 
-			if groupParams != nil {
+			if len(groupParams) > 0 {
+				_, ldap := groupParams["isLDAP"]
+				_, members := groupParams["members"]
+				_, owners := groupParams["owners"]
+				_, desc := groupParams["description"]
 				if _, ok = groupParams["name"]; !ok {
 					validateErr = NewMissingParamError("name")
-				}
+				} else if ldap && groupParams["isLDAP"].(bool) && (members || owners || desc) {
+					validateErr = fmt.Errorf("group creation includes disallowed params when marked as LDAP")
+				} else {
 
-			postPutParamLoop:
-				for key, val := range groupParams {
-					switch key {
-					case "name":
-						// we just check that name is a string
-						if n, ok := val.(string); !ok {
-							validateErr = NewBadParamTypeError(key, val, "string")
-							break postPutParamLoop
-						} else if validateErr = checkGenericNameRules(n); validateErr != nil {
-							break postPutParamLoop
-						} else if validateErr = checkReservedGroupNames(n); validateErr != nil {
-							break postPutParamLoop
-						}
-					case "members":
-						for _, v := range val.([]interface{}) {
-							if m, ok := v.(string); !ok {
-								validateErr = NewBadParamTypeError(key, val, "[]string")
-							} else if validateErr = checkUsernameRules(m); validateErr != nil {
+				postPutParamLoop:
+					for key, val := range groupParams {
+						switch key {
+						case "name":
+							// we just check that name is a string
+							if n, ok := val.(string); !ok {
+								validateErr = NewBadParamTypeError(key, val, "string")
+								break postPutParamLoop
+							} else if validateErr = checkGenericNameRules(n); validateErr != nil {
+								break postPutParamLoop
+							} else if validateErr = checkReservedGroupNames(n); validateErr != nil {
 								break postPutParamLoop
 							}
-						}
-					case "description":
-						if d, ok := val.(string); !ok {
-							validateErr = NewBadParamTypeError(key, val, "string")
+						case "isLDAP":
+							if _, ok := val.(bool); !ok {
+								validateErr = NewBadParamTypeError(key, val, "bool")
+								break postPutParamLoop
+							}
+						case "owners":
+							for _, v := range val.([]interface{}) {
+								if m, ok := v.(string); !ok {
+									validateErr = NewBadParamTypeError(key, val, "[]string")
+								} else if validateErr = checkUsernameRules(m); validateErr != nil {
+									break postPutParamLoop
+								}
+							}
+						case "members":
+							for _, v := range val.([]interface{}) {
+								if m, ok := v.(string); !ok {
+									validateErr = NewBadParamTypeError(key, val, "[]string")
+								} else if validateErr = checkUsernameRules(m); validateErr != nil {
+									break postPutParamLoop
+								}
+							}
+						case "description":
+							if d, ok := val.(string); !ok {
+								validateErr = NewBadParamTypeError(key, val, "string")
+								break postPutParamLoop
+							} else if validateErr = checkDesc(d); validateErr != nil {
+								break postPutParamLoop
+							}
+						default:
+							validateErr = NewUnknownParamError(key, val)
 							break postPutParamLoop
-						} else if validateErr = checkDesc(d); validateErr != nil {
-							break postPutParamLoop
 						}
-					default:
-						validateErr = NewUnknownParamError(key, val)
-						break postPutParamLoop
 					}
 				}
 			} else {
 				validateErr = NewMissingParamError("")
 			}
-
 		}
 
 		if r.Method == http.MethodPatch {
 			groupParams := getBodyFromContext(r)
 
 			if len(groupParams) > 0 {
+				_, addOwners := groupParams["addOwners"]
+				_, rmvOwners := groupParams["rmvOwners"]
+				_, add := groupParams["add"]
+				_, remove := groupParams["remove"]
 
-			patchParamLoop:
-				for key, val := range groupParams {
-					switch key {
-					case "name":
-						// we just check that name is a string
-						if name, ok := val.(string); !ok {
-							validateErr = NewBadParamTypeError(key, val, "string")
-							break patchParamLoop
-						} else if validateErr = checkGenericNameRules(name); validateErr != nil {
-							break patchParamLoop
-						} else if validateErr = checkReservedGroupNames(name); validateErr != nil {
-							break patchParamLoop
-						}
-					case "description":
-						if desc, ok := val.(string); !ok {
-							validateErr = NewBadParamTypeError(key, val, "string")
-							break patchParamLoop
-						} else if validateErr = checkDesc(desc); validateErr != nil {
-							break patchParamLoop
-						}
-					case "owner":
-						if owner, ok := val.(string); !ok {
-							validateErr = NewBadParamTypeError(key, val, "string")
-							break patchParamLoop
-						} else if validateErr = checkUsernameRules(owner); validateErr != nil {
-							break patchParamLoop
-						}
-					case "add", "remove":
-						// members must be a string array
-						for _, v := range val.([]interface{}) {
-							if _, ok := v.(string); !ok {
-								validateErr = NewBadParamTypeError(key, val, "[]string")
-							} else if validateErr = checkUsernameRules(v.(string)); validateErr != nil {
+				if (add || remove) && (addOwners || rmvOwners) {
+					validateErr = fmt.Errorf("operations on owners and members must be separate commands")
+				} else {
+
+				patchParamLoop:
+					for key, val := range groupParams {
+						switch key {
+						case "name":
+							// we just check that name is a string
+							if name, ok := val.(string); !ok {
+								validateErr = NewBadParamTypeError(key, val, "string")
+								break patchParamLoop
+							} else if validateErr = checkGenericNameRules(name); validateErr != nil {
+								break patchParamLoop
+							} else if validateErr = checkReservedGroupNames(name); validateErr != nil {
 								break patchParamLoop
 							}
+						case "description":
+							if desc, ok := val.(string); !ok {
+								validateErr = NewBadParamTypeError(key, val, "string")
+								break patchParamLoop
+							} else if validateErr = checkDesc(desc); validateErr != nil {
+								break patchParamLoop
+							}
+						case "addOwners", "rmvOwners":
+							for _, v := range val.([]interface{}) {
+								if _, ok := v.(string); !ok {
+									validateErr = NewBadParamTypeError(key, val, "[]string")
+								} else if validateErr = checkUsernameRules(v.(string)); validateErr != nil {
+									break patchParamLoop
+								}
+							}
+						case "add", "remove":
+							// members must be a string array
+							for _, v := range val.([]interface{}) {
+								if _, ok := v.(string); !ok {
+									validateErr = NewBadParamTypeError(key, val, "[]string")
+								} else if validateErr = checkUsernameRules(v.(string)); validateErr != nil {
+									break patchParamLoop
+								}
+							}
+						default:
+							validateErr = NewUnknownParamError(key, val)
+							break patchParamLoop
 						}
-					default:
-						validateErr = NewUnknownParamError(key, val)
-						break patchParamLoop
 					}
 				}
 			} else {
@@ -243,9 +274,9 @@ func validateGroupParams(handler http.Handler) http.Handler {
 						}
 					}
 				case "owner":
-					for _, owner := range vals {
-						owner = strings.TrimSpace(owner)
-						if validateErr = checkUsernameRules(owner); validateErr != nil {
+					for _, ownerName := range vals {
+						ownerName = strings.TrimSpace(ownerName)
+						if validateErr = checkUsernameRules(ownerName); validateErr != nil {
 							break queryParamLoop
 						}
 					}

@@ -163,7 +163,7 @@ func validateHostParams(handler http.Handler) http.Handler {
 					}
 				case "hostPolicy":
 					for _, val := range vals {
-						if validateErr = checkHostpolicyNameRules(val); validateErr != nil {
+						if validateErr = checkHostPolicyNameRules(val); validateErr != nil {
 							break queryParamLoop
 						}
 					}
@@ -229,7 +229,7 @@ func validateHostParams(handler http.Handler) http.Handler {
 						if _, ok := val.(string); !ok {
 							validateErr = NewBadParamTypeError(key, val, "string")
 							break patchParamLoop
-						} else if validateErr = checkHostpolicyNameRules(val.(string)); validateErr != nil {
+						} else if validateErr = checkHostPolicyNameRules(val.(string)); validateErr != nil {
 							break patchParamLoop
 						}
 					case "hostname":
@@ -245,6 +245,21 @@ func validateHostParams(handler http.Handler) http.Handler {
 							break patchParamLoop
 						} else if ip := net.ParseIP(ipStr); ip == nil {
 							validateErr = NewBadParamTypeError(key, val, "valid IPv4/6 string")
+							break patchParamLoop
+						}
+					case "boot":
+						if _, ok := val.(string); !ok {
+							validateErr = NewBadParamTypeError(key, val, "string")
+							break patchParamLoop
+						}
+						isValid := false
+						for _, v := range AllowedBootModes {
+							if strings.ToLower(val.(string)) == v {
+								isValid = true
+							}
+						}
+						if !isValid {
+							validateErr = fmt.Errorf("invalid boot type given")
 							break patchParamLoop
 						}
 					case "mac":
@@ -375,7 +390,7 @@ func handleBlockHosts(w http.ResponseWriter, r *http.Request) {
 		actionPrefix = "unblock host(s)"
 	}
 	if err == nil {
-		status, err = doUpdateBlockHosts(block, hostList)
+		status, err = doUpdateBlockHosts(block, hostList, r)
 	}
 
 	rb := common.NewResponseBody()

@@ -145,7 +145,7 @@
     <b-container fluid="true">
       <b-row>
         <b-col class="ml-2 col-sm-auto">
-          <h2 class="font-weight-bold title-brand">Igor 2.0</h2>
+          <h2 class="font-weight-bold title-brand">Igor 2.1</h2>
         </b-col>
         <b-col align-v="bottom">
           <span v-if="isLoggedIn">

@@ -81,7 +81,7 @@ func doDeleteRes(res *Reservation, tx *gorm.DB, activeRes bool, clog *zl.Logger)
 
 	var hostList []Host
 
-	// Look up all objects this reservation is part of and take action that may not allow delete to happen.
+	// Look up all objects this reservation is part of and take action that may not allow a deletion to happen.
 	// Return a 409-Conflict if the reservation cannot be deleted and include reason why
 	//
 	// If the server started and a reserved host is in an error state, can't change status to 'available'
@@ -111,7 +111,15 @@ func doDeleteRes(res *Reservation, tx *gorm.DB, activeRes bool, clog *zl.Logger)
 
 		// change the reservation's hosts out of 'reserved' state
 		clog.Debug().Msgf("changing reservation %v's hosts out of 'reserved' state", res.Name)
-		err = dbEditHosts(res.Hosts, map[string]interface{}{"State": HostAvailable}, tx)
+
+		var availableHosts []Host
+		for _, host := range res.Hosts {
+			if host.State != HostBlocked {
+				availableHosts = append(availableHosts, host)
+			}
+		}
+
+		err = dbEditHosts(availableHosts, map[string]interface{}{"State": HostAvailable}, tx)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -142,45 +150,57 @@ func uninstallRes(res *Reservation) (err error) {
 	}
 
 	// remove pxeboot configs for reservation hosts
-	if uErr := igor.IResInstaller.Uninstall(res); err != nil {
-		if err == nil {
-			err = uErr
-		} else {
-			err = fmt.Errorf("%v\n%v", err, uErr)
-		}
+	uErr := igor.IResInstaller.Uninstall(res)
+	if err == nil {
+		err = uErr
+	} else {
+		err = fmt.Errorf("%v\n%v", err, uErr)
 	}
 
 	// power off the nodes of this reservation
-	if pErr := powerOffResNodes(res); err != nil {
-		if err == nil {
-			err = pErr
-		} else {
-			err = fmt.Errorf("%v\n%v", err, pErr)
-		}
+	pErr := powerOffResNodes(res)
+	if err == nil {
+		err = pErr
+	} else {
+		err = fmt.Errorf("%v\n%v", err, pErr)
 	}
 
 	// Put reservation nodes into maintenance mode if a Maintenance period has been specified
 	if igor.Config.Maintenance.HostMaintenanceDuration > 0 {
 		logger.Debug().Msgf("sending nodes for reservation %v into maintenance mode", res.Name)
-		resetEnd := res.ResetEnd
-		now := time.Now()
-		// if the reservation is ending early, adjust the reset/maintenance time
-		if now.Before(res.End) {
-			// respect the maintenance padding at the time of res creation/extension
-			delta := resetEnd.Sub(res.End)
-			resetEnd = now.Add(delta)
+		var forMaintenance []Host
+		// prep for saving the current state so it can be restored after maintenance mode is finished
+		for i := range res.Hosts {
+			// the server may have been off for a while (power loss, etc.) so this reservation may be long finished
+			// and the host might be attached to a new reservation that's already started (active). If this is the
+			// case, we do not want it going into maintenance mode so don't add it to the list
+			// res hosts are shallow, we need the current full host
+			theseHosts, _, _ := getHostsTx([]string{res.Hosts[i].Name}, true)
+			activeRes := getActiveReservation(&theseHosts[0])
+			if activeRes == nil {
+				if res.Hosts[i].State == HostReserved {
+					res.Hosts[i].RestoreState = HostAvailable // a reserved host will always return to available
+				} else {
+					res.Hosts[i].RestoreState = res.Hosts[i].State
+				}
+				forMaintenance = append(forMaintenance, res.Hosts[i])
+			}
 		}
+
+		now := time.Now()
+		maintenanceDelta := time.Duration(float64(time.Minute) * float64(igor.Config.Maintenance.HostMaintenanceDuration))
+		maintenanceEnd := now.Add(maintenanceDelta)
 		// create a new MaintenanceRes from res
 		maintenanceRes := &MaintenanceRes{
 			ReservationName:    res.Name,
-			MaintenanceEndTime: resetEnd,
-			Hosts:              res.Hosts}
+			MaintenanceEndTime: maintenanceEnd,
+			Hosts:              forMaintenance}
 		err := dbCreateMaintenanceRes(maintenanceRes)
 		if err != nil {
 			logger.Error().Msgf("warning - errors detected when creating maintenance reservation %v: %v", res.Name, err)
 		} else {
 			// begin maintenance immediately
-			startMaintenance(maintenanceRes)
+			_ = startMaintenance(maintenanceRes)
 		}
 	}
 

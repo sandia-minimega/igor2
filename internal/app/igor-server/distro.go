@@ -27,13 +27,14 @@ import (
 //
 
 const (
-	PermDistros = "distros"
-	// DistroKI indicates an image represents a KI pair
-	DistroKI = "ki"
-	// DistroISO indicates an image represents an ISO (coming soon...maybe?)
-	// DistroISO = "iso"
 	// MaxMemory determines amount of memory to use when parsing multipart form (32MB)
-	MaxMemory = 32 << 20
+	MaxMemory   = 32 << 20
+	PermDistros = "distros"
+	// DistroKI indicates the image represents a netboot-only KI pair
+	DistroKI = "ki"
+
+	// DistroIso indicates the image represents an installable linux/unix distro
+	// DistroIso = "iso"
 )
 
 // Distro represents an OS in file form
@@ -118,7 +119,6 @@ func filterDistroList(distroInfo []Distro) []common.DistroData {
 			ImageType:   distro.DistroImage.Type,
 			Kernel:      distro.DistroImage.Kernel,
 			Initrd:      distro.DistroImage.Initrd,
-			Iso:         distro.DistroImage.Iso,
 			KernelArgs:  distro.KernelArgs,
 			Kickstart:   distro.Kickstart.Name,
 			IsPublic:    isPublic,

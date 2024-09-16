@@ -92,37 +92,38 @@ func validateDistroImageParams(handler http.Handler) http.Handler {
 			}
 			diParams := r.PostForm
 			if len(diParams) > 0 {
-				kernel := r.FormValue("kernelStaged")
-				initrd := r.FormValue("initrdStaged")
-				iso := r.FormValue("isoStaged")
-				local := r.FormValue("localBoot")
-				breed := r.FormValue("breed")
-				if (kernel == "" && initrd == "") && iso == "" {
-					validateErr = fmt.Errorf("a new image must have ONE of the following: 1. kernel staged AND initrd staged 2. iso")
-				} else if strings.ToLower(local) == "true" && breed == "" {
-					validateErr = fmt.Errorf("breed must be specified when registering a local boot image")
-				} else {
-
-				postPutParamLoop:
-					for key, val := range diParams {
-						switch key {
-						case "kernelStaged", "initrdStaged":
-							if validateErr = checkFileRules(val[0]); validateErr != nil {
-								break postPutParamLoop
-							}
-						case "localBoot":
-							if len(val) > 0 && strings.ToLower(val[0]) != "true" {
-								validateErr = fmt.Errorf("invalid value for localBoot, must be 'true'")
-								break postPutParamLoop
-							}
-						case "breed":
-							if validateErr = checkGenericNameRules(val[0]); validateErr != nil {
-								break postPutParamLoop
-							}
-						default:
-							validateErr = NewUnknownParamError(key, val)
+			postPutParamLoop:
+				for key, val := range diParams {
+					switch key {
+					case "kstaged", "istaged":
+						if validateErr = checkFileRules(val[0]); validateErr != nil {
 							break postPutParamLoop
 						}
+					case "localBoot":
+						if len(val) > 0 && strings.ToLower(val[0]) != "true" {
+							validateErr = fmt.Errorf("invalid value for localBoot, must be 'true'")
+							break postPutParamLoop
+						}
+					case "breed":
+						if validateErr = checkGenericNameRules(val[0]); validateErr != nil {
+							break postPutParamLoop
+						}
+					case "boot":
+						for _, v := range val {
+							isValid := false
+							for _, v2 := range AllowedBootModes {
+								if strings.ToLower(v) == v2 {
+									isValid = true
+								}
+							}
+							if !isValid {
+								validateErr = fmt.Errorf("invalid boot type given")
+								break postPutParamLoop
+							}
+						}
+					default:
+						validateErr = NewUnknownParamError(key, val)
+						break postPutParamLoop
 					}
 				}
 			} else {

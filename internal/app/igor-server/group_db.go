@@ -21,18 +21,23 @@ func dbCreateGroup(group *Group, isPug bool, tx *gorm.DB) (err error) {
 		return result.Error
 	}
 
+	// change permissions here to get pug of each owner?
+
 	if !isPug {
-		pug, gpErr := group.Owner.getPug()
-		if gpErr != nil {
-			return gpErr
-		}
-		gPerm, cgopErr := createGroupOwnerPerms(group.Name)
-		if cgopErr != nil {
-			return cgopErr
-		}
-		err = dbAppendPermissions(pug, gPerm, tx)
-		if err != nil {
-			return
+		//var pugs = make([]*Group, 0, len(group.Owner))
+		for _, owner := range group.Owners {
+			pug, gpErr := owner.getPug()
+			if gpErr != nil {
+				return gpErr
+			}
+			gPerm, cgopErr := createGroupOwnerPerms(group)
+			if cgopErr != nil {
+				return cgopErr
+			}
+			err = dbAppendPermissions(pug, gPerm, tx)
+			if err != nil {
+				return
+			}
 		}
 		vPerm, _ := NewPermission(NewPermissionString(PermGroups, group.Name, PermViewAction))
 		err = dbAppendPermissions(group, []Permission{*vPerm}, tx)
@@ -43,7 +48,7 @@ func dbCreateGroup(group *Group, isPug bool, tx *gorm.DB) (err error) {
 	return
 }
 
-// dbReadGroupsTx performs dbReadGroups in a new transcation.
+// dbReadGroupsTx performs dbReadGroups in a new transaction.
 func dbReadGroupsTx(queryParams map[string]interface{}, excludePugs bool) (groupList []Group, err error) {
 
 	err = performDbTx(func(tx *gorm.DB) error {
@@ -61,7 +66,7 @@ func dbReadGroups(queryParams map[string]interface{}, excludePugs bool, tx *gorm
 
 	var groups []Group
 
-	tx = tx.Preload("Owner").Preload("Owner.Groups").Preload("Policies").
+	tx = tx.Preload("Owners").Preload("Owners.Groups").Preload("Policies").
 		Preload("Distros").Preload("Reservations").Order("name COLLATE NOCASE ASC")
 
 	if excludePugs {
@@ -79,6 +84,8 @@ func dbReadGroups(queryParams map[string]interface{}, excludePugs bool, tx *gorm
 		case bool:
 			if key == "showMembers" {
 				tx = tx.Preload("Members")
+			} else {
+				tx = tx.Where(key, val)
 			}
 		case string:
 			tx = tx.Where(key, val)
@@ -88,6 +95,8 @@ func dbReadGroups(queryParams map[string]interface{}, excludePugs bool, tx *gorm
 				tx = tx.Joins("JOIN groups_policies ON groups_policies.group_id = ID AND host_policy_id IN ?", val)
 			case "distros":
 				tx = tx.Joins("JOIN distros_groups ON distros_groups.group_id = ID AND distro_id IN ?", val)
+			case "owners":
+				tx = tx.Joins("JOIN groups_owners ON groups_owners.group_id = ID AND user_id IN ?", val)
 			case "users":
 				tx = tx.Joins("JOIN groups_users ON groups_users.group_id = ID AND user_id IN ?", val)
 			default:
@@ -101,13 +110,21 @@ func dbReadGroups(queryParams map[string]interface{}, excludePugs bool, tx *gorm
 		}
 	}
 
-	result := tx.Find(&groups)
+	result := tx.Distinct().Find(&groups)
 
 	return groups, result.Error
 }
 
 // dbEditGroup edits the properties of a Group.
 func dbEditGroup(group *Group, changes map[string]interface{}, tx *gorm.DB) error {
+
+	if _, ok := changes["ldapRemoveOwner"].(bool); ok {
+		delete(changes, "ldapRemoveOwner")
+		admin, _ := changes["Admin"].([]User)
+		if err := tx.Model(&group).Clauses(clause.OnConflict{DoNothing: true}).Association("Owners").Append(admin); err != nil {
+			return err
+		}
+	}
 
 	// Change the name of the group
 	if name, ok := changes["name"].(string); ok {
@@ -142,16 +159,36 @@ func dbEditGroup(group *Group, changes map[string]interface{}, tx *gorm.DB) erro
 		}
 	}
 
-	// Change the owner of the group
-	if owner, ok := changes["owner"].(User); ok {
-
-		if result := tx.Model(&group).Update("Owner", owner); result.Error != nil {
-			return result.Error
+	if addOwners, ok := changes["addOwners"].([]User); ok {
+		if err := tx.Model(&group).Clauses(clause.OnConflict{DoNothing: true}).Association("Owners").Append(addOwners); err != nil {
+			return err
 		}
-		// Transfer the owner permissions of the group to the new owner
-		pList := changes["owner-permissions"].([]Permission)
-		if result := tx.Model(pList).Update("GroupID", changes["newowner-groupId"].(int)); result.Error != nil {
-			return result.Error
+		for _, owner := range addOwners {
+			pug, gpErr := owner.getPug()
+			if gpErr != nil {
+				return gpErr
+			}
+			gPerm, cgopErr := createGroupOwnerPerms(group)
+			if cgopErr != nil {
+				return cgopErr
+			}
+			apErr := dbAppendPermissions(pug, gPerm, tx)
+			if apErr != nil {
+				return apErr
+			}
+		}
+	}
+
+	if rmvOwners, ok := changes["rmvOwners"].([]User); ok {
+		if err := tx.Model(&group).Association("Owners").Delete(rmvOwners); err != nil {
+			return err
+		}
+		for _, owner := range rmvOwners {
+			if pChanges, gpErr := dbGetResourceOwnerPermissions(PermGroups, group.Name, &owner, tx); gpErr != nil {
+				return gpErr
+			} else {
+				tx.Delete(pChanges)
+			}
 		}
 	}
 
@@ -173,6 +210,10 @@ func dbDeleteGroup(group *Group, tx *gorm.DB) error {
 		return err
 	}
 
+	if err := tx.Model(&group).Association("Owners").Clear(); err != nil {
+		return err
+	}
+
 	if result := tx.Delete(&group); result.Error != nil {
 		return result.Error
 	}
@@ -184,16 +225,20 @@ func dbDeleteGroup(group *Group, tx *gorm.DB) error {
 	return nil
 }
 
-func createGroupOwnerPerms(groupName string) ([]Permission, error) {
-	pstr := NewPermissionString(PermGroups, groupName, PermEditAction, PermWildcardToken)
-	ownerGroupEdit, err := NewPermission(pstr)
+func createGroupOwnerPerms(group *Group) (ownerPerms []Permission, err error) {
+	if !group.IsLDAP {
+		ep := NewPermissionString(PermGroups, group.Name, PermEditAction, PermWildcardToken)
+		ownerGroupEdit, err := NewPermission(ep)
+		if err != nil {
+			return nil, err
+		}
+		ownerPerms = append(ownerPerms, *ownerGroupEdit)
+	}
+	dp := NewPermissionString(PermGroups, group.Name, PermDeleteAction)
+	ownerGroupDel, err := NewPermission(dp)
 	if err != nil {
 		return nil, err
 	}
-	pstr = NewPermissionString(PermGroups, groupName, PermDeleteAction)
-	ownerGroupDel, err := NewPermission(pstr)
-	if err != nil {
-		return nil, err
-	}
-	return []Permission{*ownerGroupEdit, *ownerGroupDel}, nil
+	ownerPerms = append(ownerPerms, *ownerGroupDel)
+	return
 }

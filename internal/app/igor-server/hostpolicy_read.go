@@ -60,8 +60,6 @@ func hostPolicyExists(name string, tx *gorm.DB, clog *zl.Logger) (ok bool, err e
 }
 
 func parseHostPolicySearchParams(queryMap map[string][]string, r *http.Request) (map[string]interface{}, int, error) {
-	// parse resParams and convert []string vals to proper corresponding types
-	// template: db.Where(map[string]interface{}{"name": "jinzhu", "age": 20}).Find(&users)
 
 	clog := hlog.FromRequest(r)
 	status := http.StatusOK

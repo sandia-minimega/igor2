@@ -315,7 +315,7 @@ func TestShowNormal(t *testing.T) {
 	rb := getSomeData()
 	flagset := &pflag.FlagSet{}
 	//flagset.Bool("all", false, "")
-	args := []string{}
+	var args []string
 	if err := flagset.Parse(args); err != nil {
 		t.Fatal(err)
 	}

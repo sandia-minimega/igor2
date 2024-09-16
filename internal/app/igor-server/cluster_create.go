@@ -166,6 +166,11 @@ func doCreateClusters(r *http.Request) (clusters []Cluster, hostnameList []strin
 				}
 				hostIpBytes := hostIP.String()
 
+				bootMode := nmv["bootMode"]
+				if !validBootMode(bootMode) {
+					return fmt.Errorf("required bootMode \"%s\" invalid or not found for host %s; host configuration aborted", bootMode, hostname)
+				}
+
 				host := &Host{
 					Name:         hname,
 					HostName:     hostname,
@@ -173,6 +178,7 @@ func doCreateClusters(r *http.Request) (clusters []Cluster, hostnameList []strin
 					SequenceID:   nmk,
 					Mac:          hwAddr.String(),
 					IP:           hostIpBytes,
+					BootMode:     bootMode,
 					State:        HostBlocked,
 					HostPolicyID: hostPolicyMap[hostPolicyName].ID,
 					ClusterID:    clusterId,

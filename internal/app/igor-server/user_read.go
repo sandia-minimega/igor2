@@ -6,10 +6,11 @@ package igorserver
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/hlog"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
+
+	"github.com/rs/zerolog/hlog"
+	"gorm.io/gorm"
 )
 
 // doReadUsers performs a DB lookup of User records that match the provided queryParams. It will return these as
@@ -64,20 +65,7 @@ func getUsers(names []string, findAll bool, tx *gorm.DB) ([]User, int, error) {
 	}
 
 	if findAll {
-		var inList bool
-		var notFound []string
-		for _, v := range names {
-			inList = false
-			for _, u := range found {
-				if v == u.Name {
-					inList = true
-					continue
-				}
-			}
-			if !inList {
-				notFound = append(notFound, v)
-			}
-		}
+		notFound := filterNonUsers(found, names)
 
 		if len(notFound) != 0 {
 			return nil, http.StatusNotFound, fmt.Errorf("user(s) '%s' not found", strings.Join(notFound, ","))
@@ -123,6 +111,36 @@ func userExists(name string, tx *gorm.DB) (ok bool, err error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// checkUniqueUserAttributes verifies both the name and the email are unique to the given params
+func checkUniqueUserAttributes(username, email string) (ok bool, status int, err error) {
+	status = http.StatusInternalServerError
+	ok = true
+	if err = performDbTx(func(tx *gorm.DB) error {
+		exists, ueErr := userExists(username, tx)
+		if ueErr != nil {
+			return ueErr // uses default err status
+		}
+		if exists {
+			status = http.StatusConflict
+			return fmt.Errorf("user '%s' already exists", username)
+		} else {
+			emailList, emErr := dbReadUsers(map[string]interface{}{"email": email}, tx)
+			if emErr != nil {
+				return emErr // uses default err status
+			}
+			if len(emailList) > 0 {
+				status = http.StatusConflict
+				return fmt.Errorf("email '%s' already used by '%s'", email, emailList[0].Name)
+			}
+		}
+		status = http.StatusOK
+		return nil
+	}); err != nil {
+		ok = false
+	}
+	return ok, status, err
 }
 
 func parseUserSearchParams(queryMap map[string][]string, r *http.Request) (map[string]interface{}, int, error) {

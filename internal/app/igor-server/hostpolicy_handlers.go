@@ -141,7 +141,7 @@ func validateHostPolicyParams(handler http.Handler) http.Handler {
 							if _, ok := val.(string); !ok {
 								validateErr = NewBadParamTypeError(key, val, "string")
 								break postPutParamLoop
-							} else if validateErr = checkHostpolicyNameRules(val.(string)); validateErr != nil {
+							} else if validateErr = checkHostPolicyNameRules(val.(string)); validateErr != nil {
 								break postPutParamLoop
 							}
 						case "maxResTime":
@@ -160,7 +160,7 @@ func validateHostPolicyParams(handler http.Handler) http.Handler {
 						case "accessGroups":
 							grNames, ok := val.([]interface{})
 							if !ok {
-								// return interal error instead?
+								// return internal error instead?
 								validateErr = NewBadParamTypeError(key, val, "[string]interface")
 								break postPutParamLoop
 							}
@@ -198,7 +198,7 @@ func validateHostPolicyParams(handler http.Handler) http.Handler {
 				switch key {
 				case "name":
 					for _, val := range vals {
-						if validateErr = checkHostpolicyNameRules(val); validateErr != nil {
+						if validateErr = checkHostPolicyNameRules(val); validateErr != nil {
 							break queryParamLoop
 						}
 					}

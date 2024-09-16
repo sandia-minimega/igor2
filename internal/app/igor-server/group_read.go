@@ -44,7 +44,7 @@ func parseGroupSearchParams(queryMap map[string][]string, r *http.Request) (map[
 			if ownerList, status, err = doReadUsers(map[string]interface{}{"name": val}); err != nil {
 				return nil, status, err
 			} else {
-				queryParams["owner_id"] = userIDsOfUsers(ownerList)
+				queryParams["owners"] = userIDsOfUsers(ownerList)
 			}
 		case "showMembers":
 			showMembers, _ := strconv.ParseBool(val[0])
@@ -110,7 +110,7 @@ func getGroups(groupNames []string, excludePugs bool, tx *gorm.DB) ([]Group, int
 	return found, http.StatusOK, nil
 }
 
-// getAllGroupTx is a shortcut method that returns the 'all' group in a new transcation.
+// getAllGroupTx is a shortcut method that returns the 'all' group in a new transaction.
 func getAllGroupTx() (allGroup *Group, status int, err error) {
 	status = http.StatusInternalServerError
 	err = performDbTx(func(tx *gorm.DB) error {
