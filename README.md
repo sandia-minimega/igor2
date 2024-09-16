@@ -1,6 +1,5 @@
 # IGOR
 
--------
 Igor is a node reservation manager for clusters that host ad-hoc multi-user/multi-project work.
 
 Users can reserve and provision cluster nodes with OS images of their choice. Users can also
