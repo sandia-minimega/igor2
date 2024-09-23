@@ -18,9 +18,11 @@ Install/Upgrade Instructions:
 
 Important Upgrade Notes:
 
-- v2.1.0
+  This following versions requires a database upgrade when migrating to a
+  later version. After running install-igor but before restarting the server,
+  run the db-migrate application in the newly unpacked folder. Use the -h
+  flag for options if you have installed Igor or its configuration files in
+  non-default locations.
 
-  This version requires a database upgrade. After running igor-install but
-  before restarting the server, run the db-migrate application in the newly
-  unpacked folder. Use the -h flag for options if you have installed Igor or
-  its configuration files in non-default locations.
+  - v2.0.0
+
