@@ -63,7 +63,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 			switch osType {
 			case "redhat":
 				appendStmt = "IPAPPEND 2\n" + appendStmt
-				autoInstallPart = fmt.Sprintf(" lang=  kssendmac text ksdevice=bootif ks=%s ", autoInstallFilePath)
+				autoInstallPart = fmt.Sprintf(" inst.lang=  inst.kssendmac text inst.ksdevice=bootif inst.ks=%s ", autoInstallFilePath)
 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
 				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=%s text  auto-install/enable=true priority=critical hostname=%s url=%s domain=local.lan", host.Mac, host.Name, autoInstallFilePath)
 			default:
