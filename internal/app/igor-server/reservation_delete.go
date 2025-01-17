@@ -67,7 +67,7 @@ func doDeleteReservation(resName string, r *http.Request) (status int, err error
 				return
 			}
 
-			err = powerOffResNodes(resClone)
+			// err = powerOffResNodes(resClone)
 		}
 	}
 

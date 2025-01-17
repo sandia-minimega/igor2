@@ -43,6 +43,14 @@ func generateBootFile(host *Host, r *Reservation) error {
 	masterPath := filepath.Join(igor.TFTPPath, igor.PXEBIOSDir, "igor", host.Name)
 	pxePath := getPxePath(host)
 
+	kernel_args := ""
+	if r.Profile.Distro.KernelArgs != "" {
+		kernel_args = fmt.Sprintf("%s %s", kernel_args, r.Profile.Distro.KernelArgs)
+	}
+	if r.Profile.KernelArgs != "" {
+		kernel_args = fmt.Sprintf("%s %s", kernel_args, r.Profile.KernelArgs)
+	}
+
 	// Construct the auto-install part of the boot file based on OS type
 	autoInstallFilePath := ""
 	if image.LocalBoot {
@@ -58,6 +66,9 @@ func generateBootFile(host *Host, r *Reservation) error {
 		biosLabel := fmt.Sprintf("LABEL %s", r.Name)
 		kernel := fmt.Sprintf("\tKERNEL %v", kernelPath)
 		appendStmt := fmt.Sprintf("\tAPPEND initrd=%v", initrdPath)
+		if kernel_args != "" {
+			appendStmt = fmt.Sprintf("%s %s", appendStmt, kernel_args)
+		}
 		autoInstallPart := ""
 		if autoInstallFilePath != "" {
 			switch osType {
@@ -85,7 +96,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 				return fmt.Errorf("unknown OS type: %s", osType)
 			}
 		}
-		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s --id install-menu {\n    linuxefi %s %s\n    initrdefi %s\n}\n", label, kernelPath, autoInstallPart, initrdPath)
+		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s --id install-menu {\n    linuxefi %s %s %s\n    initrdefi %s\n}\n", label, kernelPath, autoInstallPart, kernel_args, initrdPath)
 		masterPath = filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor", host.Name)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", bootMode)
