@@ -15,7 +15,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@vueform/multiselect": "^2.3.4",
-    "axios": "^0.22.0",
+    "axios": "^1.8.4",
     "bootstrap": "^4.5.3",
     "bootstrap-icons-vue": "^1.8.1",
     "bootstrap-vue": "^2.21.2",
