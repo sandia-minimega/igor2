@@ -64,8 +64,6 @@ type Config struct {
 		ImageStagePath   string   `yaml:"imageStagePath" json:"imageStagePath"`
 		ScriptDir        string   `yaml:"scriptDir" json:"scriptDir"`
 		UserLocalBootDC  bool     `yaml:"userLocalBootDC" json:"userLocalBootDC"`
-		HTTPPxe          bool     `yaml:"httpPxe" json:"httpPxe"`
-		HTTPPxeBase      string   `yaml:"httpPxeBase" json:"httpPxeBase"`
 	} `yaml:"server" json:"server"`
 
 	Auth struct {
@@ -382,18 +380,6 @@ func initConfigCheck() {
 
 	if igor.Server.UserLocalBootDC {
 		logger.Info().Msgf("Local Boot Distro Creation is enabled for non-admin users")
-	}
-
-	if igor.Server.HTTPPxe {
-		if igor.Server.HTTPPxeBase == "" {
-			exitPrintFatal("config error - server.httpPxeBase must be set if using HTTP PXE transfers")
-		}
-		if !strings.HasSuffix(igor.Server.HTTPPxeBase, "/") {
-			igor.Server.HTTPPxeBase += "/"
-		}
-		logger.Info().Msgf("HTTP will be used to transfer Kernel and Initramfs from : %s", igor.Server.HTTPPxeBase)
-	} else {
-		igor.Server.HTTPPxeBase = ""
 	}
 
 	// TFTPRoot path
