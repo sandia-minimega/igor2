@@ -64,8 +64,8 @@ func generateBootFile(host *Host, r *Reservation) error {
 		defaultLabel := fmt.Sprintf("DEFAULT %s", r.Name)
 		defaultOptions := ""
 		biosLabel := fmt.Sprintf("LABEL %s", r.Name)
-		kernel := fmt.Sprintf("\tKERNEL %v", kernelPath)
-		appendStmt := fmt.Sprintf("\tAPPEND initrd=%v", initrdPath)
+		kernel := fmt.Sprintf("\tKERNEL %s%v", igor.Server.HTTPPxeBase, kernelPath)
+		appendStmt := fmt.Sprintf("\tAPPEND initrd=%s%v", igor.Server.HTTPPxeBase, initrdPath)
 		if kernel_args != "" {
 			appendStmt = fmt.Sprintf("%s %s", appendStmt, kernel_args)
 		}
@@ -96,7 +96,7 @@ func generateBootFile(host *Host, r *Reservation) error {
 				return fmt.Errorf("unknown OS type: %s", osType)
 			}
 		}
-		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s --id install-menu {\n    linuxefi %s %s %s\n    initrdefi %s\n}\n", label, kernelPath, autoInstallPart, kernel_args, initrdPath)
+		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s --id install-menu {\n    linuxefi %s%s %s %s\n    initrdefi %s%s\n}\n", label, igor.Server.HTTPPxeBase, kernelPath, autoInstallPart, kernel_args, igor.Server.HTTPPxeBase, initrdPath)
 		masterPath = filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor", host.Name)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", bootMode)

@@ -106,6 +106,17 @@ server:
   # Default: false
   userLocalBootDC:
 
+  # httpPxe (true|false) - Use HTTP to transfer K/I pair instead of TFTP. Some systems handle TFTP transfers
+  # with limited speed. Using HTTP can greatly increase the transfer rate on some systems. The initial PXE
+  # configuration is sent over TFTP for compatibility.
+  # Default: false
+  httpPxe:
+
+  # httpPxeBase (string) - The URL that will be prepended to the PXE config to transfer the K/I pair.
+  # Ex: http://192.168.1.10/
+  # Default: (blank -- but REQUIRED if httpPxe is true)
+  httpPxeBase:
+
 
 # -- AUTHENTICATION SETTINGS -- 
 # Parameters for how users identify themselves to igor and for how long.
