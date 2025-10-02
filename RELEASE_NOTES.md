@@ -16,9 +16,9 @@
 - Removed some CLI output columns in tables that weren't giving useful information. Information is still retained in non-table formatted version (using -x flag).
 - More detailed server logging that always specifies the user associated with a given command action.
 - Updated db-migrate tool to migrate Igor databases from previous versions to this one.
+- Administrators can make a public distro private and owned by the admin group using the --deprecate flag when editing a distro.
 - The igor sync command can now operate on a specific set of hosts.
 - Bump minimum required Golang to v1.23.x
-- Migrate Igorweb from VueJS 2 to 3.
 - Bump minimum nodeJS to v22.x and npm to v10.x to build Igorweb.
 - Security package updates.
 
@@ -27,6 +27,7 @@
 - Group-restricted nodes can be extended if the same group applied to the reservation matches the one declared by the restriction policy.
 - Default to returning only the user's reservations when using igor res show. Add the --all flag to get everything.
 - Host blocking now correctly handles hosts in maintenance mode.
+- Fixed some ASCII terminal formatting issues.
 
 ## v2.1.3
 
