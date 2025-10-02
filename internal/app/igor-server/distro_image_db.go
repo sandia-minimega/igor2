@@ -15,11 +15,15 @@ func dbCreateImage(image *DistroImage, tx *gorm.DB) error {
 }
 
 // dbReadImage returns images matching the given parameters.
-func dbReadImage(queryParams map[string]interface{}, tx *gorm.DB) (images []DistroImage, err error) {
+func dbReadImage(queryParams map[string]interface{}, limit int, tx *gorm.DB) (images []DistroImage, err error) {
 
 	tx = tx.Preload("Distros")
 
-	// if no params given, return all users
+	if limit > 0 {
+		tx = tx.Limit(limit)
+	}
+
+	// if no params given, return all
 	if len(queryParams) == 0 {
 		result := tx.Find(&images)
 		return images, result.Error

@@ -26,7 +26,7 @@ func dbReadKickstartTx(queryParams map[string]interface{}) (ks []Kickstart, err 
 // dbReadKS returns ks objects matching the given parameters.
 func dbReadKS(queryParams map[string]interface{}, tx *gorm.DB) (ks []Kickstart, err error) {
 
-	tx.Preload("Users")
+	tx = tx.Preload("Owner")
 
 	// if no params given, return all kickstarts
 	if len(queryParams) == 0 {

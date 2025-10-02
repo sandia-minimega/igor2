@@ -88,6 +88,8 @@ func dbReadDistros(queryParams map[string]interface{}, tx *gorm.DB) (distroList 
 // the changes map.
 func dbEditDistro(distro *Distro, changes map[string]interface{}, tx *gorm.DB) error {
 
+	// tx = tx.Preload("DistroImage").Preload("Owner").Preload("Groups").Preload("Owner.Groups").Preload("Kickstart")
+
 	// first find and deal with ownership/group changes, if any
 	modifyOwner := false
 	modifyGroups := false
@@ -249,6 +251,19 @@ func dbEditDistro(distro *Distro, changes map[string]interface{}, tx *gorm.DB) e
 			return result.Error
 		}
 		return nil
+	}
+
+	if newKs, ok := changes["kickstart"].(Kickstart); ok {
+		distro.Kickstart = newKs
+		distro.KickstartID = newKs.ID
+		delete(changes, "kickstart")
+	}
+
+	if newInitrdInfo, ok := changes["initrdInfo"].(string); ok {
+		if result := tx.Model(&distro.DistroImage).Update("InitrdInfo", newInitrdInfo); result.Error != nil {
+			return result.Error
+		}
+		delete(changes, "initrdInfo")
 	}
 
 	// update distro with any remaining changes

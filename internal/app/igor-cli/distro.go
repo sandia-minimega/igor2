@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 
 	"igor2/internal/pkg/api"
@@ -47,11 +46,11 @@ func newDistroCreateCmd() *cobra.Command {
 
 	cmdCreateDistro := &cobra.Command{
 		Use: "create NAME {--copy-distro DISTRO | --use-distro-image DISTRO |\n" +
-			"              --kernel PATH/TO/KFILE.KERNEL --initrd PATH/TO/IFILE.INITRD |\n" +
-			" 			   --kstaged FILENAME.KERNEL --istaged FILENAME.INITRD |\n" +
-			" 			   -d FOLDER/PATH} | --image-ref IMAGEREF} \n" +
-			"               [-g GRP1...] [--kickstart KICKSTART]\n" +
-			"              [-k KARGS]  [-p PUBLIC] [--desc \"DESCRIPTION\"]",
+			"       --kernel PATH/TO/KFILE.KERNEL --initrd PATH/TO/IFILE.INITRD |\n" +
+			"       --kstaged FILENAME.KERNEL --istaged FILENAME.INITRD |\n" +
+			"       -d FOLDER/PATH} | --image-ref IMAGEREF} \n" +
+			"       [-g GRP1...] [--kickstart KICKSTART]\n" +
+			"       [-k KARGS]  [-p PUBLIC] [--desc \"DESCRIPTION\"]",
 		Short: "Create a distro",
 		Long: `
 Creates a new igor distro. A distro wraps an OS image (ex. KI-pair) and allows
@@ -254,7 +253,8 @@ func newDistroEditCmd() *cobra.Command {
 
 	cmdEditDistro := &cobra.Command{
 		Use: "edit NAME { [-n NEWNAME | -o OWNER | -a GRP1,... | -r GRP1,... |\n" +
-			"       -k KARGS | --desc \"DESCRIPTION\" | -p ] }",
+			"       -k KARGS | --desc \"DESCRIPTION\" | -p ] } --deprecate |\n" +
+			"       --kickstart \"KICKSTART\"",
 		Short: "Edit distro information",
 		Long: `
 Edits distro information. This can only be done by the distro owner or an admin.
@@ -277,9 +277,22 @@ OS image.
 Use the -a and -r flags to add or remove groups from distro access respectively.
 Separate multiple group names with commas.
 
+Use the -i flag to update the INITRD column with OS version information for
+this distro. Normally this will be set automatically by Igor, but can be edited
+if the automatic discovery process returns "unknown" or information that is
+difficult to read. (Limit: 3-30 chars.) Note this change will be applied to
+any distro created from the same underlying initrd file.
+
 Use the -p flag to change this distro to public, allowing anyone to use it. The
 distro will be owned by igor-admin and can only be modified or deleted by the
-admin team. This is a permanent change.
+admin team. Users who makes their distros public cannot revert them back to
+private without admin team help.
+
+Use the --deprecate (admin-only) flag to hide a public distro by making it
+private and directly under admin ownership. This is used to as a first step
+to isolate or retire a public distro. Active reservations using the distro who
+are not admins can continue to use it as long as their reservations don't
+expire.
 
 Use the --default flag (admin only) to designate this distro to overwrite an 
 installed distro after its reservation ends. Only one distro at a time can be
@@ -293,6 +306,10 @@ from the distro. Distro will no longer be marked as default to be used in the
 maintenance phase when a reservation ends. No other changes are made to the
 distro.
 
+Use the --kickstart flag to assign a registered kickstart file to associate
+with this distro. It is required when the image being used for the distro is
+intended to be installed/boot locally. Otherwise it should not be used.
+
 ` + descFlagText + `
 `,
 		Args: cobra.ExactArgs(1),
@@ -303,11 +320,14 @@ distro.
 			owner, _ := flagset.GetString("owner")
 			add, _ := flagset.GetStringSlice("add")
 			remove, _ := flagset.GetStringSlice("remove")
+			info, _ := flagset.GetString("os-info")
 			kargs, _ := flagset.GetString("kernel-args")
 			public, _ := flagset.GetBool("public")
+			deprecate, _ := flagset.GetBool("deprecate")
 			isDefault, _ := flagset.GetBool("default")
 			defaultRemove, _ := flagset.GetBool("default-remove")
-			printRespSimple(doEditDistro(args[0], name, owner, desc, add, remove, kargs, public, isDefault, defaultRemove))
+			kickstart, _ := flagset.GetString("kickstart")
+			printRespSimple(doEditDistro(args[0], name, owner, desc, add, remove, info, kargs, public, deprecate, isDefault, defaultRemove, kickstart))
 		},
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction:     validateNameArg,
@@ -316,21 +336,28 @@ distro.
 	var name,
 		owner,
 		desc,
+		kickstart,
+		info,
 		kargs string
 	var add,
 		remove []string
 
 	cmdEditDistro.Flags().StringVarP(&name, "name", "n", "", "update the name of the distro")
 	cmdEditDistro.Flags().StringVarP(&owner, "owner", "o", "", "update the distro owner")
+	cmdEditDistro.Flags().StringVar(&kickstart, "kickstart", "", "assign a new kickstart/preseed")
 	cmdEditDistro.Flags().StringVar(&desc, "desc", "", "update the description of the distro")
+	cmdEditDistro.Flags().StringVarP(&info, "os-info", "i", "", "change OS information in the initrd field")
 	cmdEditDistro.Flags().StringSliceVarP(&add, "add", "a", nil, "group(s) to add to distro access")
 	cmdEditDistro.Flags().StringSliceVarP(&remove, "remove", "r", nil, "group(s) to remove from distro access")
 	cmdEditDistro.Flags().StringVarP(&kargs, "kernel-args", "k", "", "update the kernel arguments of the distro")
 	cmdEditDistro.Flags().BoolP("public", "p", false, "make this distro public (anyone can use, can't undo)")
-	cmdEditDistro.Flags().Bool("default", false, "make this distro default (used during post-reservation maintenance phase)")
-	cmdEditDistro.Flags().Bool("default-remove", false, "remove the default designation from this distro")
+	cmdEditDistro.Flags().BoolP("deprecate", "d", false, "downgrade a public distro to admin-private ownership [admin-only]")
+	cmdEditDistro.Flags().Bool("default", false, "use this distro as the default for maintenance [admin-only]")
+	cmdEditDistro.Flags().Bool("default-remove", false, "remove the default designation from this distro [admin-only]")
 	_ = registerFlagArgsFunc(cmdEditDistro, "name", []string{"NAME"})
 	_ = registerFlagArgsFunc(cmdEditDistro, "owner", []string{"OWNER"})
+	_ = registerFlagArgsFunc(cmdEditDistro, "os-info", []string{"INFO"})
+	_ = registerFlagArgsFunc(cmdEditDistro, "kickstart", []string{"KICKSTART"})
 	_ = registerFlagArgsFunc(cmdEditDistro, "desc", []string{"\"DESCRIPTION\""})
 	_ = registerFlagArgsFunc(cmdEditDistro, "add", []string{"GRP1"})
 	_ = registerFlagArgsFunc(cmdEditDistro, "remove", []string{"GRP1"})
@@ -465,7 +492,9 @@ func doShowDistros(names []string, owners []string, groups []string, imageIDs []
 	return &rb
 }
 
-func doEditDistro(name string, newName string, owner string, desc string, add []string, remove []string, kargs string, public, isDefault, defaultRemove bool) *common.ResponseBodyBasic {
+func doEditDistro(name string, newName string, owner string, desc string, add []string, remove []string, info string,
+	kargs string, public, deprecate, isDefault, defaultRemove bool, kickstart string) *common.ResponseBodyBasic {
+
 	apiPath := api.Distros + "/" + name
 	params := make(map[string]interface{})
 	if newName != "" {
@@ -476,6 +505,9 @@ func doEditDistro(name string, newName string, owner string, desc string, add []
 	}
 	if desc != "" {
 		params["description"] = desc
+	}
+	if info != "" {
+		params["initrdInfo"] = info
 	}
 	if len(add) > 0 {
 		params["addGroup"] = add
@@ -489,11 +521,17 @@ func doEditDistro(name string, newName string, owner string, desc string, add []
 	if public {
 		params["public"] = "true"
 	}
+	if deprecate {
+		params["deprecate"] = "true"
+	}
 	if isDefault {
 		params["default"] = "true"
 	}
 	if defaultRemove {
 		params["default_remove"] = "true"
+	}
+	if kickstart != "" {
+		params["kickstart"] = kickstart
 	}
 	body := doSendMultiform(http.MethodPatch, apiPath, params)
 	return unmarshalBasicResponse(body)
@@ -523,10 +561,15 @@ func printDistros(rb *common.ResponseBodyDistros) {
 		var distroInfo string
 		for _, d := range distroList {
 
+			isPublic := "no"
+			if d.IsPublic {
+				isPublic = "yes"
+			}
+
 			distroInfo = "DISTRO: " + d.Name + "\n"
 			distroInfo += "  -DESCRIPTION: " + d.Description + "\n"
 			distroInfo += "  -OWNER:       " + d.Owner + "\n"
-			distroInfo += "  -PUBLIC:      " + strconv.FormatBool(d.IsPublic) + "\n"
+			distroInfo += "  -PUBLIC?:     " + isPublic + "\n"
 			distroInfo += "  -GROUPS:      " + strings.Join(d.Groups, ",") + "\n"
 			distroInfo += "  -TYPE:        " + d.ImageType + "\n"
 			distroInfo += "  -KERNEL:      " + d.Kernel + "\n"
@@ -546,21 +589,30 @@ func printDistros(rb *common.ResponseBodyDistros) {
 
 		for _, d := range distroList {
 
+			isPublic := ""
+			if d.IsPublic {
+				isPublic = "yes"
+			}
+
 			tw.AppendRow([]interface{}{
 				d.Name,
-				d.Description,
+				multiline(35, d.Description),
 				d.Owner,
-				d.IsPublic,
+				isPublic,
 				strings.Join(d.Groups, "\n"),
 				d.ImageType,
 				d.Kernel,
 				d.Initrd,
 				d.Kickstart,
-				d.KernelArgs,
+				multiline(40, d.KernelArgs),
 			})
 		}
 
 		tw.SetColumnConfigs([]table.ColumnConfig{
+			{
+				Name:     "DESCRIPTION",
+				WidthMax: 35,
+			},
 			{
 				Name:     "KERNEL-ARGS",
 				WidthMax: 40,

@@ -10,19 +10,15 @@ Install/Upgrade Instructions:
   stop these applications before running the install-igor script in the next
   step.
 
+- If you are upgrading, then as root, navigate to the db-migrate folder and
+  run the executable to upgrade igor's database. Depending on the upgrade
+  version there may not be any changes to apply, but it will ensure the
+  database version you are using is the correct one. Return to the parent
+  folder after you finish this step.
+
 - As root, run the install-igor script for both first-time installation or
   upgrading from an earlier version. If you have installed Igor in custom
   or non-traditional locations on your system, you may need to edit some of
   the path variables in the install-igor script.
 
-
-Important Upgrade Notes:
-
-  This following versions requires a database upgrade when migrating to a
-  later version. After running install-igor but before restarting the server,
-  run the db-migrate application in the newly unpacked folder. Use the -h
-  flag for options if you have installed Igor or its configuration files in
-  non-default locations.
-
-  - v2.0.0
 

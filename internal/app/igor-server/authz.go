@@ -242,7 +242,7 @@ func getEditPart(r *http.Request, resource string) (editPart string) {
 		attrs := make([]string, 0, len(body))
 		for k := range body {
 			switch k {
-			case "group", "owner", "distro", "profile", "extend", "name", "description", "kernelArgs", "drop":
+			case "group", "owner", "distro", "profile", "extend", "name", "description", "kernelArgs", "drop", "addNodeList", "addNodeCount":
 				attrs = append(attrs, k)
 			case "extendMax":
 				attrs = append(attrs, "extend")

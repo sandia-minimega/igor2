@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gorm.io/gorm"
 )
@@ -40,26 +39,33 @@ func doUpdateKS(targetName string, r *http.Request) (code int, err error) {
 		if fileErr == nil {
 			defer targetFile.Close()
 			if oldFileName != handler.Filename {
-				_, sfErr := saveNewKickstartFile(targetFile, handler.Filename)
+				_, sfErr := saveNewKickstartFile(targetFile, handler.Filename, false)
 				if sfErr != nil {
 					return sfErr
 				}
 			} else {
-				_, rfErr := replaceFile(targetFile, handler.Filename)
+				_, rfErr := saveNewKickstartFile(targetFile, handler.Filename, true)
 				if rfErr != nil {
 					return rfErr
 				}
 			}
+
 			changes["filename"] = handler.Filename
-			changes["name"] = strings.Split(handler.Filename, ".")[0]
+			// changes["name"] = strings.Split(handler.Filename, ".")[0]
 		}
+
+		name := r.FormValue("name")
+		if name != "" {
+			changes["name"] = name
+		}
+
 		if changes != nil {
 			err := dbEditKS(&target, changes, tx)
 			if err != nil {
 				return err
 			}
-			if oldFileName != changes["filename"] {
-				// if file name of new ks was different, delete old ks file
+			if changes["filename"] != nil && oldFileName != changes["filename"] {
+				// if we swapped the file and file name of new ks was different, delete old ks file
 				filePath := filepath.Join(igor.TFTPPath, igor.KickstartDir, oldFileName)
 				return os.Remove(filePath)
 			}

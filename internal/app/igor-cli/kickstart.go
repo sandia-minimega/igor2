@@ -123,19 +123,30 @@ Use the -x flag to render screen output without pretty formatting.
 func newKSEditCmd() *cobra.Command {
 
 	cmdEditKS := &cobra.Command{
-		Use:   "edit NAME -k KICKSTART.FILE ",
-		Short: "Replace kickstart file " + adminOnly,
+		Use:   "edit NAME -k KICKSTART.FILE -n NEW_NAME ",
+		Short: "Replace kickstart file or change its name" + adminOnly,
 		Long: `
 Upload and register a kickstart file to Igor to replace the existing Kickstart file.
 
+Or change the name of the kickstart file as desired
+
 When creating or modifying a distro using a local boot image, the kickstart must be
-included and referenced by file name.
+included and referenced by name.
 
 ` + requiredFlags + `
 
-NAME : kickstart name to replace file to
+NAME : kickstart name to edit
 
-Use -k flag to specify the name of the new kickstart file
+` + optionalFlags + `
+
+Use -k flag to specify the name/path of the new kickstart file you want to replace the 
+existing kickstart's file with. Note - this will not change the name of the kickstart itself, 
+you must also use the -n flag if you want to change the name too.
+WARNING - whether or not the new file is the same name as the old file, the old file will
+be deleted once the new file is saved.
+
+Use -n flag to change the name of the existing kickstart. NOTE: this changes only
+the name Igor references it by, it does not change the file name.
 
 ` + adminOnlyBanner + `
 `,
@@ -143,7 +154,8 @@ Use -k flag to specify the name of the new kickstart file
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flagset := cmd.Flags()
 			ks, _ := flagset.GetString("kickstart")
-			res, err := doUpdateKS(args[0], ks)
+			name, _ := flagset.GetString("name")
+			res, err := doUpdateKS(args[0], ks, name)
 			if err != nil {
 				return err
 			}
@@ -154,10 +166,12 @@ Use -k flag to specify the name of the new kickstart file
 		ValidArgsFunction:     validateNameArg,
 	}
 
-	var ks string
+	var ks, name string
 	cmdEditKS.Flags().StringVarP(&ks, "kickstart", "k", "", "name of the kickstart file to register")
-	_ = cmdEditKS.MarkFlagRequired("kickstart")
+	cmdEditKS.Flags().StringVarP(&name, "name", "n", "", "new name for the kickstart")
+	// _ = cmdEditKS.MarkFlagRequired("kickstart")
 	_ = registerFlagArgsFunc(cmdEditKS, "kickstart", []string{"FILENAME"})
+	_ = registerFlagArgsFunc(cmdEditKS, "name", []string{"NAME"})
 
 	return cmdEditKS
 }
@@ -208,10 +222,16 @@ func doShowKS() *common.ResponseBodyKickstarts {
 	return &rb
 }
 
-func doUpdateKS(name, ks string) (*common.ResponseBodyBasic, error) {
-	apiPath := api.Kickstarts + "/" + name
+func doUpdateKS(target, ks, name string) (*common.ResponseBodyBasic, error) {
+	apiPath := api.Kickstarts + "/" + target
 	params := map[string]interface{}{}
-	params["kickstart"] = openFile(ks)
+	if ks != "" {
+		params["kickstart"] = openFile(ks)
+		params["has_kickstart"] = "true"
+	}
+	if name != "" {
+		params["name"] = name
+	}
 	body := doSendMultiform(http.MethodPatch, apiPath, params)
 	return unmarshalBasicResponse(body), nil
 }

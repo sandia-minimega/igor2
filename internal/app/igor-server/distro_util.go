@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 func checkDistroNameRules(name string) error {
@@ -132,4 +134,42 @@ func distroIDsOfDistros(distros []Distro) []int {
 		distroIDs[i] = d.ID
 	}
 	return distroIDs
+}
+
+func getImageStorePath(imageID string) string {
+	return filepath.Join(igor.TFTPPath, igor.ImageStoreDir, imageID)
+}
+
+func parseKernelInfo(image *DistroImage) (kInfo string, breed string) {
+
+	kInfo = "not found"
+	breed = ""
+
+	targetPath := filepath.Join(getImageStorePath(image.ImageID), image.Kernel)
+
+	fileCmdOut, fileCmdErr := processWrapper("file", targetPath)
+	if fileCmdErr != nil {
+		logger.Warn().Msgf("file command error on '%s': %v", targetPath, fileCmdErr)
+	}
+	if len(fileCmdOut) > 0 {
+
+		kernVerInfo := strings.ToLower(strings.Split(fileCmdOut, ": ")[1])
+		logger.Debug().Msgf("file command output: %s", kernVerInfo)
+		for _, b := range DistroBreed {
+			if strings.Contains(kernVerInfo, b) {
+				breed = b
+				break
+			}
+		}
+
+		verPattern := `version (\S+)`
+		verRegex := regexp.MustCompile(verPattern)
+		match := verRegex.FindStringSubmatch(kernVerInfo)
+		if len(match) > 1 {
+			kInfo = match[1]
+		}
+	}
+
+	logger.Debug().Msgf("kernel version: %s, breed: %s", kInfo, breed)
+	return
 }

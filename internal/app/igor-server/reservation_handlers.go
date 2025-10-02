@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ func handleCreateReservations(w http.ResponseWriter, r *http.Request) {
 	createParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create reservation"
+	clog.Debug().Msgf("handling %s request", actionPrefix)
 	rb := common.NewResponseBody()
 
 	res, resIsNow, status, err := doCreateReservation(createParams, r)
@@ -46,7 +48,7 @@ func handleCreateReservations(w http.ResponseWriter, r *http.Request) {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
 		rb.Data["reservation"] = filterReservationList([]Reservation{*res}, getUserFromContext(r))
-		clog.Info().Msgf("%s success - '%s' created", actionPrefix, res.Name)
+		clog.Info().Msgf("%s success - '%s' created by user %s", actionPrefix, res.Name, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -56,20 +58,41 @@ func handleReadReservations(w http.ResponseWriter, r *http.Request) {
 	queryMap := r.URL.Query()
 	clog := hlog.FromRequest(r)
 	actionPrefix := "read reservation(s)"
+	clog.Debug().Msgf("handling %s request", actionPrefix)
 	rb := common.NewResponseBody()
-	var resvs []Reservation
+	var resList []Reservation
+
+	showAll := false
+	if vals, ok := queryMap["all"]; ok && len(vals) > 0 {
+		if b, pbErr := strconv.ParseBool(vals[0]); pbErr == nil {
+			showAll = b
+		}
+	}
 
 	// parse queryMap and convert []string vals to proper corresponding types
-	queryParams, timeParams, status, err := parseResSearchParams(queryMap, r)
+	queryParams, timeParams, status, err := parseResSearchParams(queryMap, showAll, r)
 	if err == nil {
-		resvs, status, err = doReadReservations(queryParams, timeParams)
+		var foundResList []Reservation
+		foundResList, status, err = doReadReservations(queryParams, timeParams)
+
+		if showAll {
+			resList = foundResList
+		} else {
+			reqUser := getUserFromContext(r)
+			resList = make([]Reservation, 0, len(foundResList)) // preallocate; adjust cap if you expect heavy filtering
+			for _, res := range foundResList {
+				if reqUser.isMemberOfGroup(&res.Group) {
+					resList = append(resList, res)
+				}
+			}
+		}
 	}
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		rb.Data["reservations"] = filterReservationList(resvs, getUserFromContext(r))
-		if len(resvs) == 0 {
+		rb.Data["reservations"] = filterReservationList(resList, getUserFromContext(r))
+		if len(resList) == 0 {
 			rb.Message = "search returned no results"
 		}
 	}
@@ -85,6 +108,7 @@ func handleUpdateReservation(w http.ResponseWriter, r *http.Request) {
 	editParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update reservation"
+	clog.Debug().Msgf("handling %s request", actionPrefix)
 	ps := httprouter.ParamsFromContext(r.Context())
 	resName := ps.ByName("resName")
 	rb := common.NewResponseBody()
@@ -94,7 +118,7 @@ func handleUpdateReservation(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' updated", actionPrefix, resName)
+		clog.Info().Msgf("%s success - '%s' updated by user %s", actionPrefix, resName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -109,6 +133,7 @@ func handleDeleteReservations(w http.ResponseWriter, r *http.Request) {
 	resName := ps.ByName("resName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete reservation"
+	clog.Debug().Msgf("handling %s request", actionPrefix)
 	rb := common.NewResponseBody()
 
 	status, err := doDeleteReservation(resName, r)
@@ -116,7 +141,7 @@ func handleDeleteReservations(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' deleted", actionPrefix, resName)
+		clog.Info().Msgf("%s success - '%s' deleted by user %s", actionPrefix, resName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -154,10 +179,8 @@ func validateResvParams(handler http.Handler) http.Handler {
 					for key, val := range resParams {
 						switch strings.TrimSpace(key) {
 						case "name":
-							if resName, ok := val.(string); !ok {
-								validateErr = NewBadParamTypeError(key, val, "string")
-								break postPutParamLoop
-							} else if validateErr = checkGenericNameRules(resName); validateErr != nil {
+							if err := validateName(val); err != nil {
+								validateErr = err
 								break postPutParamLoop
 							}
 						case "description":
@@ -316,28 +339,6 @@ func validateResvParams(handler http.Handler) http.Handler {
 							break queryParamLoop
 						}
 					}
-				// case "from-start", "from-end", "to-start", "to-end":
-				// 	if err := common.ValidateTimeFormat(vals[0]); err != nil {
-				// 		validateErr = fmt.Errorf("parameter '%s' is not a recognized time format, found %s", key, vals[0])
-				// 		break queryParamLoop
-				// 	}
-				// case "duration", "gte-duration", "lte-duration":
-				// 	if _, err := time.ParseDuration(vals[0]); err != nil {
-				// 		validateErr = fmt.Errorf("parameter '%s' is not a recognized duration format, found %s", key, vals[0])
-				// 		break queryParamLoop
-				// 	}
-				// case "installed":
-				// 	if vals[0] != "0" && vals[0] != "1" {
-				// 		validateErr = fmt.Errorf("parameter 'installed' must be 0 or 1, found %s", vals[0])
-				// 		break queryParamLoop
-				// 	}
-				// case "vlan", "gte-extendNum", "lte-extendNum", "eq-extendNum", "gte-nodeCount", "lte-nodeCount", "nodeCount":
-				// 	for _, extNumStr := range vals {
-				// 		if _, err := strconv.Atoi(extNumStr); err != nil {
-				// 			validateErr = fmt.Errorf("parameter '%s' is not a number, found %s", key, extNumStr)
-				// 			break queryParamLoop
-				// 		}
-				// 	}
 				default:
 					validateErr = NewUnknownParamError(key, vals)
 					break queryParamLoop
@@ -354,6 +355,8 @@ func validateResvParams(handler http.Handler) http.Handler {
 				_, doDistro := resParams["distro"]
 				_, doProfile := resParams["profile"]
 				_, doDrop := resParams["drop"]
+				_, doAddCount := resParams["addNodeCount"]
+				_, doAddList := resParams["addNodeList"]
 				// if doing an extend command, it must be the only thing updating
 				if doExtend || doExtendMax {
 					if len(resParams) != 1 {
@@ -379,6 +382,25 @@ func validateResvParams(handler http.Handler) http.Handler {
 					} else {
 						if thisNodeList, ok := resParams["drop"].(string); !ok {
 							validateErr = NewBadParamTypeError("drop", resParams["drop"], "string")
+						} else {
+							if strings.TrimSpace(thisNodeList) != "" {
+								hostNames := igor.splitRange(thisNodeList)
+								if len(hostNames) == 0 {
+									validateErr = fmt.Errorf("couldn't parse node specification %v", thisNodeList)
+								}
+							} else {
+								validateErr = fmt.Errorf("at least 1 host name required to create reservation")
+							}
+						}
+					}
+				} else if doAddList || doAddCount {
+					if doAddCount {
+						if nodeCount, ok := resParams["addNodeCount"].(float64); !ok {
+							validateErr = NewBadParamTypeError("addNodeCount", nodeCount, "float64")
+						}
+					} else {
+						if thisNodeList, ok := resParams["addNodeList"].(string); !ok {
+							validateErr = NewBadParamTypeError("addNodeList", resParams["addNodeList"], "string")
 						} else {
 							if strings.TrimSpace(thisNodeList) != "" {
 								hostNames := igor.splitRange(thisNodeList)
@@ -474,11 +496,20 @@ func validateResvParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateResvParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateResvParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}
 
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func validateName(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return NewBadParamTypeError("name", val, "string")
+	}
+	return checkGenericNameRules(s)
 }

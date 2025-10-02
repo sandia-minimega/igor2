@@ -18,9 +18,13 @@ func getReservedHosts() ([]Host, error) {
 	if err != nil {
 		return result, err
 	}
+	hostNames := []string{}
 	for _, reservation := range reservations {
-		result = append(result, reservation.Hosts...)
+		for _, host := range reservation.Hosts {
+			hostNames = append(hostNames, host.Name)
+		}
 	}
+	result, err = dbReadHostsTx(map[string]interface{}{"name": hostNames})
 	return result, nil
 }
 

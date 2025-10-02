@@ -62,9 +62,12 @@ func scheduleHostsByAvailability(res *Reservation, tx *gorm.DB, clog *zl.Logger)
 	numHostsReq := len(res.Hosts) // number of hosts needed for res
 	isElevated := userElevated(res.Owner.Name)
 
-	groupAccessList := []string{GroupAll}
-	if !strings.HasPrefix(res.Group.Name, GroupUserPrefix) {
-		groupAccessList = append(groupAccessList, res.Group.Name)
+	// make a list of the access groups that this user qualifies for
+	var groupAccessList []string
+	for _, uGroup := range res.Owner.Groups {
+		if !strings.HasPrefix(uGroup.Name, GroupUserPrefix) {
+			groupAccessList = append(groupAccessList, uGroup.Name)
+		}
 	}
 
 	validAccessHosts, status, err := dbGetAccessibleHosts(groupAccessList, isElevated, res.Start, res.End, numHostsReq, tx, clog)

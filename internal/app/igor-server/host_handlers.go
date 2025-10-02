@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"igor2/internal/pkg/common"
@@ -446,7 +447,8 @@ func validateBlockParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validatePowerParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validatePowerParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

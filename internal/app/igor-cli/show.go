@@ -40,7 +40,7 @@ func newShowCmd() *cobra.Command {
 
 	cmdShow := &cobra.Command{
 		Use: "show [-acefgrtx] [--sort-start --sort-name --sort-owner]\n" +
-			"            [-n USER1,... -o OWNER1,...] [--no-color --no-map]",
+			"       [-n USER1,... -o OWNER1,...] [--no-color --no-map]",
 		Short: "Display current cluster/reservation status",
 		Long: `
 Displays cluster node statuses and reservation list. 
@@ -57,7 +57,7 @@ Node Reservation Status (background color):
 
   ` + cUnreservedUp.Sprint(Unreserved) + `  : node currently free to reserve
   ` + cBlockedUp.Sprint(Blocked) + `     : node not accepting reservations
-  ` + cRestrictedUp.Sprint(Restricted) + `  : node has group/time access restriction
+  ` + cRestrictedUp.Sprint(Restricted) + `  : node has group/time access policy restriction
   ` + cInstError.Sprint("INSTALL ERR") + ` : reservation failed to install
 
   ` + cOwnerRes.Sprint("RESERVED") + `    : node reserved by you or accessible via member group
@@ -482,7 +482,7 @@ func printShow(rb *common.ResponseBodyShow, flagset *pflag.FlagSet) {
 		}
 		nodeRange, _ := r.UnsplitRange(nodes)
 
-		nodeLine := multilineRange(MaxNodeColWidth, nodeRange, showData.Cluster.Prefix)
+		nodeLine := multilineNodeList(MaxNodeColWidth, nodeRange, showData.Cluster.Prefix)
 
 		nst.AppendRow([]interface{}{
 			rowHeaderName(style, rowType),
@@ -682,7 +682,7 @@ func printShow(rb *common.ResponseBodyShow, flagset *pflag.FlagSet) {
 			endTimeStr,
 			flags,
 			strconv.Itoa(len(r.Hosts)),
-			hostStatus,
+			multilineNodeList(40, hostStatus, ""),
 		})
 	}
 
@@ -702,6 +702,7 @@ func printShow(rb *common.ResponseBodyShow, flagset *pflag.FlagSet) {
 			{Name: "NAME", AlignHeader: text.AlignRight, Align: text.AlignRight},
 			{Name: "START", AlignHeader: text.AlignLeft, Align: text.AlignRight},
 			{Name: "END", AlignHeader: text.AlignLeft, Align: text.AlignRight},
+			{Name: "HOSTS", WidthMax: 40},
 		})
 	}
 

@@ -21,6 +21,7 @@ func doDeleteReservation(resName string, r *http.Request) (status int, err error
 
 	clog := hlog.FromRequest(r)
 	actionUser := getUserFromContext(r)
+	clog.Debug().Msgf("delete reservation: '%s' requested by user %s", resName, actionUser.Name)
 	isElevated := userElevated(actionUser.Name)
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 	var res *Reservation
@@ -59,15 +60,11 @@ func doDeleteReservation(resName string, r *http.Request) (status int, err error
 			}
 		}
 
-		// power off the nodes and uninstall this res if it was active
 		if activeRes {
-
 			if err = uninstallRes(resClone); err != nil {
 				status = http.StatusInternalServerError
 				return
 			}
-
-			// err = powerOffResNodes(resClone)
 		}
 	}
 
@@ -114,9 +111,7 @@ func doDeleteRes(res *Reservation, tx *gorm.DB, activeRes bool, clog *zl.Logger)
 
 		var availableHosts []Host
 		for _, host := range res.Hosts {
-			if host.State != HostBlocked {
-				availableHosts = append(availableHosts, host)
-			}
+			availableHosts = append(availableHosts, host)
 		}
 
 		err = dbEditHosts(availableHosts, map[string]interface{}{"State": HostAvailable}, tx)

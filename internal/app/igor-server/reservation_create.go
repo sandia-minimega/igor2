@@ -23,6 +23,8 @@ import (
 func doCreateReservation(resParams map[string]interface{}, r *http.Request) (res *Reservation, resIsNow bool, status int, err error) {
 
 	clog := hlog.FromRequest(r)
+	user := getUserFromContext(r)
+	clog.Debug().Msgf("create reservation: by user %s, called with params %+v", user.Name, resParams)
 
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 

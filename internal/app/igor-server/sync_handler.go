@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"igor2/internal/pkg/common"
 
 	"github.com/rs/zerolog/hlog"
+	"gorm.io/gorm"
 )
 
 func syncHandler(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +50,10 @@ func runSync(params map[string][]string) (result map[string]interface{}, status 
 	if q, ok := params["quiet"]; ok {
 		quiet = strings.ToLower(q[0]) == "true"
 	}
+	scope := ""
+	if s, ok := params["scope"]; ok {
+		scope = strings.ToLower(s[0])
+	}
 	// already check if present in validation
 	cmd := strings.ToLower(params["cmd"][0])
 
@@ -58,7 +64,7 @@ func runSync(params map[string][]string) (result map[string]interface{}, status 
 			err := fmt.Errorf("not doing vlan segmentation, nothing to sync")
 			return nil, http.StatusBadRequest, err
 		}
-		return syncArista(force, quiet)
+		return syncArista(force, quiet, scope)
 	default:
 		status = http.StatusBadRequest
 		err = fmt.Errorf("sync command %v not recognized", cmd)
@@ -69,13 +75,50 @@ func runSync(params map[string][]string) (result map[string]interface{}, status 
 // sync builds a map of all hosts, where each host has the following
 // information captured about it:
 // map["Host.Name"]{"powered":string, "res_vlan":string, "actual_vlan":string}
-func syncArista(force, quiet bool) (result map[string]interface{}, status int, err error) {
+func syncArista(force, quiet bool, scope string) (result map[string]interface{}, status int, err error) {
 	result = make(map[string]interface{})
-
-	// we only need to care about hosts currently assigned to reservations
-	hosts, err := getReservedHosts()
-	if err != nil {
-		return result, http.StatusInternalServerError, err
+	hosts := []Host{}
+	// determine scope of sync
+	if scope != "" {
+		// this might be a host list
+		hostNames := igor.splitRange(scope)
+		if hostNames == nil {
+			// this might be a res list
+			hostNames = []string{}
+			if err := performDbTx(func(tx *gorm.DB) error {
+				resNames := strings.Split(scope, ",")
+				resResults, _, _ := getReservations(resNames, tx)
+				if err != nil {
+					return err
+				}
+				for _, res := range resResults {
+					hostNames = append(hostNames, namesOfHosts(res.Hosts)...)
+				}
+				return nil
+			}); err != nil {
+				return result, status, err
+			}
+		}
+		if len(hostNames) > 0 {
+			if err := performDbTx(func(tx *gorm.DB) error {
+				hosts, status, err = getHosts(hostNames, true, tx)
+				if err != nil {
+					return err
+				}
+				return nil
+			}); err != nil {
+				return result, status, err
+			}
+		}
+		if len(hosts) == 0 {
+			return result, http.StatusBadRequest, fmt.Errorf("unable to retrieve valid hosts from expression %s", scope)
+		}
+	} else {
+		// if scope not specified, then we only need to care about hosts currently assigned to reservations
+		hosts, err = getReservedHosts()
+		if err != nil {
+			return result, http.StatusInternalServerError, err
+		}
 	}
 
 	// get Arista vlan data
@@ -87,19 +130,26 @@ func syncArista(force, quiet bool) (result map[string]interface{}, status int, e
 	}
 
 	// get all reservations
-	reservations, err := dbReadReservationsTx(map[string]interface{}{}, map[string]time.Time{})
-	if err != nil {
-		logger.Error().Msgf("error retrieving reservations for sync: %v", err)
-		return result, http.StatusInternalServerError, err
-	}
+	// reservations, err := dbReadReservationsTx(map[string]interface{}{}, map[string]time.Time{})
+	// if err != nil {
+	// 	logger.Error().Msgf("error retrieving reservations for sync: %v", err)
+	// 	return result, http.StatusInternalServerError, err
+	// }
 
 	// determine what each host vlan should be from reservation
 	withRes := map[string]map[string]interface{}{}
-	for _, r := range reservations {
-		vlan := strconv.Itoa(r.Vlan)
+	// for _, r := range reservations {
+	// 	vlan := strconv.Itoa(r.Vlan)
 
-		for _, host := range r.Hosts {
-			withRes[host.Name] = map[string]interface{}{"res_vlan": vlan}
+	// 	for _, host := range r.Hosts {
+	// 		withRes[host.Name] = map[string]interface{}{"res_vlan": vlan}
+	// 	}
+	// }
+	for _, host := range hosts {
+		for _, r := range host.Reservations {
+			if r.IsActive(time.Now()) {
+				withRes[host.Name] = map[string]interface{}{"res_vlan": strconv.Itoa(r.Vlan)}
+			}
 		}
 	}
 
@@ -108,9 +158,10 @@ func syncArista(force, quiet bool) (result map[string]interface{}, status int, e
 	// aggregate all to report and sync the node if force
 	powerMapMU.Lock()
 	for _, host := range hosts {
-		hostName := host.HostName
+		host_hostName := host.HostName
+		host_name := host.Name
 		data := map[string]string{}
-		if resInfo, ok := withRes[hostName]; ok {
+		if resInfo, ok := withRes[host_name]; ok {
 			data["res_vlan"] = resInfo["res_vlan"].(string)
 			if data["res_vlan"] == "0" || data["res_vlan"] == "" {
 				data["res_vlan"] = "(none)"
@@ -119,7 +170,7 @@ func syncArista(force, quiet bool) (result map[string]interface{}, status int, e
 			data["res_vlan"] = "(unknown)"
 		}
 
-		if powerInfo, ok := powerMap[hostName]; ok {
+		if powerInfo, ok := powerMap[host_hostName]; ok {
 			if powerInfo == nil {
 				data["powered"] = "unknown"
 			} else if *powerInfo {
@@ -131,7 +182,7 @@ func syncArista(force, quiet bool) (result map[string]interface{}, status int, e
 			data["powered"] = "unknown"
 		}
 
-		data["switch_vlan"] = gt[hostName]
+		data["switch_vlan"] = gt[host_name]
 		// if arista had no vlan assigned, make explicit for readability
 		if data["switch_vlan"] == "0" || data["switch_vlan"] == "" {
 			data["switch_vlan"] = "(none)"
@@ -143,13 +194,13 @@ func syncArista(force, quiet bool) (result map[string]interface{}, status int, e
 				return result, http.StatusInternalServerError, err
 			}
 			if err := networkSet([]Host{host}, vlan); err != nil {
-				logger.Error().Msgf("unable to set up network isolation for host %v", hostName)
+				logger.Error().Msgf("unable to set up network isolation for host %v", host_name)
 				data["status"] = "VLAN correction failed!"
 			} else {
 				data["status"] = "VLAN correction succeeded"
 			}
 		}
-		report[hostName] = data
+		report[host_name] = data
 	}
 	powerMapMU.Unlock()
 
@@ -199,6 +250,21 @@ func validateSyncParams(handler http.Handler) http.Handler {
 								validateErr = fmt.Errorf("quiet value must be true or false")
 								break getParamLoop
 							}
+						case "scope":
+							scope := strings.TrimSpace(strings.ToLower(val[0]))
+							// this might be a host list
+							hostNames := igor.splitRange(scope)
+							if hostNames == nil {
+								// this might be a res list
+								resNames := strings.Split(scope, ",")
+								for _, r := range resNames {
+									if err := validateName(r); err != nil {
+										validateErr = fmt.Errorf("invalid scope element given: %s", r)
+										break getParamLoop
+									}
+								}
+							}
+
 						default:
 							validateErr = NewUnknownParamError(key, val)
 							break getParamLoop
@@ -211,7 +277,8 @@ func validateSyncParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateSyncParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateSyncParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

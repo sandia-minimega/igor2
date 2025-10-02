@@ -45,6 +45,7 @@ func dbCreateReservation(res *Reservation, tx *gorm.DB) error {
 	if err = dbAppendPermissions(&res.Group, gPerms, tx); err != nil {
 		return err
 	}
+
 	result := tx.Create(&res)
 	return result.Error
 }
@@ -205,6 +206,15 @@ func dbEditReservation(res *Reservation, changes map[string]interface{}, tx *gor
 			return clErr
 		}
 
+		return nil
+	}
+
+	// do add only
+	if addHosts, ok := changes["addHosts"].([]Host); ok {
+		// add the appropriate entries from the reservations_hosts lookup table
+		if clErr := tx.Model(&res).Association("Hosts").Append(addHosts); clErr != nil {
+			return clErr
+		}
 		return nil
 	}
 
@@ -395,7 +405,7 @@ type ReservationTimeSlot struct {
 // dbFindOpenSlots queries the database for time periods from now through the max allowable ending datetime that are
 // at least of length durNeeded for all hosts named in hostNameList.
 //
-// The method will return early if there are enough totally unused nodes to satisfy the reservation request. This helps
+// The method will favor unused nodes to satisfy the reservation request. This helps
 // to spread out reservations in a way that most nodes will see usage at some point at the expense of contiguous blocks
 // being allocated. It will also mean fewer instances of users being unable to extend reservations when the cluster
 // has sparse number of future reservations.
@@ -403,72 +413,141 @@ type ReservationTimeSlot struct {
 // This is purely finding all time windows that meet the size requirement. Results need to be filtered.
 func dbFindOpenSlots(hostNameList []string, startTime time.Time, durNeeded time.Duration, maxEnd time.Time, numHostsReq int, tx *gorm.DB) ([]ReservationTimeSlot, int, error) {
 
-	var result *gorm.DB
-	var tempSlots []ReservationSlot
-	var timeSlotListAll []ReservationTimeSlot
-
 	// use max end time of last minute of the year that is 25 years from now
 	resDurMinutes := strconv.Itoa(int(durNeeded.Minutes()))
 
-	// get slots on nodes that have no reservations
-	result = tx.Table("hosts h").
-		Select("h.name as hostname, h.sequence_id as hostnum, NULL as res_name, NULL AS res_start, ? AS avail_slot_begin, NULL AS next_res_name, ? AS avail_slot_end", startTime, maxEnd).
-		Joins("LEFT OUTER JOIN reservations_hosts rh ON h.id = rh.host_id").
-		Where("rh.host_id IS NULL AND h.state < ? AND h.name IN (?)", HostBlocked, hostNameList).Scan(&tempSlots)
+	const openSlotsSQL = `
+WITH
+    -- slots on nodes with no reservations
+    free_slots AS (
+        SELECT
+            h.name           AS hostname,
+            h.sequence_id    AS hostnum,
+            NULL             AS res_name,
+            NULL             AS res_start,
+            ?                AS avail_slot_begin,
+            NULL             AS next_res_name,
+            ?                AS avail_slot_end
+        FROM hosts h
+             LEFT JOIN reservations_hosts rh
+                  ON rh.host_id = h.id
+        WHERE
+            rh.host_id IS NULL
+          AND h.state   < ?
+          AND h.name IN (?)
+    ),
 
-	if result.Error != nil {
-		return nil, http.StatusInternalServerError, result.Error
+    -- slots on nodes after last reservation
+    last_res_slots AS (
+        SELECT
+            h.name           AS hostname,
+            h.sequence_id    AS hostnum,
+            r.name           AS res_name,
+            r.start          AS res_start,
+            r.reset_end      AS avail_slot_begin,
+            NULL             AS next_res_name,
+            ?                AS avail_slot_end
+        FROM hosts h
+            JOIN (
+                SELECT rh.host_id, MAX(r.start) AS max_start
+                FROM reservations r
+                    JOIN reservations_hosts rh
+                        ON r.id = rh.reservation_id
+                GROUP BY rh.host_id
+            ) lr
+                ON lr.host_id = h.id
+              JOIN reservations r
+                ON r.start = lr.max_start
+        WHERE
+            h.state < ?
+          AND h.name IN (?)
+    ),
+
+    -- slots on nodes with a large enough gap between reservations
+    gap_slots AS (
+        SELECT
+            h.name           AS hostname,
+            h.sequence_id    AS hostnum,
+            l.name           AS res_name,
+            l.start          AS res_start,
+            l.reset_end      AS avail_slot_begin,
+            r.name           AS next_res_name,
+            r.start          AS avail_slot_end
+        FROM reservations l
+            JOIN reservations_hosts rhl
+                 ON l.id = rhl.reservation_id
+            JOIN hosts h
+                 ON h.id = rhl.host_id
+            JOIN reservations r
+                 ON r.id = (
+                     SELECT r2.id
+                     FROM reservations r2
+                         JOIN reservations_hosts rh2
+                              ON r2.id = rh2.reservation_id 
+                                 AND rh2.host_id = h.id
+                     WHERE DATETIME(l.reset_end, '+'||?||' minutes') < DATETIME(r2.start)
+                     ORDER BY r2.start
+                     LIMIT 1
+                 )
+        WHERE
+            h.state < ?
+          AND h.name IN (?)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM reservations x
+                JOIN reservations_hosts rxi
+                     ON x.id = rxi.reservation_id
+                         AND rxi.host_id = h.id
+            WHERE l.reset_end < x.start
+              AND x.start   < r.start
+        )
+    ),
+
+    free_count AS (
+        SELECT COUNT(*) AS cnt
+        FROM free_slots
+    )
+
+-- final query prioritizes using unused nodes
+-- unless there are not enough available
+
+SELECT * FROM free_slots
+WHERE (SELECT cnt FROM free_count) >= ?
+
+UNION ALL
+
+SELECT * FROM
+     (
+        SELECT * FROM free_slots
+        UNION ALL
+        SELECT * FROM last_res_slots
+        UNION ALL
+        SELECT * FROM gap_slots
+     ) all_slots
+WHERE (SELECT cnt FROM free_count) < ?
+
+ORDER BY hostnum, avail_slot_begin;
+`
+	var slots []ReservationSlot
+	var timeSlotListAll []ReservationTimeSlot
+
+	err := tx.Raw(
+		openSlotsSQL,
+		// free_slots placeholders:
+		startTime, maxEnd, HostBlocked, hostNameList,
+		// last_res_slots placeholders:
+		maxEnd, HostBlocked, hostNameList,
+		// gap_slots placeholders:
+		resDurMinutes, HostBlocked, hostNameList,
+		// gating placeholders (numHostsReq twice):
+		numHostsReq, numHostsReq,
+	).Scan(&slots).Error
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
 	}
 
-	tempTimeSlots := convertToTimeSlotSlice(tempSlots)
-	timeSlotListAll = append(timeSlotListAll, tempTimeSlots...)
-
-	// if there are enough completely free nodes to satisfy request, then we are good to go.
-	if len(timeSlotListAll) >= numHostsReq {
-		sortTimeSlots(timeSlotListAll)
-		return timeSlotListAll, http.StatusOK, nil
-	}
-
-	tempSlots = nil
-
-	// get slots that start from end of last reservation and extend to indefinite future
-	result = tx.Table("reservations l, hosts h").
-		Select("h.name as hostname, h.sequence_id as hostnum, l.name as res_name, max(l.start) AS res_start, l.reset_end AS avail_slot_begin, NULL AS next_res_name, ? AS avail_slot_end", maxEnd).
-		Joins("INNER JOIN reservations_hosts rhl ON l.id = rhl.reservation_id AND h.id = rhl.host_id").
-		Group("h.name").
-		Where("h.state < ? AND h.name IN (?)", HostBlocked, hostNameList).Scan(&tempSlots)
-
-	if result.Error != nil {
-		return nil, http.StatusInternalServerError, result.Error
-	}
-
-	tempTimeSlots = convertToTimeSlotSlice(tempSlots)
-	timeSlotListAll = append(timeSlotListAll, tempTimeSlots...)
-	tempSlots = nil
-
-	// get slots that end when a new reservation starts
-	subQuery := tx.Select("id").Table("reservations x").
-		Joins("INNER JOIN reservations_hosts rhi ON x.id = rhi.reservation_id AND h.id = rhi.host_id").
-		Where("l.reset_end < x.start AND x.start < r.start")
-
-	result = tx.Table("reservations l, reservations r, hosts h").
-		Select("h.name as hostname, h.sequence_id as hostnum, l.name as res_name, l.start AS res_start, l.reset_end AS avail_slot_begin, r.name AS next_res_name, r.start AS avail_slot_end").
-		Joins("INNER JOIN reservations_hosts rhl ON l.id = rhl.reservation_id AND h.id = rhl.host_id").
-		Joins("INNER JOIN reservations_hosts rhr ON r.id = rhr.reservation_id AND h.id = rhr.host_id").
-		Where("h.state < ? AND h.name IN (?) AND DATETIME(l.reset_end, '+"+resDurMinutes+" minutes') < DATETIME(r.start) AND NOT EXISTS(?)", HostBlocked, hostNameList, subQuery).
-		Scan(&tempSlots)
-
-	if result.Error != nil {
-		return nil, http.StatusInternalServerError, result.Error
-	}
-
-	tempTimeSlots = convertToTimeSlotSlice(tempSlots)
-	timeSlotListAll = append(timeSlotListAll, tempTimeSlots...)
-
-	// eliminate duplicates?
-
+	timeSlotListAll = convertToTimeSlotSlice(slots)
 	sortTimeSlots(timeSlotListAll)
-
 	return timeSlotListAll, http.StatusOK, nil
 }
 
@@ -554,5 +633,4 @@ func copySlotToTimeSlot(slot ReservationSlot) *ReservationTimeSlot {
 	}
 
 	return timeSlot
-
 }

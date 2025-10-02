@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	LatestDbVersion     = 1 // CHANGE THIS when a new upgrade is needed
+	LatestDbVersion     = 2 // CHANGE THIS when a new upgrade is needed
 	IgorConfHome        = "/etc/igor/"
 	IgorConfFileDefault = "igor-server.yaml"
 	IgorConfPathDefault = IgorConfHome + IgorConfFileDefault
@@ -92,25 +92,38 @@ func main() {
 		}
 	}
 
-	var isUpgraded = false
+	var isFullyUpgraded = false
 	var sqlFile string
 
 	if userVersion == 0 {
 		sqlFile = getNextSqlFile("migrations/migrate0to1.sql")
 		fmt.Println("Executing upgrade step: 0 -> 1")
-		if isUpgraded, err = runNextUpgradeStep(sqlFile); err != nil {
+		if _, err := runNextUpgradeStep(sqlFile); err != nil {
 			fmt.Fprintf(os.Stderr, "There was an issue performing the upgrade: %v\n", err)
 			restoreBackup(sqliteDbLoc, backupPath)
 			os.Exit(1)
 		}
 	}
 
-	// For each subsequent file, do another step
+	// For each subsequent version change, do another step
+	// move the final else clause for isFullyUpgraded to the
+	// last in sequence
 	if userVersion == 1 {
 		// repeat formula from above
+		sqlFile = getNextSqlFile("migrations/migrate1to2.sql")
+		fmt.Println("Executing upgrade step: 1 -> 2")
+		if isUpgraded, err := runNextUpgradeStep(sqlFile); err != nil {
+			fmt.Fprintf(os.Stderr, "There was an issue performing the upgrade: %v\n", err)
+			restoreBackup(sqliteDbLoc, backupPath)
+			os.Exit(1)
+		} else {
+			if isUpgraded {
+				isFullyUpgraded = true
+			}
+		}
 	}
 
-	if isUpgraded {
+	if isFullyUpgraded {
 		_, err = igorDB.Exec(fmt.Sprintf("PRAGMA user_version = %d", userVersion))
 		if err != nil {
 			fmt.Println(err)

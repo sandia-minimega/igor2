@@ -4,7 +4,7 @@ BUILD_ALL=true
 bold=$(tput bold)
 normal=$(tput sgr0)
 
-USAGE="Usage: build.sh [-server] [-cli] [-web] [-n] [-z] [-h|-help]"
+USAGE="Usage: build-igor [-server] [-cli] [-web] [-n] [-z] [-h|-help]"
 HELP="
 This script builds Igor applications. By default, all applications are built.
 To build specific applications, use the ${bold}-server${normal}, ${bold}-cli${normal}, and/or ${bold}-web${normal} flags.
@@ -68,7 +68,7 @@ if [[ "$BUILD_WEB" == true && "$BUILD_CLI" == true && "$BUILD_SERVER" == true ]]
 fi
 
 if ! command -v go version &>/dev/null; then
-   echo "Golang not installed on this machine. Please install v1.19.x (or higher) and try again."
+   echo "Golang not installed on this machine. Please install v1.23.x (or higher) and try again."
    exit
 else
    go_v=$(go version | {
@@ -76,8 +76,8 @@ else
       echo "${v#go}"
    })
    goIN=(${go_v//./ })
-   if [ "${goIN[1]}" -lt 19 ]; then
-      echo "Go version needs a minimum of 1.19.x, found $go_v"
+   if [ "${goIN[1]}" -lt 23 ]; then
+      echo "Go version needs a minimum of 1.23.x, found $go_v"
       exit 1
    else
       echo "Go version found $go_v"
@@ -87,13 +87,13 @@ fi
 if [[ "$BUILD_ALL" == true || "$BUILD_WEB" == true ]]; then
 
    if ! command -v npm -v &>/dev/null; then
-      echo "NPM not installed on this machine. Please install v8.x and try again."
+      echo "NPM not installed on this machine. Please install v10.x and try again."
       exit 1
    else
       npm_v=$(npm -v)
       npmIN=(${npm_v//./ })
-      if [ "${npmIN[0]}" -lt 8 ]; then
-         echo "NPM version needs a minimum of 8.x, found $npm_v"
+      if [ "${npmIN[0]}" -lt 10 ]; then
+         echo "NPM version needs a minimum of 10.x, found $npm_v"
          exit 1
       else
          echo "NPM version found $npm_v"
@@ -101,14 +101,14 @@ if [[ "$BUILD_ALL" == true || "$BUILD_WEB" == true ]]; then
    fi
 
    if ! command -v node -v &>/dev/null; then
-      echo "NodeJS not installed on this machine. Please install v16.x and try again."
+      echo "NodeJS not installed on this machine. Please install v22.x and try again."
       exit 1
    else
       node_version=$(node -v)
       node_v="${node_version#v}"
       nodeIN=(${node_v//./ })
-      if [ "${nodeIN[0]}" -lt 16 ]; then
-         echo "NodeJS version needs a minimum of 16.x, found $node_v"
+      if [ "${nodeIN[0]}" -lt 22 ]; then
+         echo "NodeJS version needs a minimum of 22.x, found $node_v"
          exit 1
       else
          echo "NodeJS version found $node_v"

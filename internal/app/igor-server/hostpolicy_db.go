@@ -212,7 +212,7 @@ func dbCheckHostPolicyConflicts(hostNames []string, groupAccessList []string, is
 		if conflict, start, end := hasScheduleBlockConflict(policy.NotAvailable, contextStart, newEndTime, clog); conflict {
 			// get the intersection of affected policy hosts and requested hosts
 			offendingHosts := getHostIntersection(hostNames, policy.Hosts)
-			return http.StatusConflict, &HostPolicyConflictError{err.Error(), false, false, true, start, end, offendingHosts}
+			return http.StatusConflict, &HostPolicyConflictError{"scheduling conflict", false, false, true, start, end, offendingHosts}
 		}
 	}
 	return http.StatusOK, nil

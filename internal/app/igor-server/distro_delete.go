@@ -36,7 +36,7 @@ func doDeleteDistro(distroName string, r *http.Request) (code int, err error) {
 		distro := &distros[0]
 
 		// fail if distro is linked to any profile other than default
-		clog.Debug().Msgf("checking distro '%s' for linked profiles", distroName)
+		clog.Info().Msgf("checking distro '%s' for linked profiles", distroName)
 		linked, profs, lnkErr := distro.isLinkedToProfiles(tx)
 		if lnkErr != nil {
 			return lnkErr // uses default err code
@@ -50,7 +50,7 @@ func doDeleteDistro(distroName string, r *http.Request) (code int, err error) {
 		imageName := distro.DistroImage.Name
 
 		// destroy distro
-		clog.Debug().Msgf("deleting distro '%s'", distroName)
+		clog.Info().Msgf("deleting distro '%s'", distroName)
 		deleteErr := dbDeleteDistro(distro, tx)
 		if deleteErr != nil {
 			return deleteErr

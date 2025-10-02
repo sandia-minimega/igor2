@@ -79,8 +79,8 @@ func newResCreateCmd() *cobra.Command {
 
 	cmdCreateRes := &cobra.Command{
 		Use: "create NAME -n NODES {-p PROFILE | -d DISTRO} [-s START -e END \n" +
-			"           -g GROUP -v VLAN -k \"KARGS\" --desc \"DESCRIPTION\" --no-cycle\n" +
-			"           (-o OWNER)]",
+			"       -g GROUP -v VLAN -k \"KARGS\" --desc \"DESCRIPTION\" --no-cycle\n" +
+			"       (-o OWNER)]",
 		Short: "Create a reservation",
 		Long: `
 Create a reservation on one or more cluster nodes. A reservation requires a
@@ -310,7 +310,7 @@ func newResEditCmd() *cobra.Command {
 
 	cmdEditRes := &cobra.Command{
 		Use: "edit NAME [ {--extend LENGTH | --extend-max} | \n" +
-			"       --drop NODES | \n" +
+			"       --drop NODES | --add NODES\n" +
 			"       {-p PROFILE | -d DISTRO} | \n" +
 			"       [-n NAME] [-o OWNER] [-g GROUP] [-k KARGS] [--desc \"DESCRIPTION\"]]",
 		Short: "Edit a reservation",
@@ -364,6 +364,25 @@ This flag cannot be used to drop all nodes. Delete the reservation instead.
 
 This flag cannot be used with other edit parameters.
 
+` + sBold("ADDING HOSTS:") + `
+
+Use the --add flag to add one or more hosts to the reservation. The NODES arg is
+the same used in 'igor res create'; a comma-delimited list (kn1,kn2,...) or a
+multi-node range (kn[3,16-20,34]), or an int value declaring a number of nodes.
+
+Add allows reservations owners and admins to add one or more nodes to the
+existing reservation as needed. The added nodes will be part of the reservation
+for the duration of the reservation window as though they had been added since
+the creation of the reservation itself and will remain even if the reservation 
+is extended. 
+
+The number of nodes that may be added is limited by the configured policy and 
+host policy assigned to the nodes, which define the maximum number of hosts or 
+total time allowed based on the reservation's end time at the time of the add 
+request.
+
+This flag cannot be used with other edit parameters.
+
 ` + sBold("CHANGING THE PROFILE OR DISTRO:") + `
 
 Use the -p flag to change the profile used on the reserved nodes. An existing
@@ -402,11 +421,12 @@ also changing the distro.
 			profile, _ := flagset.GetString("profile")
 			newName, _ := flagset.GetString("name")
 			drop, _ := flagset.GetString("drop")
+			add, _ := flagset.GetString("add")
 			desc, _ := flagset.GetString("desc")
 			owner, _ := flagset.GetString("owner")
 			group, _ := flagset.GetString("group")
 			kernelArgs, _ := flagset.GetString("kernel-args")
-			printRespSimple(doEditReservation(args[0], extend, drop, distro, profile, newName, owner, group, desc, kernelArgs, extendMax))
+			printRespSimple(doEditReservation(args[0], extend, drop, add, distro, profile, newName, owner, group, desc, kernelArgs, extendMax))
 		},
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction:     validateNameArg,
@@ -419,6 +439,7 @@ also changing the distro.
 		group,
 		extend,
 		drop,
+		add,
 		kernelArgs,
 		distro string
 	var extendMax bool
@@ -426,6 +447,7 @@ also changing the distro.
 	cmdEditRes.Flags().StringVar(&extend, "extend", "", "extend reservation by provided time")
 	cmdEditRes.Flags().BoolVar(&extendMax, "extend-max", false, "extend reservation by maximum time allowed")
 	cmdEditRes.Flags().StringVar(&drop, "drop", "", "drop nodes from the reservation")
+	cmdEditRes.Flags().StringVar(&add, "add", "", "add nodes to the reservation")
 	cmdEditRes.Flags().StringVarP(&distro, "distro", "d", "", "update distro")
 	cmdEditRes.Flags().StringVarP(&profile, "profile", "p", "", "update profile")
 	cmdEditRes.Flags().StringVarP(&name, "name", "n", "", "update reservation name")
@@ -572,7 +594,7 @@ func doShowReservation(showAll *bool, names, distros, profiles, owners, groups [
 	return &rb
 }
 
-func doEditReservation(resName, extend, drop, distro, profile, newName, owner, group, desc, kernelArgs string, extendMax bool) *common.ResponseBodyBasic {
+func doEditReservation(resName, extend, drop, add, distro, profile, newName, owner, group, desc, kernelArgs string, extendMax bool) *common.ResponseBodyBasic {
 	apiPath := api.Reservations + "/" + resName
 	params := map[string]interface{}{}
 
@@ -592,6 +614,13 @@ func doEditReservation(resName, extend, drop, distro, profile, newName, owner, g
 	}
 	if drop != "" {
 		params["drop"] = drop
+	}
+	if add != "" {
+		if nodeCount, err := strconv.Atoi(add); err != nil {
+			params["addNodeList"] = add
+		} else {
+			params["addNodeCount"] = nodeCount
+		}
 	}
 	if distro != "" {
 		params["distro"] = distro
@@ -651,6 +680,15 @@ func printReservations(rb *common.ResponseBodyReservations) {
 				timeFmt = "Jan-02-06.15:04-07:00"
 			}
 
+			installed := "active"
+			if !r.Installed {
+				if r.Start > igorCliNow.Unix() {
+					installed = "future"
+				} else {
+					installed = r.InstallError
+				}
+			}
+
 			resInfo = "RESERVATION: " + r.Name + "\n"
 			resInfo += "  -DESCRIPTION:  " + r.Description + "\n"
 			resInfo += "  -OWNER:        " + r.Owner + "\n"
@@ -663,7 +701,7 @@ func printReservations(rb *common.ResponseBodyReservations) {
 			resInfo += "  -END:          " + getLocTime(time.Unix(r.End, 0)).Format(timeFmt) + "\n"
 			resInfo += "  -ORIG-END:     " + getLocTime(time.Unix(r.OrigEnd, 0)).Format(timeFmt) + "\n"
 			resInfo += "  -EXTEND-COUNT: " + strconv.Itoa(r.ExtendCount) + "\n"
-			resInfo += "  -INSTALLED:    " + strconv.FormatBool(r.Installed) + "\n"
+			resInfo += "  -STATUS:       " + installed + "\n"
 			if len(r.InstallError) > 0 {
 				resInfo += "  -INSTALL-ERR:  " + r.InstallError + "\n"
 			}
@@ -673,7 +711,7 @@ func printReservations(rb *common.ResponseBodyReservations) {
 	} else {
 
 		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "GROUP", "PROFILE", "DISTRO", "HOSTS", "DOWN/NA", "VLAN", "START", "END", "EXTEND-COUNT", "INSTALLED", "INSTALL-ERR"})
+		tw.AppendHeader(table.Row{"NAME", "DESCRIPTION", "OWNER", "GROUP", "PROFILE", "DISTRO", "HOSTS", "DOWN/NA", "VLAN", "START", "END", "STATUS"})
 		tw.AppendSeparator()
 
 		// for the table version, only put zone on first column
@@ -686,37 +724,54 @@ func printReservations(rb *common.ResponseBodyReservations) {
 				timeFmt = "Jan 2 2006 3:04 PM"
 			}
 
+			installed := "active"
+			if !r.Installed {
+				if r.Start > igorCliNow.Unix() {
+					installed = "future"
+				} else {
+					installed = r.InstallError
+				}
+			}
+
 			downNA := ""
-			if len(r.HostsPowerNA) > 0 {
-				downNA += cWarning.Sprint(r.HostsPowerNA) + "/"
+			if installed == "active" {
+				if len(r.HostsPowerNA) > 0 {
+					downNA += cWarning.Sprint(r.HostsPowerNA) + "/"
+				}
+				if len(r.HostsDown) > 0 {
+					downNA += cAlert.Sprint(r.HostsDown)
+				}
+				downNA = strings.TrimSuffix(downNA, "/")
 			}
-			if len(r.HostsDown) > 0 {
-				downNA += cAlert.Sprint(r.HostsDown)
-			}
-			downNA = strings.TrimSuffix(downNA, "/")
 
 			tw.AppendRow([]interface{}{
 				r.Name,
-				r.Description,
+				multiline(35, r.Description),
 				r.Owner,
 				r.Group,
 				r.Profile,
 				r.Distro,
-				r.HostRange,
-				downNA,
+				multilineNodeList(20, r.HostRange, ""),
+				multilineNodeList(20, downNA, ""),
 				r.Vlan,
 				getLocTime(time.Unix(r.Start, 0)).Format(startTimeFmt),
 				getLocTime(time.Unix(r.End, 0)).Format(timeFmt),
-				r.ExtendCount,
-				r.Installed,
-				r.InstallError,
+				installed,
 			})
 		}
 
 		tw.SetColumnConfigs([]table.ColumnConfig{
 			{
 				Name:     "DESCRIPTION",
-				WidthMax: 40,
+				WidthMax: 35,
+			},
+			{
+				Name:     "HOSTS",
+				WidthMax: 20,
+			},
+			{
+				Name:     "DOWN/NA",
+				WidthMax: 20,
 			},
 		})
 

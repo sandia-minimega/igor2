@@ -22,10 +22,15 @@ func NewTFTPInstaller() IResInstaller {
 
 func (b *TFTPInstaller) Install(r *Reservation) error {
 	logger.Debug().Msgf("installing Reservation %v", r.Name)
+	nodeErrors := ""
 	for _, host := range r.Hosts {
 		if err := generateBootFile(&host, r); err != nil {
-			return err
+			nodeErrors = nodeErrors + err.Error() + ", "
 		}
+	}
+	if nodeErrors != "" {
+		nodeErrors = strings.TrimRight(nodeErrors, ", ")
+		return fmt.Errorf("%s: error installing distro, please notify admin or check error logs for more details", nodeErrors)
 	}
 
 	return nil
@@ -78,7 +83,8 @@ func generateBootFile(host *Host, r *Reservation) error {
 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
 				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=%s text  auto-install/enable=true priority=critical hostname=%s url=%s domain=local.lan", host.Mac, host.Name, autoInstallFilePath)
 			default:
-				return fmt.Errorf("unknown OS type: %s", osType)
+				logger.Error().Msgf("%s: generate boot file - unknown OS type: %s", host.Name, osType)
+				return fmt.Errorf("%s", host.Name)
 			}
 		}
 		content = fmt.Sprintf("%s\n%s\n%s\n%s\n%s %s\n", defaultLabel, defaultOptions, biosLabel, kernel, appendStmt, autoInstallPart)
@@ -93,22 +99,29 @@ func generateBootFile(host *Host, r *Reservation) error {
 			case "ubuntu", "debian", "freebsd", "generic", "nexenta", "suse", "unix", "vmware", "windows", "xen":
 				autoInstallPart = fmt.Sprintf(" lang=  netcfg/choose_interface=%s text  auto-install/enable=true priority=critical url=%s", host.Mac, autoInstallFilePath)
 			default:
-				return fmt.Errorf("unknown OS type: %s", osType)
+				logger.Error().Msgf("%s: generate boot file - unknown OS type: %s", host.Name, osType)
+				return fmt.Errorf("%s", host.Name)
 			}
 		}
 		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s --id install-menu {\n    linuxefi %s %s %s\n    initrdefi %s\n}\n", label, kernelPath, autoInstallPart, kernel_args, initrdPath)
 		masterPath = filepath.Join(igor.TFTPPath, igor.PXEUEFIDir, "igor", host.Name)
 	default:
-		return fmt.Errorf("unknown boot mode: %s", bootMode)
+		logger.Error().Msgf("%s: generate boot file - unknown boot mode: %s", host.Name, bootMode)
+		return fmt.Errorf("%s", host.Name)
 	}
 
 	// Write master to backup
 	if err := writeFile(masterPath, content); err != nil {
-		return err
+		logger.Error().Msgf("%s: res install - error writing master config to backup path - %s", host.Name, err.Error())
+		return fmt.Errorf("%s", host.Name)
 	}
 
 	// Write the content to the file
-	return writeFile(pxePath, content)
+	if err := writeFile(pxePath, content); err != nil {
+		logger.Error().Msgf("%s: res install - error writing master config to main path - %s", host.Name, err.Error())
+		return fmt.Errorf("%s", host.Name)
+	}
+	return nil
 }
 
 func (b *TFTPInstaller) Uninstall(r *Reservation) error {
@@ -166,15 +179,43 @@ func setLocalConfig(host *Host, r *Reservation) error {
 			label +
 			labelOptions
 	case "uefi":
-		grubPath := ""
-		switch r.Profile.Distro.DistroImage.Breed {
-		case "redhat":
-			grubPath = "/EFI/redhat/grubx64.efi"
-		default:
-			grubPath = "+1"
-		}
 		label := fmt.Sprintf("\"Reservation: %s booting %s locally on host %s\"", r.Name, r.Profile.Distro.Name, host.Name)
-		content = fmt.Sprintf("set default=install-menu\nset timeout=6\n\nmenuentry %s  --id install-menu {\n    insmod part_gpt\n    insmod fat\n    search --no-floppy --set=root --file %s\n    chainloader %s\n}\n", label, grubPath, grubPath)
+		content = fmt.Sprintf(`
+set default=install-menu
+set timeout=6
+
+menuentry %s --id install-menu {
+	if search -n -s -f /efi/boot/bootx64.efi ; then
+		if [ -f (${root})/efi/opensuse/grub.efi ] ; then
+			chainloader (${root})/efi/opensuse/grub.efi
+		elif [ -f (${root})/efi/sle/grub.efi ] ; then
+			chainloader (${root})/efi/sle/grub.efi
+		elif [ -f (${root})/efi/sles/grub.efi ] ; then
+			chainloader (${root})/efi/sles/grub.efi
+		elif [ -f (${root})/efi/grub/grub.efi ] ; then
+			chainloader (${root})/efi/grub/grub.efi
+		elif [ -f (${root})/efi/ubuntu/grubx64.efi ] ; then
+			chainloader (${root})/efi/ubuntu/grubx64.efi
+		elif [ -f (${root})/efi/redhat/grubx64.efi ] ; then
+			chainloader (${root})/efi/redhat/grubx64.efi
+		elif [ -f (${root})/efi/rocky/grubx64.efi ] ; then
+			chainloader (${root})/efi/rocky/grubx64.efi
+		elif [ -f (${root})/efi/almalinux/grubx64.efi ] ; then
+			chainloader (${root})/efi/almalinux/grubx64.efi
+		elif [ -f (${root})/efi/centos/grubx64.efi ] ; then
+			chainloader (${root})/efi/centos/grubx64.efi
+		else
+			chainloader (${root})/efi/boot/bootx64.efi
+		fi
+		boot
+	else
+		insmod part_gpt
+		insmod fat
+		search --no-floppy --set=root --file +1
+		chainloader +1
+	fi
+}
+			`, label)
 	default:
 		return fmt.Errorf("unknown boot mode: %s", host.BootMode)
 	}

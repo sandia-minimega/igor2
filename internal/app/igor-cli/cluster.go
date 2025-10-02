@@ -267,7 +267,7 @@ func printClusters(rb *common.ResponseBodyClusters) {
 	} else {
 
 		tw := table.NewWriter()
-		tw.AppendHeader(table.Row{"NAME", "PREFIX", "DISPLAY-WIDTH", "DISPLAY-HEIGHT", "MOTD-URGENT", "MOTD"})
+		tw.AppendHeader(table.Row{"NAME", "PREFIX", "DISPLAY-W", "DISPLAY-H", "MOTD-URGENT", "MOTD"})
 		tw.AppendSeparator()
 
 		for _, d := range clusters {

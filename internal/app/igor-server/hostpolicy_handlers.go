@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"igor2/internal/pkg/common"
@@ -281,7 +282,8 @@ func validateHostPolicyParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateHostPolicyParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateHostPolicyParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

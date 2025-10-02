@@ -33,7 +33,7 @@ func saveKSFile(r *http.Request) (*Kickstart, error) {
 
 	fileName := handler.Filename
 	name := strings.Split(fileName, ".")[0]
-	_, sfErr := saveNewKickstartFile(targetFile, fileName)
+	_, sfErr := saveNewKickstartFile(targetFile, fileName, false)
 	if sfErr != nil {
 		return nil, sfErr
 	}
@@ -47,16 +47,16 @@ func saveKSFile(r *http.Request) (*Kickstart, error) {
 }
 
 // SaveFile takes a file object extracted from a multipart form
-// and saves it to the staged folder using the given file name f
-func saveNewKickstartFile(src multipart.File, f string) (target string, err error) {
+// and saves it to the kickstart folder using the given file name f
+func saveNewKickstartFile(src multipart.File, f string, replace bool) (target string, err error) {
 	// get separate path and filename in case a full path was captured during upload
 	_, fName := path.Split(f)
 	filePath := filepath.Join(igor.TFTPPath, igor.KickstartDir, fName)
 
 	// make sure we don't already have a file of the same name
-	if _, err = os.Stat(filePath); err == nil {
+	if _, err = os.Stat(filePath); !replace && err == nil {
 		// file/path already exists
-		return "", &FileAlreadyExistsError{msg: fmt.Sprintf("a kickstart file is already registered with file name: %s", fName)}
+		return "", &FileAlreadyExistsError{msg: fmt.Sprintf("a kickstart file already exists with file name: %s", fName)}
 	} else if errors.Is(err, os.ErrNotExist) {
 		// target file/path does *not* exist, write file out to kickstart directory
 		var tempFile *os.File
@@ -80,20 +80,20 @@ func saveNewKickstartFile(src multipart.File, f string) (target string, err erro
 }
 
 // overwriteFile takes a file object extracted from a multipart form
-// and saves it to the staged folder using the given file name fName
-func replaceFile(src multipart.File, f string) (target string, err error) {
-	// get separate path and filename in case a full path was captured during upload
-	_, fName := path.Split(f)
-	filePath := filepath.Join(igor.TFTPPath, igor.KickstartDir, fName)
-	var tempFile *os.File
-	if tempFile, err = os.Create(filePath); err != nil {
-		return "", err
-	} else {
-		defer tempFile.Close()
-		// Copy the uploaded file to the created file on the filesystem
-		if _, err = io.Copy(tempFile, src); err != nil {
-			return "", err
-		}
-		return filePath, nil
-	}
-}
+// and saves it to the kickstart folder using the given file name fName
+// func replaceFile(src multipart.File, f string) (target string, err error) {
+// 	// get separate path and filename in case a full path was captured during upload
+// 	_, fName := path.Split(f)
+// 	filePath := filepath.Join(igor.TFTPPath, igor.KickstartDir, fName)
+// 	var tempFile *os.File
+// 	if tempFile, err = os.Create(filePath); err != nil {
+// 		return "", err
+// 	} else {
+// 		defer tempFile.Close()
+// 		// Copy the uploaded file to the created file on the filesystem
+// 		if _, err = io.Copy(tempFile, src); err != nil {
+// 			return "", err
+// 		}
+// 		return filePath, nil
+// 	}
+// }

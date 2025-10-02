@@ -8,6 +8,7 @@ import (
 	"github.com/gookit/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"regexp"
 )
 
 const (
@@ -59,6 +60,11 @@ var (
 	cRespWarn    = color.FgYellow
 	cRespError   = color.S256(15, 9)
 	cRespUnknown = color.FgRed
+
+	ansiPattern = `\x1b\[[0-9;]*m`
+	resetSGR    = "\x1b[0m"
+	ansiRE      = regexp.MustCompile(ansiPattern)
+	resetRE     = regexp.MustCompile(`^\x1b\[0?m$`)
 
 	igorTableStyle = table.Style{
 		Name: "IgorTableStyle",

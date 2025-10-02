@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"igor2/internal/pkg/common"
@@ -29,7 +30,7 @@ func handleCreateDistro(w http.ResponseWriter, r *http.Request) {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
 		rb.Data["distro"] = filterDistroList([]Distro{*distro})
-		clog.Info().Msgf("%s success - '%s' created", actionPrefix, distro.Name)
+		clog.Info().Msgf("%s success - '%s' created by user %s", actionPrefix, distro.Name, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -88,7 +89,7 @@ func handleUpdateDistro(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' updated", actionPrefix, distroName)
+		clog.Info().Msgf("%s success - '%s' updated by user %s", actionPrefix, distroName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -109,7 +110,7 @@ func handleDeleteDistro(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' deleted", actionPrefix, distroName)
+		clog.Info().Msgf("%s success - '%s' deleted by user %s", actionPrefix, distroName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -279,67 +280,81 @@ func validateDistroParams(handler http.Handler) http.Handler {
 			}
 			distroParams := r.PostForm
 			if len(distroParams) > 0 {
-			patchParamLoop:
-				for key, vals := range distroParams {
-					switch key {
-					case "name":
-						for _, profileName := range vals {
-							profileName = strings.TrimSpace(profileName)
-							if validateErr = checkDistroNameRules(profileName); validateErr != nil {
+				if len(distroParams) > 1 && distroParams.Has("deprecate") {
+					validateErr = fmt.Errorf("the 'deprecate' flag cannot be used with other edit flags")
+				} else {
+				patchParamLoop:
+					for key, vals := range distroParams {
+						switch key {
+						case "name":
+							for _, profileName := range vals {
+								profileName = strings.TrimSpace(profileName)
+								if validateErr = checkDistroNameRules(profileName); validateErr != nil {
+									break patchParamLoop
+								}
+							}
+						case "description":
+							if validateErr = checkDesc(vals[0]); validateErr != nil {
 								break patchParamLoop
 							}
-						}
-					case "description":
-						if validateErr = checkDesc(vals[0]); validateErr != nil {
-							break patchParamLoop
-						}
-					case "owner":
-						for _, ownerName := range vals {
-							ownerName = strings.TrimSpace(ownerName)
-							if validateErr = checkUsernameRules(ownerName); validateErr != nil {
+						case "initrdInfo":
+							if validateErr = checkInitrdInfo(vals[0]); validateErr != nil {
 								break patchParamLoop
 							}
-						}
-					case "addGroup":
-						for _, group := range vals {
-							if validateErr = checkGroupNameRules(group); validateErr != nil {
+						case "owner":
+							for _, ownerName := range vals {
+								ownerName = strings.TrimSpace(ownerName)
+								if validateErr = checkUsernameRules(ownerName); validateErr != nil {
+									break patchParamLoop
+								}
+							}
+						case "addGroup":
+							for _, group := range vals {
+								if validateErr = checkGroupNameRules(group); validateErr != nil {
+									break patchParamLoop
+								}
+							}
+						case "removeGroup":
+							for _, group := range vals {
+								if validateErr = checkGroupNameRules(group); validateErr != nil {
+									break patchParamLoop
+								}
+							}
+						case "public":
+							public := strings.ToLower(vals[0])
+							if public != "true" {
+								validateErr = fmt.Errorf("'%s' is not an acceptable value for public parameter (must be 'true')", vals[0])
 								break patchParamLoop
 							}
-						}
-					case "removeGroup":
-						for _, group := range vals {
-							if validateErr = checkGroupNameRules(group); validateErr != nil {
+						case "deprecate":
+							deprecate := strings.ToLower(vals[0])
+							if deprecate != "true" {
+								validateErr = fmt.Errorf("'%s' is not an acceptable value for deprecate parameter (must be 'true')", vals[0])
 								break patchParamLoop
 							}
-						}
-					case "public":
-						public := strings.ToLower(vals[0])
-						if public != "true" {
-							validateErr = fmt.Errorf("'%s' is not an acceptable value for public parameter (must be 'true')", vals[0])
+						case "default":
+							makeDefault := strings.ToLower(vals[0])
+							if makeDefault != "true" {
+								validateErr = fmt.Errorf("'%s' is not an acceptable value for parameter \"default\" (must be 'true')", vals[0])
+								break patchParamLoop
+							}
+						case "default_remove":
+							makeDefault := strings.ToLower(vals[0])
+							if makeDefault != "true" {
+								validateErr = fmt.Errorf("'%s' is not an acceptable value for parameter \"default_remove\" (must be 'true')", vals[0])
+								break patchParamLoop
+							}
+						case "kernelArgs":
+							// already a valid string
+							continue
+						case "kickstart":
+							if validateErr = checkFileRules(vals[0]); validateErr != nil {
+								break patchParamLoop
+							}
+						default:
+							validateErr = NewUnknownParamError(key, vals)
 							break patchParamLoop
 						}
-					case "default":
-						makeDefault := strings.ToLower(vals[0])
-						if makeDefault != "true" {
-							validateErr = fmt.Errorf("'%s' is not an acceptable value for parameter \"default\" (must be 'true')", vals[0])
-							break patchParamLoop
-						}
-					case "default_remove":
-						makeDefault := strings.ToLower(vals[0])
-						if makeDefault != "true" {
-							validateErr = fmt.Errorf("'%s' is not an acceptable value for parameter \"default_remove\" (must be 'true')", vals[0])
-							break patchParamLoop
-						}
-					case "kernelArgs":
-						// already a valid string
-						continue
-					case "kickstart":
-						if validateErr = checkGenericNameRules(vals[0]); validateErr != nil {
-							break patchParamLoop
-						}
-					default:
-						validateErr = NewUnknownParamError(key, vals)
-						break patchParamLoop
 					}
 				}
 			} else {
@@ -348,8 +363,10 @@ func validateDistroParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateDistroParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateDistroParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
+			return
 		}
 
 		handler.ServeHTTP(w, r)

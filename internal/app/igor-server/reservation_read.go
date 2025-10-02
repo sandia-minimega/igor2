@@ -30,25 +30,23 @@ func doReadReservations(queryParams map[string]interface{}, timeParams map[strin
 	return result, http.StatusOK, nil
 }
 
-// parseResSearchParams should just be converting string inputs to the appropriate type
+// parseResSearchParams converts string inputs to the appropriate type
 // using basic validation related to that purpose
-func parseResSearchParams(queryMap map[string][]string, r *http.Request) (map[string]interface{}, map[string]time.Time, int, error) {
+func parseResSearchParams(queryMap map[string][]string, showAll bool, r *http.Request) (map[string]interface{}, map[string]time.Time, int, error) {
 
 	status := http.StatusOK
 	clog := hlog.FromRequest(r)
-	resOwner := getUserFromContext(r)
-
 	queryParams := map[string]interface{}{}
 	queryTimeParams := map[string]time.Time{}
 
-	for key, val := range queryMap {
+	if showAll {
+		return queryParams, queryTimeParams, status, nil
+	}
 
+	clog.Debug().Msgf("parseResSearchParams: %+v", queryMap)
+
+	for key, val := range queryMap {
 		switch key {
-		case "all":
-			showAll, _ := strconv.ParseBool(val[0])
-			if !showAll {
-				queryParams["reservations.owner_id"] = resOwner.ID
-			}
 		case "name":
 			// these can be passed directly as []string
 			queryParams[key] = val

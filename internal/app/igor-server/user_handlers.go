@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"igor2/internal/pkg/common"
@@ -37,7 +38,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 			stdErrorResp(rb, ucStatus, actionPrefix, err, clog)
 		} else {
 			status = ucStatus
-			msg := fmt.Sprintf("igor user '%s' created", user.Name)
+			msg := fmt.Sprintf("igor user '%s' created by user %s", user.Name, getUserFromContext(r).Name)
 			clog.Info().Msgf("%s success - %s", actionPrefix, msg)
 			rb.Message = msg
 		}
@@ -101,7 +102,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
 		msg := fmt.Sprintf("user '%s' %s", username, updateMsg)
-		clog.Info().Msgf("%s success - %s", actionPrefix, msg)
+		clog.Info().Msgf("%s success - %s by user %s", actionPrefix, msg, getUserFromContext(r).Name)
 		rb.Message = msg
 	}
 	makeJsonResponse(w, status, rb)
@@ -125,7 +126,7 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
 		msg := fmt.Sprintf("user '%s' deleted", name)
-		clog.Info().Msgf("%s success - %s", actionPrefix, msg)
+		clog.Info().Msgf("%s success - %s by user %s", actionPrefix, msg, getUserFromContext(r).Name)
 		rb.Message = msg
 	}
 	makeJsonResponse(w, status, rb)
@@ -276,7 +277,8 @@ func validateUserParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateUserParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateUserParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

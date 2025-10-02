@@ -6,12 +6,13 @@ package igorserver
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 func dbCreateHosts(nodes []Host, tx *gorm.DB) error {
@@ -34,7 +35,7 @@ func dbReadHostsTx(queryParams map[string]interface{}) (hosts []Host, err error)
 func dbReadHosts(queryParams map[string]interface{}, tx *gorm.DB) (hosts []Host, err error) {
 
 	tx = tx.Preload("Cluster").Preload("HostPolicy").Preload("HostPolicy.AccessGroups").
-		Preload("Reservations")
+		Preload("Reservations").Preload("MaintenanceRes")
 
 	// if no params given, return all
 	if len(queryParams) == 0 {

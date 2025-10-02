@@ -13,7 +13,6 @@ import (
 var DistroBreed = []string{
 	"debian",
 	"freebsd",
-	"generic",
 	"nexenta",
 	"redhat",
 	"suse",
@@ -22,21 +21,24 @@ var DistroBreed = []string{
 	"vmware",
 	"windows",
 	"xen",
+	"generic-linux",
 }
 
 // DistroImage represents boot file(s) associated to a distro.
 type DistroImage struct {
 	Base
-	ImageID   string `gorm:"unique; notNull"`
-	Type      string `gorm:"notNull"`
-	Name      string `gorm:"unique; notNull"`
-	Kernel    string
-	Initrd    string
-	Breed     string
-	LocalBoot bool
-	BiosBoot  bool `gorm:"notNull; default:false"`
-	UefiBoot  bool `gorm:"notNull; default:false"`
-	Distros   []Distro
+	ImageID    string `gorm:"unique; notNull"`
+	Type       string `gorm:"notNull"`
+	Name       string `gorm:"unique; notNull"`
+	KernelInfo string `gorm:"notNull;default:''"`
+	InitrdInfo string `gorm:"notNull;default:''"`
+	Kernel     string
+	Initrd     string
+	Breed      string
+	LocalBoot  bool
+	BiosBoot   bool `gorm:"notNull; default:false"`
+	UefiBoot   bool `gorm:"notNull; default:false"`
+	Distros    []Distro
 }
 
 func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData {
@@ -62,8 +64,8 @@ func filterDistroImagesList(distroImages []DistroImage) []common.DistroImageData
 			Name:      image.Name,
 			ImageID:   image.ImageID,
 			ImageType: image.Type,
-			Kernel:    image.Kernel,
-			Initrd:    image.Initrd,
+			Kernel:    image.KernelInfo,
+			Initrd:    image.InitrdInfo,
 			Distros:   distros,
 			Breed:     image.Breed,
 			Local:     local,

@@ -20,6 +20,7 @@ func handleElevateUser(w http.ResponseWriter, r *http.Request) {
 	clog := hlog.FromRequest(r)
 	actionPrefix := "elevate user"
 	user := getUserFromContext(r)
+	clog.Debug().Msgf("%s: %s", actionPrefix, user.Name)
 	var status int
 	rb := common.NewResponseBody()
 	if user.Name == IgorAdmin {
@@ -48,6 +49,7 @@ func handleElevateUserStatus(w http.ResponseWriter, r *http.Request) {
 	clog := hlog.FromRequest(r)
 	actionPrefix := "status elevate"
 	user := getUserFromContext(r)
+	clog.Debug().Msgf("%s: %s", actionPrefix, user.Name)
 	var status int
 	rb := common.NewResponseBody()
 	if user.Name == IgorAdmin {
@@ -84,6 +86,7 @@ func handleElevateUserCancel(w http.ResponseWriter, r *http.Request) {
 	clog := hlog.FromRequest(r)
 	actionPrefix := "cancel elevate"
 	user := getUserFromContext(r)
+	clog.Debug().Msgf("%s: %s", actionPrefix, user.Name)
 	var status int
 	rb := common.NewResponseBody()
 

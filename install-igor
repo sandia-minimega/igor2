@@ -4,7 +4,7 @@ INSTALL_ALL=true
 bold=$(tput bold)
 normal=$(tput sgr0)
 
-USAGE="Usage: install.sh [-server] [-cli] [-web] [-h|-help]
+USAGE="Usage: install-igor [-server] [-cli] [-web] [-h|-help]
 ${bold}(must be run as root)${normal}"
 HELP="
 This script installs or upgrades Igor applications. A first-time install sets

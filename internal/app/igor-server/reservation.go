@@ -179,11 +179,6 @@ func (r *Reservation) Remaining(t time.Time) time.Duration {
 	return r.Duration()
 }
 
-// Filename returns the filename that stores the reservation configuration
-// func (r *Reservation) Filename() string {
-// 	return filepath.Join(igor.TFTPPath, igor.PXEDir, "igor", r.Name)
-// }
-
 func (r *Reservation) getKernelArgs() string {
 	// profile args should append behind distro args if both exist
 	kArgs := ""

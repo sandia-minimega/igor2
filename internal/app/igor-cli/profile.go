@@ -105,7 +105,7 @@ func newProfileShowCmd() *cobra.Command {
 
 	cmdShowProfile := &cobra.Command{
 		Use: "show [-n NAME1,NAME2,...] [-o OWNER1,OWNER2,...] [-d DIST1,DIST2,...]\n" +
-			"        [-k \"KARGS1\",\"KARGS2\",...] [-x]",
+			"       [-k \"KARGS1\",\"KARGS2\",...] [-x]",
 		Short: "Show group information",
 		Long: `
 Shows profile information, returning matches to specified parameters. If no
@@ -340,14 +340,18 @@ func printProfiles(rb *common.ResponseBodyProfiles) {
 
 			tw.AppendRow([]interface{}{
 				p.Name,
-				p.Description,
+				multiline(35, p.Description),
 				p.Owner,
 				p.Distro,
-				p.KernelArgs,
+				multiline(40, p.KernelArgs),
 			})
 		}
 
 		tw.SetColumnConfigs([]table.ColumnConfig{
+			{
+				Name:     "DESCRIPTION",
+				WidthMax: 35,
+			},
 			{
 				Name:     "KERNEL-ARGS",
 				WidthMax: 40,

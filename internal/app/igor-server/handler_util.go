@@ -26,7 +26,7 @@ var stdNameCheckPattern = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9._-]{2,23}$
 // Regex for Eth names. Includes letters, numbers, slash. Must be 3-24 characters in
 // length. No whitespace allowed.
 // Interface naming convention: https://www.cisco.com/assets/sol/sb/Switches_Emulators_v2_3_5_xx/help/350_550/index.html#page/tesla_350_550_olh/ts_getting_started_01_22.html
-var stdEthCheckPattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\/]{2,23}$`)
+var stdEthCheckPattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9/]{2,23}$`)
 
 // Regex for distro Image ref (Image name). Consists of a prefix (image type), followed by 8 characters which can be a combination
 // of letters and numbers. Must be 10 characters in length total. No whitespace allowed. Example: kid942c59b
@@ -40,6 +40,10 @@ var stdImageIDCheckPattern = regexp.MustCompile(`^[a-zA-Z0-9]{40}$`)
 // Regex for description fields. Includes letters, numbers, limited punctuation and space character. Max 256
 // characters in length.
 var descCheckPattern = regexp.MustCompile(`^[a-zA-Z0-9 :,)(.?!_-]{0,256}$`)
+
+// Regex for description fields. Includes letters, numbers, limited punctuation and space character. Max 30
+// characters in length.
+var initrdCheckPattern = regexp.MustCompile(`^[a-zA-Z0-9 :,)(.?!_\-\[\]]{3,30}$`)
 
 // Regex for file names. Cannot start or end with spaces. May have a .ext included at the end, or not.
 var fileNameCheckPattern = regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9 ._-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9_-])?$`)
@@ -88,6 +92,13 @@ func panicHandler(w http.ResponseWriter, r *http.Request, err interface{}) {
 func checkDesc(desc string) error {
 	if !descCheckPattern.MatchString(strings.TrimSpace(desc)) {
 		return fmt.Errorf("description field invalid, must be 0-256 characters and may only contain letters, numbers, space and .,_-():?! characters")
+	}
+	return nil
+}
+
+func checkInitrdInfo(info string) error {
+	if !initrdCheckPattern.MatchString(strings.TrimSpace(info)) {
+		return fmt.Errorf("field invalid, must be 3-30 characters and may only contain letters, numbers, space and .,_-()[]:?! characters")
 	}
 	return nil
 }

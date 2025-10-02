@@ -6,6 +6,7 @@ package igorserver
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"igor2/internal/pkg/common"
@@ -32,7 +33,7 @@ func handleCreateProfile(w http.ResponseWriter, r *http.Request) {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
 		rb.Data["profile"] = filterProfileList([]Profile{*profile})
-		clog.Info().Msgf("%s success - '%s' created", actionPrefix, profile.Name)
+		clog.Info().Msgf("%s success - '%s' created by user %s", actionPrefix, profile.Name, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -82,7 +83,7 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' updated", actionPrefix, profileName)
+		clog.Info().Msgf("%s success - '%s' updated by user %s", actionPrefix, profileName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -105,7 +106,7 @@ func handleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' deleted", actionPrefix, profileName)
+		clog.Info().Msgf("%s success - '%s' deleted by user %s", actionPrefix, profileName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -244,7 +245,8 @@ func validateProfileParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateProfileParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateProfileParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

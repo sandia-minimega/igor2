@@ -6,12 +6,10 @@ package igorserver
 
 import (
 	"fmt"
-	"net/http"
-	"path/filepath"
-
 	zl "github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 func doDeleteDistroImage(distroImageName string, r *http.Request) (code int, err error) {
@@ -50,7 +48,7 @@ func deleteDistroImage(image *DistroImage, tx *gorm.DB, clog *zl.Logger) (err er
 	}
 
 	// get the path to the image folder
-	targetPath := filepath.Join(igor.TFTPPath, igor.ImageStoreDir, image.ImageID)
+	targetPath := getImageStorePath(image.ImageID)
 	// destroy the folder and contents
 	clog.Info().Msgf("removing image %s files from %v", image.Name, targetPath)
 	return removeFolderAndContents(targetPath)

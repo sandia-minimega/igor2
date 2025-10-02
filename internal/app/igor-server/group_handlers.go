@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -33,7 +34,7 @@ func handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
 		msg := fmt.Sprintf("igor group '%s' created %s", group.Name, addMsg)
-		clog.Info().Msgf("%s success - %s", actionPrefix, msg)
+		clog.Info().Msgf("%s success - %s by user %s", actionPrefix, msg, getUserFromContext(r).Name)
 		rb.Message = msg
 	}
 
@@ -96,7 +97,7 @@ func handleUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' updated", actionPrefix, name)
+		clog.Info().Msgf("%s success - '%s' updated by user %s", actionPrefix, name, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -119,7 +120,7 @@ func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' deleted", actionPrefix, name)
+		clog.Info().Msgf("%s success - '%s' deleted by user %s", actionPrefix, name, getUserFromContext(r).Name)
 	}
 	makeJsonResponse(w, status, rb)
 }
@@ -303,7 +304,8 @@ func validateGroupParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateGroupParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateGroupParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

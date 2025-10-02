@@ -530,7 +530,7 @@ func printPolicies(rb *common.ResponseBodyPolicies) {
 
 			tw.AppendRow([]interface{}{
 				hp.Name,
-				hp.Hosts,
+				multilineNodeList(20, hp.Hosts, ""),
 				common.FormatDuration(maxResTime, true),
 				strings.Join(hp.AccessGroups, "\n"),
 				strings.Join(nas, "\n"),
@@ -538,6 +538,7 @@ func printPolicies(rb *common.ResponseBodyPolicies) {
 		}
 
 		tw.SetColumnConfigs([]table.ColumnConfig{
+			{Name: "HOSTS", WidthMax: 20},
 			{Name: "MAX-RES-TIME", Align: text.AlignRight},
 			{Name: "KERNEL-ARGS", WidthMax: 40},
 		})

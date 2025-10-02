@@ -9,7 +9,14 @@ module.exports = {
     //     key: fs.readFileSync('path to key file'),
     //     cert: fs.readFileSync('path to cert file'),
     // },
-    https: true,
-    public: "https://localhost:3000/",
+    //https: true,
+    //public: "https://localhost:3000/",
+    server: 'https',
+    port: 3000,
+    webSocketServer: 'ws',
+    client: {
+      webSocketTransport: 'ws',
+      webSocketURL: 'ws://0.0.0.0:3000/ws',
+    },
   },
 };

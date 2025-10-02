@@ -22,7 +22,7 @@ import (
 func newSyncCmd() *cobra.Command {
 
 	cmdSync := &cobra.Command{
-		Use:   "sync {arista} [-f] [-q]",
+		Use:   "sync {arista} [-f] [-q] [-s]",
 		Short: "Report/repair status of vlan service " + adminOnly,
 		Long: `
 Displays status and information about the vlan network service based on command
@@ -41,8 +41,17 @@ given.
 Use the -f flag to force host vlan ids in the switch to the value indicated by
 the reservation if the values do not match.
 
-The the -q flag to only report back on hosts whose reservation vlan value does
+Use the -q flag to only report back on hosts whose reservation vlan value does
 not match what's reported by the switch.
+
+Use the -s flag to specify a set of hosts on which to sync. Can be either a
+name list or range of hosts
+	* name list is comma-delimited: kn1,kn2,kn3,...
+    * range is the form prefix[n,m-n,...] where m,n are integers representing
+      a single or contiguous ranges of hosts, ex. kn[3,7-9,22-35,47]
+or one or more reservations as a list
+	* reservation list is comma-delimited: MyReserved1,MyReserved2,...
+All the hosts included in a reservation will undergo the sync operation.
 
 ` + adminOnlyBanner + `
 `,
@@ -51,7 +60,8 @@ not match what's reported by the switch.
 			flagset := cmd.Flags()
 			force := flagset.Changed("force")
 			quiet := flagset.Changed("quiet")
-			result := doSync(args[0], force, quiet)
+			scope, _ := flagset.GetString("scope")
+			result := doSync(args[0], force, quiet, scope)
 			printSync(result)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -64,13 +74,15 @@ not match what's reported by the switch.
 
 	var force bool
 	var quiet bool
+	var scope string
 	cmdSync.Flags().BoolVarP(&force, "force", "f", false, "force sync with authoritative source")
 	cmdSync.Flags().BoolVarP(&quiet, "quiet", "q", false, "only report objects out of sync")
+	cmdSync.Flags().StringVarP(&scope, "scope", "s", "", "scope of hosts or reservation to perform sync")
 
 	return cmdSync
 }
 
-func doSync(cmd string, force, quiet bool) *common.ResponseBodySync {
+func doSync(cmd string, force, quiet bool, scope string) *common.ResponseBodySync {
 	var params string
 	params += "cmd=" + cmd + "&"
 	if force {
@@ -78,6 +90,9 @@ func doSync(cmd string, force, quiet bool) *common.ResponseBodySync {
 	}
 	if quiet {
 		params += "quiet=true" + "&"
+	}
+	if scope != "" {
+		params += "scope=" + scope + "&"
 	}
 	if params != "" {
 		params = strings.TrimSuffix(params, "&")

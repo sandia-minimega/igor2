@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"igor2/internal/pkg/common"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/rs/zerolog/hlog"
@@ -144,7 +145,8 @@ func validateClusterParams(handler http.Handler) http.Handler {
 		}
 
 		if validateErr != nil {
-			clog.Warn().Msgf("validateHostParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateHostParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

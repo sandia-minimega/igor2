@@ -7,6 +7,7 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/hlog"
@@ -29,14 +30,6 @@ func doUpdateDistro(target *Distro, r *http.Request) (code int, err error) {
 		updateParams, code, err = parseDistroUpdateParams(target, r, tx)
 		if err != nil {
 			return err
-		}
-
-		// if kickstart is included, make sure the distro image is local
-		if _, ok := updateParams["kickstart_id"]; ok {
-			if !target.DistroImage.LocalBoot {
-				return fmt.Errorf("kickstart script can only be assigned to a distro with a local boot image")
-			}
-
 		}
 
 		// make sure proposed changes will result in a valid distro
@@ -85,10 +78,36 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 		}
 		changes["Name"] = name
 	}
+
+	if _, ok := r.PostForm["deprecate"]; ok {
+
+		if !groupSliceContains(reqUser.Groups, GroupAdmins) {
+			return nil, http.StatusBadRequest, fmt.Errorf("deprecating a distro is restricted to admins")
+		}
+
+		if !userElevated(reqUser.Name) {
+			return nil, http.StatusBadRequest, fmt.Errorf("non-elevated user cannot deprecate a distro")
+		}
+
+		if target.isPublic() {
+			changes["removeGroup"] = []string{GroupAll}
+			changes["addGroup"] = []string{GroupAdmins}
+			return changes, http.StatusOK, nil
+		} else {
+			return nil, http.StatusBadRequest, fmt.Errorf("cannot deprecate a non-public distro")
+		}
+	}
+
 	// check desc
 	if desc, ok := r.PostForm["description"]; ok {
 		changes["Description"] = strings.TrimSpace(desc[0])
 	}
+
+	// check info
+	if initrd, ok := r.PostForm["initrdInfo"]; ok {
+		changes["initrdInfo"] = strings.TrimSpace(initrd[0])
+	}
+
 	// check kernel args
 	if ka, ok := r.PostForm["kernelArgs"]; ok {
 		// make sure distro isn't currently being used
@@ -102,20 +121,24 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 	}
 	// check kickstart
 	if ks, ok := r.PostForm["kickstart"]; ok {
+		// can't assign a kickstart in distro is not installed
+		if !target.DistroImage.LocalBoot {
+			return nil, http.StatusBadRequest, fmt.Errorf("kickstart script can only be assigned to a distro with a local boot image")
+		}
 		// make sure distro isn't currently being used
 		if activeRes := target.hasActiveReservations(); len(activeRes) > 0 {
 			status := http.StatusConflict
 			err := fmt.Errorf("distro kickstart cannot be updated while associated to active Reservations: %s", activeRes)
 			return nil, status, err
 		} else {
-			kickstarts, err := dbReadKickstartTx(map[string]interface{}{"file_name": ks})
+			kickstarts, err := dbReadKickstartTx(map[string]interface{}{"filename": ks})
 			if err != nil {
 				return changes, http.StatusInternalServerError, err
 			}
 			if len(kickstarts) == 0 {
 				return changes, http.StatusBadRequest, fmt.Errorf("no kickstart files found using name %s", ks)
 			}
-			changes["kickstart_id"] = kickstarts[0].ID
+			changes["kickstart"] = kickstarts[0]
 		}
 	}
 	// check if public
@@ -139,10 +162,8 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 	// group_add should be an array of valid group names
 	if groupAdd, ok := r.PostForm["addGroup"]; ok {
 		if len(groupAdd) > 0 {
-			if isPublic {
-				if !(len(groupAdd) == 1 && groupAdd[0] == GroupAll) {
-					return nil, http.StatusBadRequest, fmt.Errorf("a public distro cannot be assigned to specific groups: %v", strings.Join(groupAdd, ","))
-				}
+			if isPublic || target.isPublic() {
+				return nil, http.StatusBadRequest, fmt.Errorf("a public distro cannot be assigned to specific groups: [%v]", strings.Join(groupAdd, ","))
 			} else {
 				for _, gName := range groupAdd {
 					if gName == GroupAll {
@@ -167,6 +188,13 @@ func parseDistroUpdateParams(target *Distro, r *http.Request, tx *gorm.DB) (map[
 			if err != nil {
 				return nil, code, err
 			}
+			if isPublic || target.isPublic() {
+				if slices.Contains(groupRemove, GroupAll) {
+					code := http.StatusBadRequest
+					return nil, code, fmt.Errorf("cannot remove the '%s' group from a public distro", GroupAll)
+				}
+			}
+
 			// abort if Distro already isn't associated with the requested Group
 			targetGroups := target.Groups
 			for _, g := range groupRemove {

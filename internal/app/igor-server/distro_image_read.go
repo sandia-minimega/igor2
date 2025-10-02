@@ -18,7 +18,7 @@ import (
 func doReadDistroImages() (images []DistroImage, status int, err error) {
 
 	err = performDbTx(func(tx *gorm.DB) error {
-		images, err = dbReadImage(map[string]interface{}{}, tx)
+		images, err = dbReadImage(map[string]interface{}{}, 0, tx)
 		return err
 	})
 	if err != nil {
@@ -36,7 +36,7 @@ func doReadDistroImages() (images []DistroImage, status int, err error) {
 //	nil,500,err if db error
 func getImages(imageNames []string, tx *gorm.DB) ([]DistroImage, int, error) {
 	// profile search by name must always be in the context of their owner
-	images, err := dbReadImage(map[string]interface{}{"name": imageNames}, tx)
+	images, err := dbReadImage(map[string]interface{}{"name": imageNames}, 0, tx)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	} else if len(images) == 0 {
@@ -50,7 +50,7 @@ func getImages(imageNames []string, tx *gorm.DB) ([]DistroImage, int, error) {
 // database. It will pass back any encountered GORM errors.
 func imageExists(name string, tx *gorm.DB) (found bool, err error) {
 	queryParams := map[string]interface{}{"name": name}
-	iList, findErr := dbReadImage(queryParams, tx)
+	iList, findErr := dbReadImage(queryParams, 0, tx)
 	if findErr != nil {
 		return false, findErr
 	}

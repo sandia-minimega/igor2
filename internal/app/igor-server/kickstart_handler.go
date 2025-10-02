@@ -7,6 +7,8 @@ package igorserver
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"igor2/internal/pkg/common"
 
@@ -74,8 +76,8 @@ func handleUpdateKickstart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		msg := fmt.Sprintf("kickstart file updated successfully: %s", ksName)
-		clog.Info().Msgf("%s success -%s", actionPrefix, msg)
+		msg := fmt.Sprintf("kickstart file '%s' updated successfully", ksName)
+		clog.Info().Msgf("%s success - %s by user %s", actionPrefix, msg, getUserFromContext(r).Name)
 		rb.Message = msg
 	}
 
@@ -97,7 +99,7 @@ func handleDeleteKickstart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Info().Msgf("%s success - '%s' deleted", actionPrefix, ksName)
+		clog.Info().Msgf("%s success - '%s' deleted by user %s", actionPrefix, ksName, getUserFromContext(r).Name)
 	}
 
 	makeJsonResponse(w, status, rb)
@@ -133,8 +135,40 @@ func validateKSParams(handler http.Handler) http.Handler {
 			}
 		}
 
+		if r.Method == http.MethodPatch {
+			if validateErr = r.ParseMultipartForm(MaxMemory); validateErr != nil {
+				clog.Warn().Msgf("validateKSParams - %v", validateErr)
+				createValidationErrMessage(validateErr, w)
+				handler.ServeHTTP(w, r)
+				return
+			}
+			ksParams := r.PostForm
+			if len(ksParams) > 0 {
+			patchParamLoop:
+				for key, vals := range ksParams {
+					switch key {
+					case "name":
+						for _, new_name := range vals {
+							new_name = strings.TrimSpace(new_name)
+							if validateErr = checkGenericNameRules(new_name); validateErr != nil {
+								break patchParamLoop
+							}
+						}
+					case "has_kickstart":
+						continue
+					default:
+						validateErr = NewUnknownParamError(key, vals)
+						break patchParamLoop
+					}
+				}
+			} else {
+				validateErr = NewMissingParamError("")
+			}
+		}
+
 		if validateErr != nil {
-			clog.Warn().Msgf("validateDistroImageParams - %v", validateErr)
+			reqUrl, _ := url.QueryUnescape(r.URL.RequestURI())
+			clog.Warn().Msgf("validateDistroImageParams - failed validation for %s:%s:%v - %v", getUserFromContext(r).Name, r.Method, reqUrl, validateErr)
 			createValidationErrMessage(validateErr, w)
 			return
 		}

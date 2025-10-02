@@ -20,7 +20,8 @@ import (
 
 // SQLiteDbUserVersion This is the latest internal version of the SQLite Igor database. The value
 // should map to the most recent db schema.
-const SQLiteDbUserVersion = 1 // (for Igor 2.1)
+const SQLiteDbUserVersion = 2 // (for Igor 2.2)
+//const SQLiteDbUserVersion = 1 // (for Igor 2.1)
 //const SQLiteDbUserVersion = 0   // (for Igor 2.0)
 
 func init() {

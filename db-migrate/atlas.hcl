@@ -1,9 +1,3 @@
-// atlas must be installed on dev machine to run this
-// follows atlas instructions online to download dependencies needed
-// uncomment the import statement in tools.go
-// in db-migrate folder run command:  atlas migrate diff --env gorm
-// run to fix hash mismatch:          atlas migrate hash
-
 data "external_schema" "gorm" {
   program = [
     "go",

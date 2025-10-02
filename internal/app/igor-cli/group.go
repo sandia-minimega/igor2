@@ -45,7 +45,7 @@ func newGroupCreateCmd() *cobra.Command {
 
 	cmdCreateGroup := &cobra.Command{
 		Use: "create NAME {[-o USER1,USER2...] [-m USER3,USER4...]\n" +
-			"                [--desc \"DESCRIPTION\"] | -L }",
+			"       [--desc \"DESCRIPTION\"] | -L }",
 		Short: "Create a group",
 		Long: `
 Creates a new igor group.
@@ -166,7 +166,7 @@ func newGroupEditCmd() *cobra.Command {
 
 	cmdEditGroup := &cobra.Command{
 		Use: "edit NAME [-n NEWNAME] {[-o OWNER1,...] [-w OWNER1,...] | \n" +
-			"                [-a MEMBER1,...] [-r MEMBER1,...]} [--desc \"DESCRIPTION\"]",
+			"       [-a MEMBER1,...] [-r MEMBER1,...]} [--desc \"DESCRIPTION\"]",
 		Short: "Edit group information",
 		Long: `
 Edits group information. This can only be done by the group owner or an admin.
@@ -430,7 +430,7 @@ func printShowGroups(rb *common.ResponseBodyGroups) {
 
 			tw.AppendRow([]interface{}{
 				g.Name,
-				g.Description,
+				multiline(35, g.Description),
 				owners,
 				members,
 				strings.Join(g.Distros, "\n"),
@@ -442,7 +442,7 @@ func printShowGroups(rb *common.ResponseBodyGroups) {
 		tw.SetColumnConfigs([]table.ColumnConfig{
 			{
 				Name:     "DESCRIPTION",
-				WidthMax: 40,
+				WidthMax: 35,
 			},
 		})
 

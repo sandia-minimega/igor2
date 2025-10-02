@@ -32,7 +32,7 @@ func showHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		clog.Debug().Msgf("%s success", actionPrefix)
+		clog.Debug().Msgf("%s '%s' success", user.Name, actionPrefix)
 	}
 	rb.Data["show"] = result
 

@@ -29,6 +29,7 @@ func Execute(configFilepath *string) {
 	initNotify()
 
 	igor.ElevateMap = common.NewPassiveTtlMap(time.Duration(igor.Auth.ElevateTimeout) * time.Minute)
+	logger.Info().Msgf("admin user elevation window set to %d minutes", igor.Auth.ElevateTimeout)
 
 	igor.IPowerStatus = NewNmapPowerStatus()
 
@@ -47,7 +48,10 @@ func Execute(configFilepath *string) {
 	// need to check igor config to see if nodes have been added or removed
 	syncNodes(hostList)
 
+	logger.Info().Msg("bootstrapping main worker processes")
+
 	if len(hostList) > 0 {
+		logger.Info().Msgf("starting node power status manager; %d registered hosts", len(hostList))
 		wg.Add(1)
 		go powerStatusManager(hostList)
 	}

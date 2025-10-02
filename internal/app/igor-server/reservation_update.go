@@ -24,11 +24,12 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 	clog := hlog.FromRequest(r)
 	var res *Reservation
 	actionUser := getUserFromContext(r)
+	clog.Debug().Msgf("update reservation: '%s' by user %s with params %+v", resName, actionUser.Name, editParams)
 	isElevated := userElevated(actionUser.Name)
 	var extended, renamed, dropped, isNewOwner, isNewGroup bool
 	var clusterName, oldName, newOwnerName string
 	var oldOwner User
-	var droppedHosts []Host
+	var droppedHosts, addHosts []Host
 
 	if err = performDbTx(func(tx *gorm.DB) error {
 
@@ -50,6 +51,8 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		extendDur, doExtendS := editParams["extend"].(string)
 		extendTime, doExtendF := editParams["extend"].(float64)
 		dropList, doDrop := editParams["drop"].(string)
+		addCount, doAddByVal := editParams["addNodeCount"].(float64)
+		addList, doAddByList := editParams["addNodeList"].(string)
 		_, doExtendMax := editParams["extendMax"]
 		_, doDistro := editParams["distro"]
 		_, doProfile := editParams["profile"]
@@ -84,6 +87,43 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 				dropped = true
 				droppedHosts = changes["dropHosts"].([]Host)
 			}
+		} else if doAddByList || doAddByVal {
+			changes = map[string]interface{}{}
+			var hostNames []string
+			dummyRes := res.DeepCopy()
+
+			if doAddByList {
+				// get the host names so we can look at the schedule
+				hostNames = igor.splitRange(addList)
+				addHosts, status, err = getHosts(hostNames, true, tx)
+				if err != nil {
+					return err
+				}
+				dummyRes.Hosts = addHosts
+				// verify named hosts are available
+				if status, err = scheduleHostsByName(dummyRes, tx, clog); err != nil {
+					return err
+				}
+			} else {
+				if addCount < 1 {
+					status = http.StatusBadRequest
+					return fmt.Errorf("must include at least one host if adding to reservation")
+				}
+				dummyRes.Hosts = make([]Host, int(addCount))
+				if addHosts, status, err = scheduleHostsByAvailability(dummyRes, tx, clog); err != nil {
+					return err
+				}
+			}
+			// Check against allowed host max limit when not an elevated admin
+			totalHosts := len(addHosts) + len(res.Hosts)
+			if !isElevated && igor.Scheduler.NodeReserveLimit > 0 && totalHosts > igor.Scheduler.NodeReserveLimit {
+				err = fmt.Errorf("host reserve limit exceeded if new hosts are added, reservation cannot have more than %v hosts", igor.Scheduler.NodeReserveLimit)
+				clog.Warn().Msgf("%v", err)
+				status = http.StatusForbidden
+				return err
+			}
+			changes["addHosts"] = addHosts
+
 		} else if doDistro || doProfile {
 			changes, status, vErr = parseImageEdits(res, editParams, tx)
 		} else {
@@ -91,6 +131,19 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		}
 		if vErr != nil {
 			return vErr
+		}
+
+		if (len(addHosts) > 0) && (res.Installed || (res.Start.Before(time.Now()) && time.Now().Before(res.End))) {
+			// if the reservation is active, delete the power perms so we can rebuild them below with the new hosts included
+			old_power_perms, err := dbGetHostPowerPermissions(&res.Group, res.Hosts, tx)
+			if err != nil {
+				return err
+			}
+			// delete the permissions for this reservation
+			result := tx.Delete(old_power_perms)
+			if result.Error != nil {
+				return result.Error
+			}
 		}
 
 		return dbEditReservation(res, changes, tx)
@@ -135,6 +188,57 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		}
 	}
 
+	// Install these hosts if the reservation is active
+	if (len(addHosts) > 0) && (res.Installed || (res.Start.Before(time.Now()) && time.Now().Before(res.End))) {
+		if err = performDbTx(func(tx *gorm.DB) error {
+			// var result *gorm.DB
+			err = dbEditHosts(addHosts, map[string]interface{}{"State": HostReserved}, tx)
+			if err != nil {
+				return err
+			}
+
+			// create and add power perms
+			powerPerm, permErr := NewPermission(makeNodePowerPerm(res.Hosts))
+			if permErr != nil {
+				return permErr
+			}
+			if apErr := dbAppendPermissions(&res.Group, []Permission{*powerPerm}, tx); apErr != nil {
+				return apErr
+			}
+
+			// skip if not using vlan
+			if igor.Vlan.Network != "" {
+				// update network config
+				if nsErr := networkSet(addHosts, res.Vlan); nsErr != nil {
+					return fmt.Errorf("error setting network isolation: %v", nsErr)
+				}
+			}
+			dummyRes := res.DeepCopy()
+			dummyRes.Hosts = addHosts
+			// install the reservation's profile to its hosts
+			logger.Debug().Msgf("installing PXE files to added Hosts for reservation %s", dummyRes.Name)
+			if irErr := igor.IResInstaller.Install(dummyRes); irErr != nil {
+				// update the reservation with the error message
+				if irErr = dbEditReservation(res, map[string]interface{}{"install_error": irErr.Error()}, tx); irErr != nil {
+					return irErr
+				}
+				return irErr
+			}
+
+			if res.CycleOnStart {
+				logger.Debug().Msgf("power cycling hosts for reservation '%s'", res.Name)
+				if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(addHosts), &logger); powerErr != nil {
+					// don't return this error we still want to mark it installed
+					logger.Error().Msgf("problem powering cycling hosts for the added hosts for reservation '%s': %v", res.Name, powerErr)
+				}
+			} else {
+				logger.Warn().Msgf("The added hosts for reservation '%s' were not powered cycled at start", res.Name)
+			}
+			return nil
+		}); err != nil {
+			return
+		}
+	}
 	rList, _ := dbReadReservationsTx(map[string]interface{}{"ID": res.ID}, nil)
 	res = &rList[0]
 
@@ -331,7 +435,7 @@ func parseExtend(res *Reservation, extendTime string, isActionUserElevated bool,
 	}
 
 	// verify extension doesn't conflict with current host policies
-	groupAccessList := []string{GroupAll, res.Group.Name}
+	groupAccessList := groupNamesOfGroups(res.Owner.Groups)
 	checkStart := res.Start
 	if res.Installed {
 		checkStart = now

@@ -65,6 +65,15 @@ func doUpdateBlockHosts(blockAction bool, hostList []string, r *http.Request) (s
 			if blockErr != nil {
 				return blockErr
 			}
+			// if host is in maintenance mode, set restore state to blocked so it remains blocked when finished.
+			for _, host := range hList {
+				if len(host.MaintenanceRes) > 0 {
+					blockErr := dbEditHosts([]Host{host}, map[string]interface{}{"RestoreState": HostBlocked}, tx)
+					if blockErr != nil {
+						return blockErr
+					}
+				}
+			}
 
 			if len(blockedRes) > 0 {
 				actionUser := getUserFromContext(r)

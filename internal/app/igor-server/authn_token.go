@@ -16,7 +16,7 @@ import (
 
 	"igor2/internal/pkg/common"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/hlog"
 )
 
