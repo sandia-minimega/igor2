@@ -43,7 +43,7 @@ func dbReadProfilesTx(queryParams map[string]interface{}) (profileList []Profile
 // specified then all profiles are returned.
 func dbReadProfiles(queryParams map[string]interface{}, tx *gorm.DB) (profileList []Profile, err error) {
 
-	tx = tx.Preload("Owner").Preload("Distro").Preload("Owner.Groups").Preload("Distro.Groups").Preload("Distro.Kickstart")
+	tx = tx.Preload("Owner").Preload("Distro").Preload("Owner.Groups").Preload("Distro.Groups").Preload("Distro.Kickstart").Preload("Distro.DistroImage")
 
 	// if no params given, return all reservations
 	if len(queryParams) == 0 {
