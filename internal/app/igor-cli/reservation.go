@@ -258,7 +258,8 @@ with any filter flags. Use the --all flag to search across all reservations.
 
 ` + optionalFlags + `
 
-Use the -a flag to include all reservations in the search.
+Use the -a flag to include all reservations in the search. If this flag is not
+present, search will only match against the user's reservations.
 
 Use the -n, -o, -d, -p and -g flags to narrow results. Multiple values for a
 given flag should be comma-delimited.
@@ -386,10 +387,11 @@ This flag cannot be used with other edit parameters.
 ` + sBold("CHANGING THE PROFILE OR DISTRO:") + `
 
 Use the -p flag to change the profile used on the reserved nodes. An existing
-profile name must be provided. Alternatively you may use the -d flag to use a
-bare distro instead which uses that distro's default profile. Changing either
-does not take effect until a power-cycle operation is performed on the reserva-
-tion nodes. (See 'igor host power --help' for more information.)
+profile name must be provided. Alternatively, use the -d flag to change the
+distro for the reservation (which uses that distro's default profile).
+
+Changing either does not take effect until a power-cycle operation is performed
+on the reservation nodes. (See 'igor host power --help' for more information.)
 
 These flags cannot be used with other edit parameters.
 

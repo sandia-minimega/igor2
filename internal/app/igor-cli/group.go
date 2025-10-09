@@ -197,8 +197,6 @@ Use the -a flag to add a list of users to the group. ` + sItalic("Note: adding a
 
 Use the -r flag to remove a list of users from the group.
 
-
-
 ` + descFlagText + `
 `,
 		Args: cobra.ExactArgs(1),

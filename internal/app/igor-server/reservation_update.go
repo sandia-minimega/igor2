@@ -26,6 +26,8 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 	actionUser := getUserFromContext(r)
 	clog.Debug().Msgf("update reservation: '%s' by user %s with params %+v", resName, actionUser.Name, editParams)
 	isElevated := userElevated(actionUser.Name)
+	_, doDistro := editParams["distro"]
+	_, doProfile := editParams["profile"]
 	var extended, renamed, dropped, isNewOwner, isNewGroup bool
 	var clusterName, oldName, newOwnerName string
 	var oldOwner User
@@ -54,8 +56,6 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		addCount, doAddByVal := editParams["addNodeCount"].(float64)
 		addList, doAddByList := editParams["addNodeList"].(string)
 		_, doExtendMax := editParams["extendMax"]
-		_, doDistro := editParams["distro"]
-		_, doProfile := editParams["profile"]
 		_, renamed = editParams["name"]
 		newOwnerName, isNewOwner = editParams["owner"].(string)
 		_, isNewGroup = editParams["group"]
@@ -239,8 +239,25 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 			return
 		}
 	}
+
 	rList, _ := dbReadReservationsTx(map[string]interface{}{"ID": res.ID}, nil)
 	res = &rList[0]
+
+	// if the distro or profile was changed, install the new profile to all hosts
+	if (doDistro || doProfile) && (res.Installed || (res.Start.Before(time.Now()) && time.Now().Before(res.End))) {
+		if err = performDbTx(func(tx *gorm.DB) error {
+			if irErr := igor.IResInstaller.Install(res); irErr != nil {
+				// update the reservation with the error message
+				if irErr = dbEditReservation(res, map[string]interface{}{"install_error": irErr.Error()}, tx); irErr != nil {
+					return irErr
+				}
+				return irErr
+			}
+			return nil
+		}); err != nil {
+			return
+		}
+	}
 
 	editKeys := make([]string, 0, len(editParams))
 	for k := range editParams {

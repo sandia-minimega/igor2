@@ -39,7 +39,7 @@ func parseResSearchParams(queryMap map[string][]string, showAll bool, r *http.Re
 	queryParams := map[string]interface{}{}
 	queryTimeParams := map[string]time.Time{}
 
-	if showAll {
+	if showAll && len(queryMap) == 0 {
 		return queryParams, queryTimeParams, status, nil
 	}
 

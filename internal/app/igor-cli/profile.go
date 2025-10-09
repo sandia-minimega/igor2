@@ -27,19 +27,16 @@ func newProfileCmd() *cobra.Command {
 		Long: `
 Profile primary command. A sub-command must be invoked to do anything.
 
-Profile is a wrapper around a distro and serves as the primary means of speci-
-fying the OS image when making a reservation, therefore it is necessary to 
-confirm the details of a distro before using a profile in a reservation that
-invokes it.
+Profiles allow adding kernel arguments that modify how a distro boots and runs.
+A distro's default profile makes no changes and runs the base distro as-is, 
+unless the owner edits the default profile's arguments.
 
-Profiles grant the ability to specify additional kernel arguments and scripts
-that modify the startup and running of a distro. A distro's default profile
-doesn't add anything to the distro deployment and it is run 'as is' unless the
-owner chooses to modify the default profile's arguments.
+Users with access to a distro can create any number of custom profiles. To
+apply a different profile, update the reservation's profile field and issue a
+power cycle command.
 
-Any user with access rights to a distro can create as many customized profiles
-as they like and can swap them as needed by first editing the reservation's
-profile field then issuing a power cycle command.
+Before using a new profile, verify the details of its associated distro OS to
+ensure compatibility.
 `,
 	}
 
@@ -56,8 +53,8 @@ func newProfileCreateCmd() *cobra.Command {
 		Use:   "create NAME DISTRO [ -k \"KARGS\" --desc \"DESCRIPTION\"]",
 		Short: "Create a profile",
 		Long: `
-Creates a new igor profile. A profile is a distro wrapper and serves as the
-primary means of specifying the OS image to be used when making a reservation.
+Creates a new igor profile. A profile is a distro wrapper for adding kernel
+arguments to its startup.
 
 Once created, only the owner is allowed to edit or delete the profile.
 
@@ -158,23 +155,23 @@ func newProfileEditCmd() *cobra.Command {
 	cmdEditProfile := &cobra.Command{
 		Use:   "edit NAME { [-n NEWNAME] [-k \"KARGS\"] [--desc \"DESCRIPTION\"] }",
 		Short: "Edit profile information",
-		Long: fmt.Sprintf(`
+		Long: `
 Edits profile information. This can only be done by the profile owner or an 
 admin.
 
-`+requiredArgs+`
+` + requiredArgs + `
 
   NAME : profile name
 
-`+optionalFlags+`
+` + optionalFlags + `
 
 Use the -n flag to re-name the profile.
 
 Use the -k flag to replace the kernel arguments field. Use a double-quotes around
 the field if it contains spaces.
 
-%s
-`, descFlagText),
+` + descFlagText + `
+`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			flagset := cmd.Flags()

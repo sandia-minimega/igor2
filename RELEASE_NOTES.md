@@ -1,23 +1,33 @@
 # Release Notes
 
+## v2.2.1
+
+9-October-2025
+
+### Fixes
+- Fixed a bug where profile-switching was failing. (Thanks to user mabbonda for catching this!)
+- Fixed search filtering bug in 'igor res show'.
+
+
 ## v2.2.0
 
-19-September-2025
+2-October-2025
 
 ### New Features
 
 - Igor now probes K/I pair files for kernel and OS metadata and publishes its results in the 'kernel' and 'initrd' columns displayed by the igor distro show command.
 - Reservations and distros for auto-removed owner accounts are re-assigned to administrators for possible owner re-assignment to other users or manual deletion.
+- Users can now add hosts to existing reservations.
+- Administrators can make a public distro private and owned by the admin group using the --deprecate flag when editing a distro.
 
 ### Updates
 
-- Users can now add hosts to existing reservations.
+
 - More detailed line-wrap formatting within table cells in CLI output for better readability of dense information.
-- Removed some CLI output columns in tables that weren't giving useful information. Information is still retained in non-table formatted version (using -x flag).
+- Removed some CLI output columns in information tables that had little impact for the amount of space used. All information is still retained in non-table formatted version (using -x flag).
 - More detailed server logging that always specifies the user associated with a given command action.
-- Updated db-migrate tool to migrate Igor databases from previous versions to this one.
-- Administrators can make a public distro private and owned by the admin group using the --deprecate flag when editing a distro.
 - The igor sync command can now operate on a specific set of hosts.
+- Updated db-migrate tool to migrate Igor databases from previous versions to this one.
 - Bump minimum required Golang to v1.23.x
 - Bump minimum nodeJS to v22.x and npm to v10.x to build Igorweb.
 - Security package updates.
