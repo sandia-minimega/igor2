@@ -233,8 +233,9 @@ Use the -m flag to change the MAC address.
 func newHostDelCmd() *cobra.Command {
 
 	cmdDeleteHost := &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a host " + adminOnly,
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a host " + adminOnly,
 		Long: `
 Deletes an igor host.
 

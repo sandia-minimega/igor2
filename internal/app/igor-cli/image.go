@@ -50,11 +50,11 @@ parameter localBoot = true and a breed.
 func newImageRegisterCmd() *cobra.Command {
 
 	cmdRegisterImage := &cobra.Command{
-		Use: "register (-k FILENAME.KERNEL -i FILENAME.INITRD |\n"+
-             "       --kstaged FILENAME.KERNEL --istaged FILENAME.INITRD)\n"+
-             "       --boot BOOTMODES\n"+
-             "       [-l|--localBoot {true|false}]\n"+
-             "       [-b|--breed BREED]",
+		Use: "register (-k FILENAME.KERNEL -i FILENAME.INITRD |\n" +
+			"       --kstaged FILENAME.KERNEL --istaged FILENAME.INITRD)\n" +
+			"       --boot BOOTMODES\n" +
+			"       [-l|--localBoot {true|false}]\n" +
+			"       [-b|--breed BREED]",
 		Short: "Register image files or distro",
 		Long: `
 Registers bootable file(s) (ex. a kernel/initrd file pair) with igor. This
@@ -156,8 +156,9 @@ Use the -x flag to render screen output without pretty formatting.
 func newImageDelCmd() *cobra.Command {
 
 	return &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete an image " + adminOnly,
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete an image " + adminOnly,
 		Long: `
 Deletes an igor image from the image store.
 

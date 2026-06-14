@@ -259,8 +259,9 @@ event.
 func newUserDelCmd() *cobra.Command {
 
 	cmdDeleteUser := &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a user " + adminOnly,
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a user " + adminOnly,
 		Long: `
 Deletes an igor user. An email will be sent to the user informing them of this
 event.
