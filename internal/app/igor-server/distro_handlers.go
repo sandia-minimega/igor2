@@ -33,6 +33,11 @@ func handleCreateDistro(w http.ResponseWriter, r *http.Request) {
 		clog.Info().Msgf("%s success - '%s' created by user %s", actionPrefix, distro.Name, getUserFromContext(r).Name)
 	}
 
+	err = r.MultipartForm.RemoveAll()
+	if err != nil {
+		clog.Error().Msg("error deleting temporary files during handleCreateDistro")
+	}
+
 	makeJsonResponse(w, status, rb)
 
 }
