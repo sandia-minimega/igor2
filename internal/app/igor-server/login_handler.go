@@ -125,10 +125,16 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 		panic(err)
 	}
 
+	// Get a list of group names for the jwt claim
+	var groups []string
+	for _, v := range user.Groups {
+		groups = append(groups, v.Name)
+	}
+
 	// we have successfully logged in, token generation time!
 	exprTime := getTokenExpiration()
 
-	tokenString, gtErr := generateToken(user.Name, exprTime)
+	tokenString, gtErr := generateToken(user.Name, groups, exprTime)
 	if gtErr != nil {
 		errLine := fmt.Sprintf("%s failed - %v", actionPrefix, gtErr)
 		clog.Error().Msgf(errLine)
@@ -140,6 +146,7 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 		Name:     "auth_token",
 		Value:    tokenString,
 		HttpOnly: true,
+		Path:     "/",
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
 	})

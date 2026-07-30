@@ -48,7 +48,7 @@ var (
 			user = username
 		} else {
 			tokenString, _ := extractToken(r)
-			if token, err := jwt.ParseWithClaims(tokenString, &MyClaims{}, acquireTokenSecret); err == nil {
+			if token, err := jwt.ParseWithClaims(tokenString, &MyClaims{}, acquireTokenPublicKey); err == nil {
 				if claims, ok2 := token.Claims.(*MyClaims); ok2 {
 					user = claims.Username
 				}
