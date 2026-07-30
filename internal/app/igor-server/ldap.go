@@ -100,7 +100,7 @@ func getLDAPConnection() (*ldap.Conn, error) {
 			ldapCert, rfErr := os.ReadFile(ldapConf.TLSConfig.Cert)
 			if rfErr != nil {
 				e := fmt.Sprintf("%s failed - failed to read added cert: %v", actionPrefix, rfErr)
-				return nil, fmt.Errorf(e)
+				return nil, fmt.Errorf("%v", e)
 			}
 			ok := rootCA.AppendCertsFromPEM(ldapCert)
 			if !ok {
@@ -172,7 +172,7 @@ func createLdapSyncGroup(conn *ldap.Conn, group *Group) (members []User, owners 
 		return
 	}
 
-	ldapGroupMembers := result.Entries[0].GetAttributeValues(groupSearchAttributes[0])
+	ldapGroupMembers := result.Entries[0].GetEqualFoldAttributeValues(groupSearchAttributes[0])
 	if len(ldapGroupMembers) == 0 {
 		err = fmt.Errorf("%s failed - group '%s' retrieved from LDAP but contained no members", actionPrefix, group.Name)
 		return
@@ -181,7 +181,7 @@ func createLdapSyncGroup(conn *ldap.Conn, group *Group) (members []User, owners 
 	uid := regexp.MustCompile(`uid=(\w+),`)
 	ldapGroupOwners := common.NewSet()
 	for i := 1; i < len(groupSearchAttributes); i++ {
-		for _, val := range result.Entries[0].GetAttributeValues(groupSearchAttributes[i]) {
+		for _, val := range result.Entries[0].GetEqualFoldAttributeValues(groupSearchAttributes[i]) {
 			ldapGroupOwners.Add(uid.FindStringSubmatch(val)[1])
 		}
 	}
@@ -269,7 +269,7 @@ func syncLdapGroups(conn *ldap.Conn, ldapGroupList []Group, igorUsers []User) (e
 
 		// get the list of group members
 		ldapGroupMembers := common.NewSet()
-		ldapGroupMembers.Add(result.Entries[0].GetAttributeValues(groupSearchAttributes[0])...)
+		ldapGroupMembers.Add(result.Entries[0].GetEqualFoldAttributeValues(groupSearchAttributes[0])...)
 		if ldapGroupMembers.Size() == 0 {
 			err = fmt.Errorf("%s failed - group retrieved from LDAP but contained no members - aborted", actionPrefix)
 			logger.Error().Msgf("%v", err)
@@ -279,7 +279,7 @@ func syncLdapGroups(conn *ldap.Conn, ldapGroupList []Group, igorUsers []User) (e
 		// get the list of owners and delegates
 		ldapGroupOwners := common.NewSet()
 		for i := 1; i < len(groupSearchAttributes); i++ {
-			for _, val := range result.Entries[0].GetAttributeValues(groupSearchAttributes[i]) {
+			for _, val := range result.Entries[0].GetEqualFoldAttributeValues(groupSearchAttributes[i]) {
 				ldapGroupOwners.Add(uid.FindStringSubmatch(val)[1])
 			}
 		}
@@ -374,7 +374,8 @@ func syncLdapUsers(conn *ldap.Conn) error {
 
 	// gather config elements
 	baseDN := igor.Auth.Ldap.BaseDN
-	gcConf := igor.Auth.Ldap.Sync
+	ldapConf := igor.Auth.Ldap
+	gcConf := ldapConf.Sync
 	groupSearchAttribute := []string{gcConf.UserListAttribute}
 
 	// build member_attributes if present
@@ -406,7 +407,10 @@ func syncLdapUsers(conn *ldap.Conn) error {
 			logger.Debug().Msgf("%s - no entries returned for given group filter '%s'", actionPrefix, groupFilter)
 		}
 
-		userList.Add(result.Entries[0].GetAttributeValues(gcConf.UserListAttribute)...)
+		for _, entry := range result.Entries {
+			logger.Debug().Msgf("%v\n", entry)
+			userList.Add(entry.GetEqualFoldAttributeValues(gcConf.UserListAttribute)...)
+		}
 	}
 
 	if userList.Size() == 0 {
@@ -440,7 +444,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 
 	// register each new member
 	for _, member := range newIgorUsers {
-		userFilter := fmt.Sprintf("(uid=%s)", member)
+		userFilter := fmt.Sprintf(ldapConf.Filter, member)
 		userResult, srErr := conn.Search(&ldap.SearchRequest{
 			BaseDN:     baseDN,
 			Scope:      ldap.ScopeWholeSubtree,
@@ -453,7 +457,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 			continue
 		}
 		if len(userResult.Entries) == 0 {
-			logger.Warn().Msgf("%s failed - no user '%s' found", actionPrefix, member)
+			logger.Warn().Msgf("%s failed - no user: %v : %v : %v found", actionPrefix, member, userFilter, memberAttributes)
 			continue
 		}
 
@@ -462,8 +466,8 @@ func syncLdapUsers(conn *ldap.Conn) error {
 		entry := userResult.Entries[0]
 		memberEmail := ""
 		if gcConf.UserEmailAttribute != "" {
-			if len(entry.GetAttributeValues(gcConf.UserEmailAttribute)) > 0 {
-				memberEmail = entry.GetAttributeValues(gcConf.UserEmailAttribute)[0]
+			if len(entry.GetEqualFoldAttributeValues(gcConf.UserEmailAttribute)) > 0 {
+				memberEmail = entry.GetEqualFoldAttributeValues(gcConf.UserEmailAttribute)[0]
 				userInfo["email"] = memberEmail
 			}
 		}
@@ -473,8 +477,8 @@ func syncLdapUsers(conn *ldap.Conn) error {
 		}
 		memberDisplayName := ""
 		if gcConf.UserDisplayNameAttribute != "" {
-			if len(entry.GetAttributeValues(gcConf.UserDisplayNameAttribute)) > 0 {
-				memberDisplayName = entry.GetAttributeValues(gcConf.UserDisplayNameAttribute)[0]
+			if len(entry.GetEqualFoldAttributeValues(gcConf.UserDisplayNameAttribute)) > 0 {
+				memberDisplayName = entry.GetEqualFoldAttributeValues(gcConf.UserDisplayNameAttribute)[0]
 				if len(memberDisplayName) > 0 {
 					userInfo["fullName"] = memberDisplayName
 				}
