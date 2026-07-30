@@ -5,16 +5,15 @@
 package igorserver
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"igor2/internal/pkg/common"
+	"igor2/internal/pkg/jwtkeys"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/hlog"
@@ -25,8 +24,8 @@ type TokenAuth struct{}
 
 // NewTokenAuth instantiates the jwt.Token implementation of IAuth
 func NewTokenAuth() IAuth {
-	igor.AuthTokenKeypath = filepath.Join(igor.IgorHome, ".jwt", "jkey")
-	if err := verifyJwtSecret(); err != nil {
+	igor.AuthTokenKeypath = filepath.Join(igor.IgorHome, ".jwt", "private.pem")
+	if err := verifyJwtKeyPair(); err != nil {
 		logger.Error().Msgf("%v", err)
 	}
 	return &TokenAuth{}
@@ -35,6 +34,8 @@ func NewTokenAuth() IAuth {
 // MyClaims carries custom configs for jwt.token
 type MyClaims struct {
 	Username string `json:"username"`
+	// Igor groups the user is a part of for use by downstream applications
+	Groups []string `json:"groups"`
 	jwt.RegisteredClaims
 }
 
@@ -51,11 +52,16 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	}
 	if tokenString == "" {
 		errLine := actionPrefix + " failed - no token"
-		clog.Warn().Msgf(errLine)
+		clog.Warn().Msg(errLine)
 		return nil, &BadCredentialsError{msg: errLine}
 	}
 
-	token, parseErr := jwt.ParseWithClaims(tokenString, &MyClaims{}, acquireTokenSecret)
+	token, parseErr := jwt.ParseWithClaims(
+		tokenString,
+		&MyClaims{},
+		acquireTokenPublicKey,
+		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}),
+	)
 
 	if token == nil || parseErr != nil {
 		// no token was recovered from header, user never included one
@@ -73,7 +79,7 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	if !ok {
 		// expired or invalid token
 		errLine := actionPrefix + " failed - expired or invalid token"
-		clog.Warn().Msgf(errLine)
+		clog.Warn().Msg(errLine)
 		return nil, &BadCredentialsError{msg: errLine}
 	}
 
@@ -87,30 +93,36 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	return user, nil
 }
 
-func acquireTokenSecret(token *jwt.Token) (interface{}, error) {
-	// make sure the signing method is the same as when we first generated the token
-	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		err := fmt.Errorf("validate token failed - Unexpected signing method: %v", token.Header["alg"])
-		logger.Warn().Msgf(err.Error())
+func acquireTokenPublicKey(token *jwt.Token) (interface{}, error) {
+	// Reject algorithms other than the one used by Igor to sign tokens.
+	method, ok := token.Method.(*jwt.SigningMethodRSA)
+	if !ok || method.Alg() != jwt.SigningMethodRS256.Alg() {
+		err := fmt.Errorf("validate token failed - unexpected signing method: %v", token.Header["alg"])
+		logger.Warn().Msgf("%v", err)
 		return nil, err
 	}
-	return getJwtToken()
+	return jwtkeys.LoadPublic(jwtPublicKeyPath())
 }
 
-func generateToken(username string, exprTime time.Time) (tokenString string, err error) {
+func generateToken(username string, groups []string, exprTime time.Time) (tokenString string, err error) {
 
 	// set token expiration
 	claims := &MyClaims{
 		Username: username,
+		Groups:   groups,
 		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "igor",
+			Subject:   username,
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-1 * time.Minute)),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-2 * time.Minute)),
 			ExpiresAt: jwt.NewNumericDate(exprTime),
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
 	// Create the JWT string
-	key, err := getJwtToken()
+	key, err := jwtkeys.LoadPrivate(igor.AuthTokenKeypath)
 	if err != nil {
 		return "", err
 	}
@@ -151,75 +163,36 @@ func extractToken(r *http.Request) (string, error) {
 	return token, nil
 }
 
-// ensure storage exists or create
-func verifyJwtSecret() error {
-	// ensure path exists
-	storePath, _ := filepath.Split(igor.AuthTokenKeypath)
-	// check key file exists
-	if _, err := os.Stat(igor.AuthTokenKeypath); errors.Is(err, os.ErrNotExist) {
-		// make sure the path exists
-		createErr := os.MkdirAll(storePath, 0755)
-		if createErr != nil {
-			return createErr
-		}
-		// keep it secret, keep it safe
-		var file, err = os.OpenFile(igor.AuthTokenKeypath, os.O_RDWR|os.O_CREATE, 0600)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		secret, _ := generateSecret()
-		_, err = file.Write(secret)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+// return the path of the public key
+func jwtPublicKeyPath() string {
+	return filepath.Join(filepath.Dir(igor.AuthTokenKeypath), "public.pem")
 }
 
-func deleteJwtSecret() error {
-	// check key file exists
-	if _, err := os.Stat(igor.AuthTokenKeypath); !errors.Is(err, os.ErrNotExist) {
-		// file appears to exist, let's fix that
-		if err := os.Remove(igor.AuthTokenKeypath); err != nil {
-			return err
-		}
-	}
-	return nil
+// ensure storage exists or create a new asymmetric signing key pair
+func verifyJwtKeyPair() error {
+	return jwtkeys.Ensure(igor.AuthTokenKeypath, jwtPublicKeyPath())
 }
 
-func getJwtToken() ([]byte, error) {
-	return os.ReadFile(igor.AuthTokenKeypath)
+// delete the keypair during reset token
+func deleteJwtKeyPair() error {
+	return jwtkeys.Delete(igor.AuthTokenKeypath, jwtPublicKeyPath())
 }
 
-func generateSecret() ([]byte, error) {
-	// read 64 cryptographically secure pseudorandom numbers
-	// from rand.Reader and write them to a byte slice
-	c := 64
-	b := make([]byte, c)
-	_, err := rand.Read(b)
-	if err != nil {
-		fmt.Println("error:", err)
-		return nil, err
-	}
-	return b, nil
-}
-
-// handleResetToken allows admin to generate a new jwt secret key
-// will invalidate all existing authn jwt Tokens
+// handleResetToken allows admin to generate a new JWT signing key pair
+// and invalidates all existing authentication tokens.
 func handleResetToken(w http.ResponseWriter, r *http.Request) {
 	clog := hlog.FromRequest(r)
-	actionPrefix := "reset JWT secret"
+	actionPrefix := "reset JWT signing key pair"
 	rb := common.NewResponseBody()
 	var status int
 	var err error
 
-	// delete the secret file
-	err = deleteJwtSecret()
+	// delete the signing key pair
+	err = deleteJwtKeyPair()
 
 	if err == nil {
-		// generate a new secret
-		err = verifyJwtSecret()
+		// generate a new signing key pair
+		err = verifyJwtKeyPair()
 	}
 
 	if err != nil {
@@ -228,7 +201,7 @@ func handleResetToken(w http.ResponseWriter, r *http.Request) {
 		clog.Error().Msgf("%s error - %v", actionPrefix, err)
 	} else {
 		status = http.StatusOK
-		rb.Data["result"] = "token secret refreshed successfully"
+		rb.Data["result"] = "token signing key pair refreshed successfully"
 		clog.Info().Msgf("%s success", actionPrefix)
 	}
 
