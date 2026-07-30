@@ -374,7 +374,8 @@ func syncLdapUsers(conn *ldap.Conn) error {
 
 	// gather config elements
 	baseDN := igor.Auth.Ldap.BaseDN
-	gcConf := igor.Auth.Ldap.Sync
+	ldapConf := igor.Auth.Ldap
+	gcConf := ldapConf.Sync
 	groupSearchAttribute := []string{gcConf.UserListAttribute}
 
 	// build member_attributes if present
@@ -443,7 +444,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 
 	// register each new member
 	for _, member := range newIgorUsers {
-		userFilter := fmt.Sprintf("(uid=%s)", member)
+		userFilter := fmt.Sprintf(ldapConf.Filter, member)
 		userResult, srErr := conn.Search(&ldap.SearchRequest{
 			BaseDN:     baseDN,
 			Scope:      ldap.ScopeWholeSubtree,
