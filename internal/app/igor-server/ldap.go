@@ -100,7 +100,7 @@ func getLDAPConnection() (*ldap.Conn, error) {
 			ldapCert, rfErr := os.ReadFile(ldapConf.TLSConfig.Cert)
 			if rfErr != nil {
 				e := fmt.Sprintf("%s failed - failed to read added cert: %v", actionPrefix, rfErr)
-				return nil, fmt.Errorf(e)
+				return nil, fmt.Errorf("%v", e)
 			}
 			ok := rootCA.AppendCertsFromPEM(ldapCert)
 			if !ok {
@@ -406,7 +406,10 @@ func syncLdapUsers(conn *ldap.Conn) error {
 			logger.Debug().Msgf("%s - no entries returned for given group filter '%s'", actionPrefix, groupFilter)
 		}
 
-		userList.Add(result.Entries[0].GetEqualFoldAttributeValues(gcConf.UserListAttribute)...)
+		for _, entry := range result.Entries {
+			logger.Debug().Msgf("%v\n", entry)
+			userList.Add(entry.GetEqualFoldAttributeValues(gcConf.UserListAttribute)...)
+		}
 	}
 
 	if userList.Size() == 0 {
@@ -453,7 +456,7 @@ func syncLdapUsers(conn *ldap.Conn) error {
 			continue
 		}
 		if len(userResult.Entries) == 0 {
-			logger.Warn().Msgf("%s failed - no user '%s' found", actionPrefix, member)
+			logger.Warn().Msgf("%s failed - no user: %v : %v : %v found", actionPrefix, member, userFilter, memberAttributes)
 			continue
 		}
 
