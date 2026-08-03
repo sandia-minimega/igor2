@@ -1,22 +1,18 @@
 <template>
   <div>
-    <b-container fluid>
-      <b-row class="mt-3">
-        <b-col>
-          <user-reservations></user-reservations>
-        </b-col>
-      </b-row>
-      <b-row class="mt-3">
-        <b-col>
-          <profile-table></profile-table>
-        </b-col>
-      </b-row>
-      <b-row class="mt-3 mb-3">
-        <b-col>
-          <distro-table></distro-table>
-        </b-col>
-      </b-row>
-    </b-container>
+    <b-card no-body class="mt-3 mb-3">
+      <b-tabs card active-nav-item-class="fw-bold">
+        <b-tab active no-body title="My Reservations">
+          <user-reservations embedded></user-reservations>
+        </b-tab>
+        <b-tab no-body title="My Profiles">
+          <profile-table embedded></profile-table>
+        </b-tab>
+        <b-tab no-body title="My Distros">
+          <distro-table embedded></distro-table>
+        </b-tab>
+      </b-tabs>
+    </b-card>
   </div>
 </template>
 

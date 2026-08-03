@@ -7,36 +7,36 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <b-row class="mb-2">
-                    <b-col sm="4" class="text-sm-right"><b>Owner:</b></b-col>
+                    <b-col sm="4" class="text-sm-end"><b>Owner:</b></b-col>
                     <b-col>{{ showDistro.owner }}</b-col>
                   </b-row>
                   <b-row>
-                    <b-col sm="4" class="text-sm-right"
+                    <b-col sm="4" class="text-sm-end"
                       ><b>Description:</b></b-col
                     >
                     <b-col>{{ showDistro.description }}</b-col>
                   </b-row>
 
                   <b-row class="mb-2">
-                    <b-col sm="4" class="text-sm-right"
+                    <b-col sm="4" class="text-sm-end"
                       ><b>Image Type:</b></b-col
                     >
                     <b-col>{{ showDistro.imageType }}</b-col>
                   </b-row>
                   <b-row>
-                    <b-col sm="4" class="text-sm-right"
+                    <b-col sm="4" class="text-sm-end"
                       ><b>Kernel Args:</b></b-col
                     >
                     <b-col>{{ showDistro.kernelArgs }}</b-col>
@@ -56,15 +56,15 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <b-row>
@@ -125,7 +125,7 @@
                         <template v-slot:label>
                           Groups
                           <b-button
-                            class="align-center btn bg-transparent btn-outline-light text-dark buttonfocus"
+                            class="align-center btn bg-transparent btn-outline-light buttonfocus"
                             @click="removeGroups"
                           >
                             <b-icon
@@ -154,7 +154,7 @@
                         <template v-slot:label>
                           Add Groups
                           <b-button
-                            class="align-center btn bg-transparent btn-outline-light text-dark buttonfocus"
+                            class="align-center btn bg-transparent btn-outline-light buttonfocus"
                             @click="addGroups"
                           >
                             <b-icon
@@ -213,7 +213,7 @@
                 class="btn btn-danger"
               >
                 Delete
-                <b-icon icon="trash" class="ml-1"></b-icon>
+                <b-icon icon="trash" class="ms-1"></b-icon>
               </button>
               <button
                 type="button"
@@ -229,8 +229,12 @@
     </div>
     <!-- Distro Table -->
     <div>
-      <b-card no-body>
-        <b-tabs card active-nav-item-class="font-weight-bold">
+      <b-card no-body :class="{ 'border-0': embedded }">
+        <b-tabs
+          card
+          active-nav-item-class="fw-bold"
+          :nav-wrapper-class="embedded ? 'd-none' : null"
+        >
           <b-tab active no-body title="My Distros">
             <b-row>
               <b-col>
@@ -242,17 +246,17 @@
                   :current-page="currentPage"
                   :per-page="perPage"
                   responsive="sm"
-                  class="rtable pl-3 pr-3 pb-3"
+                  class="rtable ps-3 pe-3 pb-3"
                   show-empty
                 >
                   <template #empty="scope">
-                    <h6 class="font-italic">{{ scope.emptyText }}</h6>
+                    <h6 class="fst-italic">{{ scope.emptyText }}</h6>
                   </template>
                   <template #cell(show_details)="row">
                     <div v-show="userDistro(row.item.name)">
                       <!-- Edit Distro -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getEditId(row.item.name)"
                       >
                         <b-icon-pencil-fill
@@ -262,7 +266,7 @@
                       </b-button>
                       <!-- Delete Distro -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getDistroId(row.item.name)"
                       >
                         <b-icon-x-circle-fill
@@ -274,7 +278,7 @@
                     <!-- Show Distro Details -->
                     <div v-show="!userDistro(row.item.name)">
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getShowId(row.item.name)"
                       >
                         <b-icon-arrows-fullscreen
@@ -327,12 +331,13 @@
 
 <script>
 import axios from "axios";
-import Vue from "vue";
-import SmartTable from "vuejs-smart-table";
-Vue.use(SmartTable);
 export default {
   name: "DistroTable",
   props: {
+    embedded: {
+      type: Boolean,
+      default: false,
+    },
     msg: {
       type: String,
       value: "",

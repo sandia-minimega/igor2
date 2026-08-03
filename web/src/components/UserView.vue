@@ -14,7 +14,7 @@
             </b-col>
           </b-row>
         </b-col>
-        <b-col class="mt-4  mr-2 p-1 align-top" rowspan="2">
+        <b-col class="mt-4  me-2 p-1 align-top" rowspan="2">
           <tab-menu></tab-menu>
         </b-col>
       </b-row>

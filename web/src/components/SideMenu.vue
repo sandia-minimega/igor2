@@ -4,11 +4,13 @@
       <b-row>
         <b-col>
           <b-button
-            v-b-toggle.sidebar-1
-            class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+            :aria-expanded="sidebarVisible"
+            aria-controls="sidebar-1"
+            class="btn bg-transparent btn-outline-light buttonfocus"
+            @click="sidebarVisible = true"
           >
             <b-icon
-              icon="text-left"
+              icon="text-start"
               aria-hidden="true"
               variant="dark"
               scale="1.5"
@@ -18,22 +20,31 @@
       </b-row>
     </b-container>
 
-    <b-sidebar id="sidebar-1" shadow v-b-tooltip.hover title="">
+    <b-offcanvas
+      id="sidebar-1"
+      v-model="sidebarVisible"
+      placement="start"
+      shadow
+      backdrop
+      title=""
+    >
       <div class="px-2 py-2">
         <div class="sidebar p-1">
-          <a class="active" href="#home">Home</a>
-          <a href="#contact">Contact</a>
-          <a href="#about">About</a>
+          <a class="active" href="#home" @click="sidebarVisible = false">Home</a>
+          <a href="#contact" @click="sidebarVisible = false">Contact</a>
+          <a href="#about" @click="sidebarVisible = false">About</a>
         </div>
       </div>
-    </b-sidebar>
+    </b-offcanvas>
   </div>
 </template>
 
 <script>
 export default {
   data() {
-    return {};
+    return {
+      sidebarVisible: false,
+    };
   },
   name: "SideMenu",
 };

@@ -7,16 +7,16 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold text-dark"
+              active-tab-class=""
+              title-item-class=""
             >
               <!-- Profile Tab -->
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <b-row>
@@ -77,7 +77,7 @@
               <b-tab
                 no-body
                 title="Password"
-                title-link-class="text-dark"
+                title-link-class=""
                 v-if="!ldapEnabled"
               >
                 <div class="container">
@@ -144,13 +144,13 @@
     <!-- Top Panel -->
     <b-container fluid="true">
       <b-row>
-        <b-col class="ml-2 col-sm-auto">
-          <h2 class="font-weight-bold title-brand">Igor 2.3</h2>
+        <b-col class="ms-2 col-sm-auto">
+          <h2 class="fw-bold title-brand">Igor 2.3</h2>
         </b-col>
         <b-col class="d-flex align-items-center justify-content-center">
           <div v-if="isLoggedIn" class="w-100">
             <h5
-                class="font-weight-bold text-center mb-0"
+                class="fw-bold text-center mb-0"
                 id="motdMsg"
                 :class="{
         'text-primary': true,
@@ -161,10 +161,10 @@
             </h5>
           </div>
         </b-col>
-        <b-col class="mr-3 col-sm-auto" align-v="bottom">
+        <b-col class="me-3 col-sm-auto" align-v="bottom">
           <b-navbar class="justify-content-end">
             <b-navbar-nav class="align-items-center">
-              <b-nav-text class="mr-3">
+              <b-nav-text class="me-3">
                 <b-form-checkbox
                   v-model="isDarkMode"
                   switch
@@ -177,7 +177,7 @@
                     :variant="isDarkMode ? 'light' : 'warning'"
                     aria-hidden="true"
                   ></b-icon>
-                  <span class="sr-only">
+                  <span class="visually-hidden">
                     {{ isDarkMode ? "Disable dark mode" : "Enable dark mode" }}
                   </span>
                 </b-form-checkbox>
@@ -185,12 +185,12 @@
               <b-nav-item-dropdown v-if="isLoggedIn" right>
                 <!-- Using 'button-content' slot -->
                 <template #button-content>
-                  <span class="text-dark">
+                  <span class="">
                     <b-icon-person-circle
                       aria-hidden="true"
                       variant="warning"
                       scale="1.5"
-                      class="mr-2"
+                      class="me-2"
                     >
                     </b-icon-person-circle>
                     {{ username }}
@@ -272,11 +272,13 @@ export default {
   methods: {
     initializeTheme() {
       this.isDarkMode = localStorage.getItem(THEME_STORAGE_KEY) === "dark";
-      this.applyThemeClass();
     },
     applyThemeClass() {
-      document.documentElement.classList.toggle("theme-dark", this.isDarkMode);
-      document.body.classList.toggle("theme-dark", this.isDarkMode);
+      //document.documentElement.classList.toggle("theme-dark", this.isDarkMode);
+      //document.body.classList.toggle("theme-dark", this.isDarkMode);
+      const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-bs-theme', newTheme);
     },
     applyThemePreference() {
       localStorage.setItem(THEME_STORAGE_KEY, this.isDarkMode ? "dark" : "light");
@@ -334,10 +336,10 @@ export default {
       };
       // Sanity check
       if (this.editUser.name === this.name) {
-        this.$delete(editData, "fullName");
+        delete editData.fullName;
       }
       if (this.editUser.email === this.email) {
-        this.$delete(editData, "email");
+        delete editData.email;
       }
 
       axios

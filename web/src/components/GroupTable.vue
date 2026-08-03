@@ -7,15 +7,15 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Members"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <b-list-group>
@@ -40,15 +40,15 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <b-row>
@@ -113,7 +113,7 @@
                         <template v-slot:label>
                           Members
                           <b-button
-                            class="align-center btn bg-transparent btn-outline-light text-dark buttonfocus"
+                            class="align-center btn bg-transparent btn-outline-light buttonfocus"
                             @click="removeMembers"
                           >
                             <b-icon
@@ -142,7 +142,7 @@
                         <template v-slot:label>
                           Add Members
                           <b-button
-                            class="align-center btn bg-transparent btn-outline-light text-dark buttonfocus"
+                            class="align-center btn bg-transparent btn-outline-light buttonfocus"
                             @click="addMembers"
                           >
                             <b-icon
@@ -201,7 +201,7 @@
                 class="btn btn-danger"
               >
                 Delete
-                <b-icon icon="trash" class="ml-1" scale="0.7"></b-icon>
+                <b-icon icon="trash" class="ms-1" scale="0.7"></b-icon>
               </button>
               <button
                 type="button"
@@ -218,7 +218,7 @@
     <!-- Group Table -->
     <div>
       <b-card no-body>
-        <b-tabs card active-nav-item-class="font-weight-bold">
+        <b-tabs card active-nav-item-class="fw-bold">
           <b-tab active no-body title="My Groups">
             <b-row>
               <b-col>
@@ -230,17 +230,17 @@
                   :current-page="currentPage"
                   :per-page="perPage"
                   responsive="sm"
-                  class="rtable pl-3 pr-3 pb-3"
+                  class="rtable ps-3 pe-3 pb-3"
                   show-empty
                 >
                   <template #empty="scope">
-                    <h6 class="font-italic">{{ scope.emptyText }}</h6>
+                    <h6 class="fst-italic">{{ scope.emptyText }}</h6>
                   </template>
                   <template #cell(show_details)="row">
                     <div v-show="userGroup(row.item.name)">
                       <!-- Show Details -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getShowId(row.item.name)"
                       >
                         <b-icon-arrows-fullscreen
@@ -250,7 +250,7 @@
                       </b-button>
                       <!-- Edit Group -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getEditId(row.item.name)"
                       >
                         <b-icon-pencil-fill
@@ -260,7 +260,7 @@
                       </b-button>
                       <!-- Delete Group -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getGroupdId(row.item.name)"
                       >
                         <b-icon-x-circle-fill
@@ -272,7 +272,7 @@
                     <!-- Show Members -->
                     <div v-show="!userGroup(row.item.name)">
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getShowId(row.item.name)"
                       >
                         <b-icon-arrows-fullscreen
@@ -654,19 +654,19 @@ export default {
 
       // Sanity check
       if (this.editGroup.name === this.name) {
-        this.$delete(editData, "name");
+        delete editData.name;
       }
       if (this.editGroup.owner === this.owner) {
-        this.$delete(editData, "owner");
+        delete editData.owner;
       }
       if (this.editGroup.description === this.description) {
-        this.$delete(editData, "description");
+        delete editData.description;
       }
       if (this.newAdded.length === 0) {
-        this.$delete(editData, "add");
+        delete editData.add;
       }
       if (this.newRemoved.length === 0) {
-        this.$delete(editData, "remove");
+        delete editData.remove;
       }
 
       axios

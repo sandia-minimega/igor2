@@ -7,15 +7,15 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <div class="row col-sm-6">
@@ -85,7 +85,7 @@
                 class="btn btn-danger"
               >
                 Delete
-                <b-icon icon="trash" scale="0.7" class="ml-1"></b-icon>
+                <b-icon icon="trash" scale="0.7" class="ms-1"></b-icon>
               </button>
               <button
                 type="button"
@@ -100,8 +100,12 @@
       </b-modal>
     </div>
     <!-- Profile Table -->
-    <b-card no-body>
-      <b-tabs card active-nav-item-class="font-weight-bold">
+    <b-card no-body :class="{ 'border-0': embedded }">
+      <b-tabs
+        card
+        active-nav-item-class="fw-bold"
+        :nav-wrapper-class="embedded ? 'd-none' : null"
+      >
         <b-tab active no-body title=" My Profiles">
           <b-row>
             <b-col>
@@ -113,17 +117,17 @@
                 :current-page="currentPage"
                 :per-page="perPage"
                 responsive="sm"
-                class="rtable pl-3 pr-3 pb-3"
+                class="rtable ps-3 pe-3 pb-3"
                 show-empty
               >
                 <template #empty="scope">
-                  <h6 class="font-italic">{{ scope.emptyText }}</h6>
+                  <h6 class="fst-italic">{{ scope.emptyText }}</h6>
                 </template>
                 <template #cell(show_details)="row">
                   <div v-show="userProfile(row.item.name)">
                     <!-- Edit Profile -->
                     <b-button
-                      class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                      class="btn bg-transparent btn-outline-light buttonfocus"
                       v-on:click="getEditId(row.item.name)"
                     >
                       <b-icon-pencil-fill
@@ -133,7 +137,7 @@
                     </b-button>
                     <!-- Delete Profile -->
                     <b-button
-                      class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                      class="btn bg-transparent btn-outline-light buttonfocus"
                       v-on:click="getProfileId(row.item.name)"
                     >
                       <b-icon-x-circle-fill
@@ -184,13 +188,14 @@
 </template>
 
 <script>
-import Vue from "vue";
-import SmartTable from "vuejs-smart-table";
-Vue.use(SmartTable);
 import axios from "axios";
 export default {
   name: "ProfileTable",
   props: {
+    embedded: {
+      type: Boolean,
+      default: false,
+    },
     msg: {
       type: String,
       value: "",

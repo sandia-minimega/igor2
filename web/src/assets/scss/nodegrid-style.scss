@@ -1,10 +1,25 @@
+
 /* General Style */
+
+$igor-node-red: red;
+$igor-node-violet: violet;
+$igor-node-green: green;
+$igor-node-lightgreen: lightgreen;
+$igor-node-black: black;
+$igor-node-white: white;
+$igor-node-orange:orange;
+$igor-node-blue:cornflowerblue;
+$igor-node-blocked:rgb(160, 137, 4);
+$igor-node-gray:gray;
+$igor-node-dimgray: dimgray;
+$igor-node-purple:rebeccapurple;
+
 
 /* Links */
 ul,
 li {
   list-style-type: none;
-  color: grey;
+  color: gray;
 }
 
 a {
@@ -17,28 +32,18 @@ button {
   cursor: pointer;
 }
 
-.title-brand {
-  color: orange;
+[data-bvtoggle="nodeLegend"] {
+  color: orange !important;
   font-weight: bold;
 }
 
 /* Style for Node Grid */
 .node-grid {
-  background-color: mintcream;
+  background-color: var(--bs-body-bg);
   border-radius: 4px;
-  border-color: mintcream;
+  border-color:   var(--bs-border-color);
   padding: 20px;
   transition: all 0.2s;
-}
-
-html.theme-dark .node-grid {
-  background-color: #1c2532;
-  border: 1px solid #3c4759;
-  color: #e5e9f0;
-}
-
-html.theme-dark .node-grid .btn.buttonfocus {
-  color: #e5e9f0;
 }
 
 .card-list {
@@ -59,14 +64,12 @@ html.theme-dark .node-grid .btn.buttonfocus {
   container-type: inline-size;  /* enables cqi sizing for the label */
 }
 
-html.theme-dark .card-list > .list-group-item {
-  border-color: #3c4759;
-}
+
 
 /* If you wrapped the hostname in <span class="node-name"> */
 .card-list > .list-group-item .node-name {
-  font-size: clamp(0.95rem, 14cqi, 1.25rem);
-  line-height: 1;
+  font-size: clamp(0.80rem, 14cqi, 1.25rem);
+  line-height: 1em;
   padding: 0 0.35rem;           /* keeps visible background margin */
   white-space: nowrap;
   overflow: hidden;
@@ -74,10 +77,10 @@ html.theme-dark .card-list > .list-group-item {
 }
 
 .card-item {
-  background-color: black;
-  color: white;
+  background-color: $igor-node-black;
+  color: $igor-node-white;
   font-weight: bold;
- border-radius: 4px;
+  border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
@@ -88,436 +91,299 @@ html.theme-dark .card-available-unknown {
   border: 1px solid #5a657a;
 }
 .card-item:hover {
-  background-color: grey;
-  color: white;
+  background-color: gray;
+  color: $igor-node-white;
   font-weight: bold;
 }
 
 .card-reserved-up {
-  background-color: green;
-  color: white;
+  background-color: $igor-node-green;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-grp-reserved-up:hover {
-  background-color: green;
-  color: white;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-reserved-on {
-  background-color: green;
-  color: cornflowerblue;
+  background-color: $igor-node-green;
+  color: $igor-node-blue;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-grp-reserved-on:hover {
-  background-color: green;
-  color: cornflowerblue;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-reserved-ping {
-  background-color: green;
-  color: orange;
+  background-color: $igor-node-green;
+  color: $igor-node-orange;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-grp-reserved-ping:hover {
-  background-color: green;
-  color: orange;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-reserved-off {
-  background-color: green;
-  color: red;
+  background-color: $igor-node-green;
+ color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-reserved-off:hover {
-  background-color: green;
-  color: red;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-reserved-unknown {
-  background-color: green;
-  color: dimgray;
+  background-color: $igor-node-green;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-reserved-unknown:hover {
-  background-color: green;
-  color: dimgray;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-grp-reserved-up {
   background-image: repeating-linear-gradient(
-    45deg,
-    green,
-    green 10px,
-    darkgreen 10px,
-    darkgreen 20px
+                  45deg,
+                  green,
+                  green 10px,
+                  darkgreen 10px,
+                  darkgreen 20px
   );
-  background-color: green;
-  color: white;
+  background-color: $igor-node-green;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-grp-reserved-up:hover {
-  background-color: green;
-  color: white;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-grp-reserved-off {
   background-image: repeating-linear-gradient(
-    45deg,
-    green,
-    green 10px,
-    darkgreen 10px,
-    darkgreen 20px
+                  45deg,
+                  green,
+                  green 10px,
+                  darkgreen 10px,
+                  darkgreen 20px
   );
-  background-color: green;
-  color: red;
+  background-color: $igor-node-green;
+  color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-grp-reserved-off:hover {
-  background-color: green;
-  color: red;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-grp-reserved-unknown {
   background-image: repeating-linear-gradient(
-    45deg,
-    green,
-    green 10px,
-    darkgreen 10px,
-    darkgreen 20px
+                  45deg,
+                  green,
+                  green 10px,
+                  darkgreen 10px,
+                  darkgreen 20px
   );
-  background-color: green;
-  color: dimgray;
+  background-color: $igor-node-green;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-grp-reserved-unknown:hover {
-  background-color: green;
-  color: dimgray;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-other-reserved-up {
   background-color: rebeccapurple;
-  color: white;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-other-reserved-up:hover {
-  background-color: rebeccapurple;
-  color: white;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-other-reserved-on {
   background-color: rebeccapurple;
-  color: cornflowerblue;
+  color: $igor-node-blue;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-other-reserved-on:hover {
-  background-color: rebeccapurple;
-  color: cornflowerblue;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-other-reserved-ping {
   background-color: rebeccapurple;
-  color: orange;
+  color: $igor-node-orange;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-other-reserved-ping:hover {
-  background-color: rebeccapurple;
-  color: orange;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-other-reserved-off {
   background-color: rebeccapurple;
-  color: red;
+ color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-other-reserved-off:hover {
-  background-color: rebeccapurple;
-  color: red;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-other-reserved-unknown {
   background-color: rebeccapurple;
-  color: dimgray;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
   pointer-events: none;
 }
-.card-other-reserved-unknown:hover {
-  background-color: rebeccapurple;
-  color: dimgray;
-  font-weight: bold;
-  pointer-events: none;
-}
 
 .card-available-off {
-  background-color: black;
-  color: red;
+  background-color: $igor-node-black;
+  color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
 .card-available-off:hover {
-  background-color: black;
-  color: red;
+  background-color: tint-color($igor-node-black,50%);
+  color: tint-color($igor-node-red,50%) !important;
   font-weight: bold;
 }
 
 .card-available-unknown {
-  background-color: black;
-  color: dimgray;
+  background-color: $igor-node-black;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
 .card-available-unknown:hover {
-  background-color: grey !important;
-  color: orange;
+  background-color: tint-color($igor-node-gray,50%);
+  color: tint-color($igor-node-orange,50%) !important;
   font-weight: bold;
 }
+
 .card-available-unknown:active {
-  background-color: grey !important;
-  color: orange;
+  background-color: $igor-node-gray !important;
+  color: $igor-node-orange;
   font-weight: bold;
 }
 
 .card-blocked-up {
-  background-color: rgb(160, 137, 4);
-  color: white;
+  background-color: $igor-node-blocked;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-blocked-up:hover {
-  background-color: rgb(160, 137, 4);
-  color: white;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-blocked-on {
-  background-color: rgb(160, 137, 4);
-  color: cornflowerblue;
+  background-color: $igor-node-blocked;
+  color: $igor-node-blue;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-blocked-on:hover {
-  background-color: rgb(160, 137, 4);
-  color: cornflowerblue;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-blocked-ping {
-  background-color: rgb(160, 137, 4);
-  color: orange;
+  background-color: $igor-node-blocked;
+  color: $igor-node-orange;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-blocked-ping:hover {
-  background-color: rgb(160, 137, 4);
-  color: orange;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-blocked-off {
-  background-color: rgb(160, 137, 4);
-  color: red;
+  background-color: $igor-node-blocked;
+  color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-blocked-off:hover {
-  background-color: rgb(160, 137, 4);
-  color: red;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-blocked-unknown {
-  background-color: rgb(160, 137, 4);
-  color: dimgray;
+  background-color: $igor-node-blocked;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-blocked-unknown:hover {
-  background-color: rgb(160, 137, 4);
-  color: dimgray;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-restricted-up {
-  background-color: violet;
-  color: white;
+  background-color: $igor-node-violet;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-restricted-up:hover {
-  background-color: violet;
-  color: white;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-restricted-on {
-  background-color: violet;
-  color: cornflowerblue;
+  background-color: $igor-node-violet;
+  color: $igor-node-blue;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-restricted-on:hover {
-  background-color: violet;
-  color: cornflowerblue;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-restricted-ping {
-  background-color: violet;
-  color: orange;
+  background-color: $igor-node-violet;
+  color: $igor-node-orange;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-restricted-ping:hover {
-  background-color: violet;
-  color: orange;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-restricted-off {
-  background-color: violet;
-  color: red;
+  background-color: $igor-node-violet;
+  color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-restricted-off:hover {
-  background-color: violet;
-  color: red;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-restricted-unknown {
-  background-color: violet;
-  color: dimgray;
+  background-color: $igor-node-violet;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
   pointer-events: none;
 }
-.card-restricted-unknown:hover {
-  background-color: violet;
-  color: dimgray;
-  font-weight: bold;
-  pointer-events: none;
-}
 
 .card-insterr-displayonly {
-  background-color: red;
-  color: white;
+  background-color: $igor-node-red;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
@@ -526,88 +392,70 @@ html.theme-dark .card-available-unknown {
 }
 
 .card-insterr-on {
-  background-color: red;
-  color: cornflowerblue;
+  background-color: $igor-node-red;
+  color: $igor-node-blue;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-insterr-on:hover {
-  background-color: red;
-  color: cornflowerblue;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-insterr-off {
-  background-color: red;
+  background-color: $igor-node-red;
   color: black;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
-  pointer-events: none;
-}
-.card-insterr-off:hover {
-  background-color: red;
-  color: black;
-  font-weight: bold;
   pointer-events: none;
 }
 
 .card-insterr-ping {
-  background-color: red;
-  color: orange;
+  background-color: $igor-node-red;
+  color: $igor-node-orange;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
   pointer-events: none;
 }
-.card-insterr-ping:hover {
-  background-color: red;
-  color: orange;
-  font-weight: bold;
-  pointer-events: none;
-}
 
 .card-selected-up {
-  background-color: lightgreen;
-  color: white;
+  background-color: $igor-node-lightgreen;
+  color: $igor-node-white;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
 .card-selected-on {
-  background-color: lightgreen;
-  color: cornflowerblue;
+  background-color: $igor-node-lightgreen;
+  color: $igor-node-blue;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
 .card-selected-ping {
-  background-color: lightgreen;
-  color: orange;
+  background-color: $igor-node-lightgreen;
+  color: $igor-node-orange;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
 .card-selected-off {
-  background-color: lightgreen;
-  color: red;
+  background-color: $igor-node-lightgreen;
+  color: $igor-node-red;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;
   padding-right: 3px;
 }
 .card-selected-unknown {
-  background-color: lightgreen;
-  color: dimgray;
+  background-color: $igor-node-lightgreen;
+  color: $igor-node-dimgray;
   font-weight: bold;
   border-radius: 4px;
   padding-left: 3px;

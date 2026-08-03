@@ -1,0 +1,24 @@
+// Compatibility for BootstrapVue 2 icon props rendered by bootstrap-icons-vue.
+// Keep application-specific overrides here, after BootstrapVueNext's CSS.
+
+$icon-variants: primary, secondary, success, danger, warning, info, light, dark;
+
+@each $variant in $icon-variants {
+  svg[variant="#{$variant}"] {
+    color: var(--bs-#{$variant}) !important;
+  }
+}
+
+svg[variant="white"] {
+  color: #fff !important;
+}
+
+$icon-scales: 0.5, 0.6, 0.7, 0.8, 0.9, 1.2, 1.5, 2;
+
+@each $scale in $icon-scales {
+  svg[scale="#{$scale}"] {
+    transform: scale($scale);
+    transform-origin: center;
+  }
+}
+

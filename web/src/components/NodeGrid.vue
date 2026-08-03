@@ -4,15 +4,15 @@
       <b-col>
         <b-button
           v-b-toggle.nodeLegend
-          class="text-left buttonfocus font-weight-bold text-uppercase"
+          class="text-start buttonfocus fw-bold text-uppercase"
           variant="outline-transparent"
         >
-          <b-icon icon="chevron-expand" class="mr-2"></b-icon>
+          <b-icon icon="chevron-expand" class="me-2"></b-icon>
           {{ clusterName }}
         </b-button>
       </b-col>
       <b-col>
-        <p class="text-right">
+        <p class="text-end">
           {{ serverTime }}
         </p>
       </b-col>
@@ -22,7 +22,7 @@
         <b-collapse id="nodeLegend" class="mt-2 w-100">
           <div class="legend">
             <div class="legend-section">
-              <div class="legend-title font-weight-bold">
+              <div class="legend-title fw-bold">
                 RESERVATION / AVAILABILITY (background)
               </div>
               <b-row class="mt-2">
@@ -38,8 +38,8 @@
                     <div :class="['legend-swatch', item.swatchClass]">
                       {{ item.swatchText }}
                     </div>
-                    <div class="ml-2">
-                      <div class="font-weight-bold">{{ item.label }}</div>
+                    <div class="ms-2">
+                      <div class="fw-bold">{{ item.label }}</div>
                       <div class="legend-desc">{{ item.desc }}</div>
                     </div>
                   </div>
@@ -48,7 +48,7 @@
             </div>
 
             <div class="legend-section mt-3">
-              <div class="legend-title font-weight-bold">
+              <div class="legend-title fw-bold">
                 POWER + CONNECTIVITY (foreground)
               </div>
               <b-row class="mt-2">
@@ -64,20 +64,20 @@
                     <div class="legend-swatch card-item" :style="{ color: item.color }">
                       <b-icon :icon="item.icon" aria-hidden="true"></b-icon>
                     </div>
-                    <div class="ml-2">
-                      <div class="font-weight-bold">{{ item.label }}</div>
+                    <div class="ms-2">
+                      <div class="fw-bold">{{ item.label }}</div>
                       <div class="legend-desc">{{ item.desc }}</div>
                     </div>
                   </div>
                 </b-col>
               </b-row>
               <div class="legend-note mt-2">
-                Install error nodes will never appear as <span class="font-weight-bold">Up</span>.
+                Install error nodes will never appear as <span class="fw-bold">Up</span>.
               </div>
             </div>
 
             <div class="legend-section mt-3">
-              <div class="legend-title text-uppercase font-weight-bold">
+              <div class="legend-title text-uppercase fw-bold">
                 Examples
               </div>
               <b-row class="mt-2">
@@ -93,8 +93,8 @@
                     <div :class="['legend-swatch', ex.className]">
                       <b-icon :icon="ex.icon" aria-hidden="true"></b-icon>
                     </div>
-                    <div class="ml-2">
-                      <div class="font-weight-bold">{{ ex.label }}</div>
+                    <div class="ms-2">
+                      <div class="fw-bold">{{ ex.label }}</div>
                       <div class="legend-desc">{{ ex.desc }}</div>
                     </div>
                   </div>
@@ -124,7 +124,7 @@
           >
             <span class="node-name">{{ host }}</span>
             <!-- <div class="tooltip-wrap">
-              <div class="tooltip-content p-3 mb-2 bg-gradient-light text-dark">
+              <div class="tooltip-content p-3 mb-2 bg-gradient-light">
                 <p>
                   {{ host.cluster }}
                   {{ host.state }}
@@ -595,7 +595,7 @@ export default {
 }
 
 html.theme-dark .legend-title,
-html.theme-dark .legend-section .font-weight-bold {
+html.theme-dark .legend-section .fw-bold {
   color: #f1f5fb;
 }
 

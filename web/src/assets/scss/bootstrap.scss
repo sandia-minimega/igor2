@@ -1,0 +1,14 @@
+// Compile Bootstrap from its npm Sass source instead of importing a
+// prebuilt CSS bundle. Project variable overrides stay outside
+// node_modules so Bootstrap can be upgraded without editing vendor files.
+
+@import "functions";
+@import "_variables";
+@import "_variables-dark";
+
+// Bootstrap variables can only be overridden after functions are available.
+@import "bootstrap/scss/functions";
+
+// Compile Bootstrap after the project overrides have been declared.
+@import "bootstrap/scss/bootstrap";
+@import "nodegrid-style";
