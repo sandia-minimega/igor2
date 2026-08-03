@@ -22,3 +22,17 @@ $icon-scales: 0.5, 0.6, 0.7, 0.8, 0.9, 1.2, 1.5, 2;
   }
 }
 
+
+// Outline every node belonging to the reservation selected from the grid.
+// The outline preserves each node's existing status colors.
+.card-list > .list-group-item.node-reservation-member-highlight {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 0.2rem rgba(var(--bs-warning-rgb), 0.9);
+}
+
+tr.node-reservation-highlight > * {
+  --bs-table-bg:   var(--bs-warning) !important;
+  color: var(--bs-warning-bg-subtle) !important;
+}
+

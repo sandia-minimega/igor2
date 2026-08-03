@@ -54,6 +54,7 @@
                 bordered
                 :items="rows"
                 :fields="fields"
+                :tbody-tr-class="reservationRowClass"
                 responsive="sm"
                 :current-page="currentPage"
                 :per-page="perPage"
@@ -138,6 +139,10 @@ export default {
       type: String,
       value: "",
     },
+    focusedNode: {
+      type: String,
+      default: null,
+    },
   },
   data() {
     return {
@@ -197,6 +202,43 @@ export default {
     };
   },
   methods: {
+    reservationContainsNode(reservation) {
+      if (!reservation || !this.focusedNode) {
+        return false;
+      }
+
+      if (Array.isArray(reservation.hosts)) {
+        return reservation.hosts.includes(this.focusedNode);
+      }
+
+      if (typeof reservation.hosts === "string") {
+        return reservation.hosts
+          .split(",")
+          .map((host) => host.trim())
+          .includes(this.focusedNode);
+      }
+
+      return false;
+    },
+    reservationRowClass(item, type) {
+      return type === "row" && this.reservationContainsNode(item)
+        ? "table-warning node-reservation-highlight"
+        : "";
+    },
+    showFocusedReservation() {
+      if (!this.focusedNode || this.filter) {
+        return;
+      }
+
+      const rowIndex = this.rows.findIndex((reservation) =>
+        this.reservationContainsNode(reservation)
+      );
+      const pageSize = Number(this.perPage);
+
+      if (rowIndex >= 0 && Number.isFinite(pageSize) && pageSize > 0) {
+        this.currentPage = Math.floor(rowIndex / pageSize) + 1;
+      }
+    },
     onFiltered(filteredItems) {
       // Trigger pagination to update the number of buttons/pages due to filtering
       this.totalRows = filteredItems.length;
@@ -227,6 +269,18 @@ export default {
     },
     clearFilter() {
       this.searchText = "";
+    },
+  },
+
+  watch: {
+    focusedNode() {
+      this.showFocusedReservation();
+    },
+    perPage() {
+      this.showFocusedReservation();
+    },
+    rows() {
+      this.showFocusedReservation();
     },
   },
 

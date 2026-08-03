@@ -114,7 +114,12 @@
             button
             v-for="(host, index) in this.hostNames"
             :key="index"
-            v-bind:class="hostStatus(host)"
+            :class=" [
+              hostStatus(host),
+              {
+                'node-reservation-member-highlight': highlightedNodes.includes(host),
+              },
+            ]"
             v-on:click.shift="hostClick(index)"   
             v-on:click="nodeClickedListener(index)" 
             v-on:click.ctrl="nodeCtrlClickedListener(index)"
@@ -141,6 +146,13 @@
 <script>
 export default {
   name: "NodeGrid",
+  emits: ["node-focused"],
+  props: {
+    highlightedNodes: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       shiftStart: null,
@@ -294,6 +306,7 @@ export default {
 
     nodeClickedListener(clickedNode) {
       this.lastClickedNode = clickedNode;
+      this.$emit("node-focused", this.hostNames[clickedNode] || null);
     },
 
     hostClick(clickedNode) {
