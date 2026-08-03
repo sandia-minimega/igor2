@@ -338,73 +338,73 @@ export default {
     hostStatus(host) {
 
       // 1) Highest priority: blocked (maintenance)
-      if (this.hostsBlockedPow.includes(host)) return "card-blocked-up";
-      if (this.hostsBlockedPing.includes(host)) return "card-blocked-ping";
-      if (this.hostsBlockedOn.includes(host)) return "card-blocked-on";
-      if (this.hostsBlockedDown.includes(host)) return "card-blocked-off";
-      if (this.hostsBlockedUnknown.includes(host)) return "card-blocked-unknown";
+      if (this.hostsBlockedPow.includes(host)) return "card-item card-blocked card-up";
+      if (this.hostsBlockedPing.includes(host)) return "card-item card-blocked card-ping";
+      if (this.hostsBlockedOn.includes(host)) return "card-item card-blocked card-on";
+      if (this.hostsBlockedDown.includes(host)) return "card-item card-blocked card-off";
+      if (this.hostsBlockedUnknown.includes(host)) return "card-item card-blocked card-unknown";
 
       // 2) Next: install error
-      if (this.hostsInstErrPow.includes(host)) return "card-insterr-up";
-      if (this.hostsInstErrPing.includes(host)) return "card-insterr-ping";
-      if (this.hostsInstErrOn.includes(host)) return "card-insterr-on";
-      if (this.hostsInstErrDown.includes(host)) return "card-insterr-off";
-      if (this.hostsInstErrUnknown.includes(host)) return "card-insterr-unknown";
+      if (this.hostsInstErrPow.includes(host)) return "card-item card-insterr card-up";
+      if (this.hostsInstErrPing.includes(host)) return "card-item card-insterr card-ping";
+      if (this.hostsInstErrOn.includes(host)) return "card-item card-insterr card-on";
+      if (this.hostsInstErrDown.includes(host)) return "card-item card-insterr card-off";
+      if (this.hostsInstErrUnknown.includes(host)) return "card-item card-insterr card-unknown";
 
       // 3) Next: restricted
-      if (this.hostsRestrictedPow.includes(host)) return "card-restricted-up";
-      if (this.hostsRestrictedPing.includes(host)) return "card-restricted-ping";
-      if (this.hostsRestrictedOn.includes(host)) return "card-restricted-on";
-      if (this.hostsRestrictedDown.includes(host)) return "card-restricted-off";
-      if (this.hostsRestrictedUnknown.includes(host)) return "card-restricted-unknown";
+      if (this.hostsRestrictedPow.includes(host)) return "card-item card-restricted card-up";
+      if (this.hostsRestrictedPing.includes(host)) return "card-item card-restricted card-ping";
+      if (this.hostsRestrictedOn.includes(host)) return "card-item card-restricted card-on";
+      if (this.hostsRestrictedDown.includes(host)) return "card-item card-restricted card-off";
+      if (this.hostsRestrictedUnknown.includes(host)) return "card-item card-restricted card-unknown";
 
       // 4) Reserved buckets (your user / group / other)
-      if (this.hostsResvUp.includes(host)) return "card-reserved-up";
-      if (this.hostsResvPing.includes(host)) return "card-reserved-ping";
-      if (this.hostsResvOn.includes(host)) return "card-reserved-on";
-      if (this.hostsResvDown.includes(host)) return "card-reserved-off";
-      if (this.hostsResvUnknown.includes(host)) return "card-reserved-unknown";
+      if (this.hostsResvUp.includes(host)) return "card-item card-reserved card-up";
+      if (this.hostsResvPing.includes(host)) return "card-item card-reserved card-ping";
+      if (this.hostsResvOn.includes(host)) return "card-item card-reserved card-on";
+      if (this.hostsResvDown.includes(host)) return "card-item card-reserved card-off";
+      if (this.hostsResvUnknown.includes(host)) return "card-item card-reserved card-unknown";
 
-      if (this.hostsGrpResvPow.includes(host)) return "card-grp-reserved-up";
-      if (this.hostsGrpResvPing.includes(host)) return "card-grp-reserved-ping";
-      if (this.hostsGrpResvOn.includes(host)) return "card-grp-reserved-on";
-      if (this.hostsGrpResvDown.includes(host)) return "card-grp-reserved-off";
-      if (this.hostsGrpResvUnknown.includes(host)) return "card-grp-reserved-unknown";
+      if (this.hostsGrpResvPow.includes(host)) return "card-item card-grp-reserved card-up";
+      if (this.hostsGrpResvPing.includes(host)) return "card-item card-grp-reserved card-ping";
+      if (this.hostsGrpResvOn.includes(host)) return "card-item card-grp-reserved card-on";
+      if (this.hostsGrpResvDown.includes(host)) return "card-item card-grp-reserved card-off";
+      if (this.hostsGrpResvUnknown.includes(host)) return "card-item card-grp-reserved card-unknown";
 
-      if (this.hostsOtherResvPow.includes(host)) return "card-other-reserved-up";
-      if (this.hostsOtherResvPing.includes(host)) return "card-other-reserved-ping";
-      if (this.hostsOtherResvOn.includes(host)) return "card-other-reserved-on";
-      if (this.hostsOtherResvDown.includes(host)) return "card-other-reserved-off";
-      if (this.hostsOtherResvUnknown.includes(host)) return "card-other-reserved-unknown";
+      if (this.hostsOtherResvPow.includes(host)) return "card-item card-other-reserved card-up";
+      if (this.hostsOtherResvPing.includes(host)) return "card-item card-other-reserved card-ping";
+      if (this.hostsOtherResvOn.includes(host)) return "card-item card-other-reserved card-on";
+      if (this.hostsOtherResvDown.includes(host)) return "card-item card-other-reserved card-off";
+      if (this.hostsOtherResvUnknown.includes(host)) return "card-item card-other-reserved card-unknown";
 
 
       if (this.hostsAvlDown.includes(host)) {
         if(this.selectedHosts.includes(host)) {
-          return "card-selected-off"
+          return "card-item card-selected card-off"
         } else {
-          return "card-available-off";
+          return "card-item card-available card-off";
         }
       } else if (this.hostsAvlUnknown.includes(host)) {
         if(this.selectedHosts.includes(host)) {
-          return "card-selected-unknown"
+          return "card-item card-selected card-unknown"
         } else {
-        return "card-available-unknown"
+        return "card-item card-available card-unknown"
         }
       } else if (this.hostsAvlPing.includes(host)) {
         if(this.selectedHosts.includes(host)) {
-          return "card-selected-ping"
+          return "card-item card-selected card-ping"
         } else {
           return "card-item"
         }
       } else if (this.hostsAvlOn.includes(host)) {
         if(this.selectedHosts.includes(host)) {
-          return "card-selected-on"
+          return "card-item card-selected card-on"
         } else {
           return "card-item"
         }
       } else if (this.hostsAvlPow.includes(host)) {
         if(this.selectedHosts.includes(host)) {
-          return "card-selected-up"
+          return "card-item card-selected card-up"
         } else {
           return "card-item";
         }
