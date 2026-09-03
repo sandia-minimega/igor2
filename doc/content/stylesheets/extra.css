@@ -1,0 +1,10 @@
+.md-typeset img {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 2px;
+  max-width: 100%;
+}
+
+.md-typeset figcaption {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+}

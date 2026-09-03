@@ -1,0 +1,99 @@
+[project]
+site_name = "Igor documentation"
+site_description = "Documentation for Igor, a node reservation manager for clusters"
+site_url = "https://sandia-minimega.github.io/igor2/"
+repo_name = "sandia-minimega/igor2"
+repo_url = "https://github.com/sandia-minimega/igor2"
+edit_uri = "edit/main/doc/content/"
+docs_dir = "doc/content"
+site_dir = "site"
+use_directory_urls = true
+extra_css = ["stylesheets/extra.css"]
+copyright = "Copyright 2017-2026. Sandia National Laboratories is a multimission laboratory managed and operated by National Technology & Engineering Solutions of Sandia, LLC, for the U.S. Department of Energy's National Nuclear Security Administration."
+
+[[project.nav]]
+Home = "index.md"
+
+[[project.nav]]
+"Getting Started" = [
+  { "Obtaining Igor" = "download.md" },
+  { "First Steps" = "user-guide/getting-started.md" },
+]
+
+[[project.nav]]
+"User Guide" = [
+  { Overview = "user-guide/index.md" },
+  { Reservations = "user-guide/reservations.md" },
+  { "Reservation Management" = "user-guide/reservation-management.md" },
+  { Distros = "user-guide/distros.md" },
+  { Profiles = "user-guide/profiles.md" },
+  { Groups = "user-guide/groups.md" },
+  { "Igor-web" = "user-guide/igor-web.md" },
+]
+
+[[project.nav]]
+"Administration Guide" = [
+  { Overview = "admin-guide/index.md" },
+  { "Operational Requirements" = "admin-guide/operational-requirements.md" },
+  { Setup = "admin-guide/setup.md" },
+  { "Concepts and Configuration" = "admin-guide/concepts-configuration.md" },
+]
+
+[[project.nav]]
+Project = [
+  { "Release Notes" = "release-notes.md" },
+  { Contributing = "project/contributing.md" },
+  { "Legacy Site Recovery" = "project/legacy-site-recovery.md" },
+]
+
+[project.theme]
+variant = "classic"
+custom_dir = "doc/overrides"
+language = "custom"
+font = false
+features = [
+  "content.code.copy",
+  "navigation.sections",
+  "navigation.top",
+  "search.highlight",
+  "search.suggest",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue grey"
+accent = "deep orange"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue grey"
+accent = "deep orange"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[project.plugins.search]
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+footnotes = {}
+md_in_html = {}
+"pymdownx.snippets".base_path = ["."]
+"pymdownx.snippets".check_paths = true
+toc.permalink = true
+"pymdownx.highlight".anchor_linenums = true
+"pymdownx.highlight".line_spans = "__span"
+"pymdownx.highlight".pygments_lang_class = true
+"pymdownx.inlinehilite" = {}
+"pymdownx.superfences" = {}
+
+[project.validation]
+invalid_links = true
+invalid_link_anchors = true
+
+# Populated from Git history by scripts/zensical_build.py, keyed by page URL.
+[project.extra.revision_dates]

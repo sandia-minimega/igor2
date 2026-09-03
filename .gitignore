@@ -13,7 +13,7 @@ cmd/igor-web/igor-web
 cmd/igor-web/__debug_bin*
 *.log
 *.log.gz
-scripts/
+/scripts/
 .vscode/
 var/
 *.DS_Store
@@ -60,3 +60,8 @@ igor2.zip
 igor2.tar.gz
 
 /db-migrate/db-migrate
+
+# Documentation build output
+/site/
+/.zensical-*.toml
+.zensical/
