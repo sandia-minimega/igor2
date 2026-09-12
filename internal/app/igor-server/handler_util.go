@@ -7,13 +7,18 @@ package igorserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"mime"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strings"
+
+	zl "github.com/rs/zerolog"
 
 	"igor2/internal/pkg/api"
 	"igor2/internal/pkg/common"
@@ -75,11 +80,16 @@ func isResourceNameMatch(value string) error {
 	}
 }
 
-// A very simple panic handler
+// panicHandler is registered as httprouter's PanicHandler. It records the panic and answers
+// the client with a 500.
+//
+// The panic value stays out of the response. It is a raw runtime message written to the log
+// in full, along with the request path and the stack, so an incident is diagnosable from igor.log
+// alone; correlate a user's report by time and path.
 func panicHandler(w http.ResponseWriter, r *http.Request, err interface{}) {
-	logger.Panic().Stack().Msgf("panic intercepted - %v: %v\n%v", r.URL.Path, err, string(debug.Stack()))
+	logger.Error().Msgf("panic intercepted - %v: %v\n%v", r.URL.Path, err, string(debug.Stack()))
 	rb := common.NewResponseBody()
-	rb.Message = fmt.Sprintf("server error; please notify admins : %v", err)
+	rb.Message = "server error; please notify admins"
 	makeJsonResponse(w, http.StatusInternalServerError, rb)
 }
 
@@ -107,6 +117,43 @@ func createValidationErrMessage(validateErr error, w http.ResponseWriter) {
 	rb := common.NewResponseBody()
 	rb.Message = validateErr.Error()
 	makeJsonResponse(w, http.StatusBadRequest, rb)
+}
+
+// removeUploadTempFiles deletes the temporary files ParseMultipartForm spooled to disk for
+// this request. Call it deferred, at the top of the handler that parses the form.
+func removeUploadTempFiles(r *http.Request) {
+	if r.MultipartForm == nil {
+		return
+	}
+	if err := r.MultipartForm.RemoveAll(); err != nil {
+		logger.Warn().Msgf("could not remove temporary upload files for %s - %v", r.URL.Path, err)
+	}
+}
+
+// respondUploadParseErr answers a ParseMultipartForm failure, choosing the status from what
+// actually went wrong.
+//
+// A malformed, truncated or oversized body is the client's fault and stays a 400. A failure
+// to spool the upload to disk means the server's temp filesystem is full, read-only or missing.
+// Those become a 503 with an actionable message.
+//
+// The distinction is whether the failure carries an fs.PathError. Everything multipart does
+// against the filesystem produces one; its parse errors do not.
+//
+// The underlying error names server-side paths, so it goes to the log only.
+func respondUploadParseErr(w http.ResponseWriter, clog *zl.Logger, parseErr error) {
+	var pathErr *fs.PathError
+	if errors.As(parseErr, &pathErr) {
+		clog.Error().Msgf("cannot spool uploaded file to disk - %v (server temp dir: %s)", parseErr, os.TempDir())
+		rb := common.NewResponseBody()
+		rb.Message = "server cannot store the uploaded file(s) - an administrator should check " +
+			"free space and permissions on the server's temporary directory"
+		makeJsonResponse(w, http.StatusServiceUnavailable, rb)
+		return
+	}
+
+	clog.Warn().Msgf("could not parse uploaded form - %v", parseErr)
+	createValidationErrMessage(parseErr, w)
 }
 
 // marshalJSONBody turns the intended body response into a JSON string. It will panic if

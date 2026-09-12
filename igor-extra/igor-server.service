@@ -12,6 +12,11 @@ ExecStart=/opt/igor/igor-server
 Restart=always
 RestartSec=1
 User=igor
+TimeoutStopSec=60
+# Makes SIGQUIT dump every goroutine rather than only the current one. Costs nothing at
+# runtime and is the only way to identify what is holding the database write lock if the
+# server ever stops responding to commands that write.
+Environment=GOTRACEBACK=all
 
 [Install]
 WantedBy=multi-user.target

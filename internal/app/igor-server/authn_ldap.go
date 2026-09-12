@@ -5,10 +5,12 @@
 package igorserver
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-ldap/ldap/v3"
 	"github.com/rs/zerolog/hlog"
-	"net/http"
 )
 
 // LdapAuth implements IAuth interface
@@ -27,8 +29,8 @@ func (l *LdapAuth) authenticate(r *http.Request) (*User, error) {
 	username, password, ok := r.BasicAuth()
 	if !ok {
 		errLine := actionPrefix + " failed: problem reading basic auth header"
-		clog.Warn().Msgf(errLine)
-		return nil, fmt.Errorf(errLine)
+		clog.Warn().Msg(errLine)
+		return nil, errors.New(errLine)
 	}
 	// verify Igor knows the user
 	user, err := findUserForAuthN(username)

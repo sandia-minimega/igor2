@@ -9,13 +9,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/rs/cors"
 	//_ "net/http/pprof"
@@ -34,6 +35,12 @@ var (
 
 	// initrdQueue is used to queue and process initrd jobs
 	initrdQueue *InitrdJobQueue
+
+	// shutdownGrace bounds the whole shutdown sequence -- both HTTP servers and the background
+	// workers together, not each stage separately.
+	// A var rather than a const only so tests can shorten it; nothing at runtime reassigns it.
+	shutdownGrace    = 20 * time.Second
+	shutdownDeadline time.Time
 )
 
 // runServer sets up and runs the server processes. It blocks until shutdown.
@@ -120,6 +127,7 @@ func runServer() {
 		//IdleTimeout:  time.Minute,
 		Handler:   corsHandler,
 		TLSConfig: tlsConfig,
+		ErrorLog:  newHttpErrorLog("api server"),
 	}
 
 	cbRouter := newRouter()
@@ -130,7 +138,8 @@ func runServer() {
 		//ReadTimeout:  5 * time.Second,
 		//WriteTimeout: 15 * time.Second,
 		//IdleTimeout:  time.Minute,
-		Handler: cbRouter,
+		Handler:  cbRouter,
+		ErrorLog: newHttpErrorLog("callback server"),
 	}
 	// add TLS to cb server if configured
 	if *igor.Server.CbUseTLS {
@@ -146,9 +155,10 @@ func runServer() {
 	initrdQueue.Start()
 	go initrdQueue.EnqueuePendingJobs()
 
-	// interrupt signal sent from terminal or systemd
+	// interrupt signal sent from terminal or systemd. SIGKILL is deliberately absent --
+	// it cannot be caught or handled, so registering it did nothing but mislead.
 	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 
@@ -157,8 +167,12 @@ func runServer() {
 		logger.Info().Msgf("received OS signal: %v", s)
 		logger.Info().Msg("gracefully shutting down")
 
-		shutdownServer(apiSrv, "REST service")
-		shutdownServer(cbSrv, "node callback service")
+		shutdownDeadline = time.Now().Add(shutdownGrace)
+		ctx, cancel := context.WithDeadline(context.Background(), shutdownDeadline)
+		defer cancel()
+
+		shutdownServer(ctx, apiSrv, "REST service")
+		shutdownServer(ctx, cbSrv, "node callback service")
 
 		close(shutdownChan) // shuts down reservationManager and notificationManager
 	}()
@@ -166,7 +180,7 @@ func runServer() {
 	startServer(apiSrv, "REST service", sigint, true)
 	startServer(cbSrv, "node callback service", sigint, *igor.Server.CbUseTLS)
 
-	wg.Wait()
+	waitForWorkers(&wg, shutdownChan)
 
 	sqlDb, _ := igor.IGormDb.GetDB().DB()
 	_ = sqlDb.Close()
@@ -194,11 +208,60 @@ func startServer(srv *http.Server, name string, sigint chan os.Signal, useTLS bo
 	}()
 }
 
-func shutdownServer(srv *http.Server, name string) {
-	if err := srv.Shutdown(context.Background()); err != nil {
-		logger.Error().Msgf("error shutting down %s: %v", name, err)
+func shutdownServer(ctx context.Context, srv *http.Server, name string) {
+	if err := srv.Shutdown(ctx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			logger.Error().Msgf("%s did not close within the %v shutdown grace -- connections are "+
+				"still active, most likely a request blocked on the database write lock or an "+
+				"external call; forcing close", name, shutdownGrace)
+			if closeErr := srv.Close(); closeErr != nil {
+				logger.Error().Msgf("error force-closing %s: %v", name, closeErr)
+			}
+		} else {
+			logger.Error().Msgf("error shutting down %s: %v", name, err)
+		}
 	} else {
 		logger.Info().Msgf("%s closed", name)
+	}
+}
+
+// waitForWorkers is the call that keeps runServer alive for the life of the process. It
+// blocks indefinitely while the server is running and only starts timing once shutdown has
+// actually been requested.
+//
+// The WaitGroup and the shutdown channel are parameters rather than the package globals so
+// that tests can supply their own.
+func waitForWorkers(workers *sync.WaitGroup, shutdownReq <-chan struct{}) {
+	grace := shutdownGrace
+
+	done := make(chan struct{})
+	go func() {
+		workers.Wait()
+		close(done)
+	}()
+
+	// No timer in this select. Until a signal arrives there is nothing to wait out.
+	select {
+	case <-done:
+		// every worker exited without a shutdown ever being requested
+		return
+	case <-shutdownReq:
+	}
+
+	remaining := time.Until(shutdownDeadline)
+	if remaining <= 0 {
+		logger.Error().Msgf("the %v shutdown grace was already spent closing the HTTP services -- "+
+			"continuing without waiting on background workers", grace)
+		return
+	}
+
+	select {
+	case <-done:
+		logger.Info().Msg("all background workers stopped")
+	case <-time.After(remaining):
+		logger.Error().Msgf("background workers did not stop within the %v shutdown grace -- "+
+			"continuing shutdown; a worker is most likely blocked on the database write lock",
+			grace)
 	}
 }
 
@@ -249,11 +312,12 @@ func fillKernelInfoBacklog() {
 		image.KernelInfo = kernelInfo
 		image.Breed = breed
 
-		dbAccess.Lock()
-		saveErr := performDbTx(func(tx *gorm.DB) error {
-			return tx.Save(&image).Error
+		var saveErr error
+		lockedDbWrite(func() {
+			saveErr = performDbTx(func(tx *gorm.DB) error {
+				return tx.Save(&image).Error
+			})
 		})
-		dbAccess.Unlock()
 
 		if saveErr != nil {
 			logger.Error().Msgf("failed to update kernel_info for image %s: %v", image.ImageID, saveErr)
@@ -379,15 +443,17 @@ func ldapSyncManager() {
 				logger.Warn().Msgf("%v", adErr)
 				continue
 			}
-			dbAccess.Lock()
-			logger.Debug().Msgf("doing LDAP sync management - %v", checkTime.Format(time.RFC3339))
-			if igor.Auth.Ldap.Sync.EnableUserSync {
-				executeLdapUserSync()
-			}
-			if igor.Auth.Ldap.Sync.EnableGroupSync {
-				executeLdapGroupSync()
-			}
-			dbAccess.Unlock()
+			var notices notifyBuffer
+			lockedDbWrite(func() {
+				logger.Debug().Msgf("doing LDAP sync management - %v", checkTime.Format(time.RFC3339))
+				if igor.Auth.Ldap.Sync.EnableUserSync {
+					executeLdapUserSync(&notices)
+				}
+				if igor.Auth.Ldap.Sync.EnableGroupSync {
+					executeLdapGroupSync()
+				}
+			})
+			notices.flush()
 			countdown.reset()
 		}
 	}

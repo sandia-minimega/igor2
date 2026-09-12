@@ -22,7 +22,7 @@ import (
 //	404,error if group, new owner or member cannot be found
 //	409,error if attempting to rename the group and that name is already in use
 //	500,error if an internal error occurred
-func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.Request) (status int, err error) {
+func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.Request, notices *notifyBuffer) (status int, err error) {
 
 	// validate changes that don't require DB lookups
 	clog := hlog.FromRequest(r)
@@ -301,10 +301,8 @@ func doUpdateGroup(groupName string, editParams map[string]interface{}, r *http.
 			}
 		}
 
-		if len(notifyList) > 0 {
-			for _, m := range notifyList {
-				groupNotifyChan <- *m
-			}
+		for _, m := range notifyList {
+			notices.addGroup(m)
 		}
 	}
 

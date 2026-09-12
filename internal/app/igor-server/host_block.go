@@ -33,7 +33,7 @@ func checkBlockParams(powerParams map[string]interface{}) (bool, []string, int, 
 }
 
 // Runs the actual power command for the service that controls host power options.
-func doUpdateBlockHosts(blockAction bool, hostList []string, r *http.Request) (status int, err error) {
+func doUpdateBlockHosts(blockAction bool, hostList []string, r *http.Request, notices *notifyBuffer) (status int, err error) {
 
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 
@@ -93,10 +93,7 @@ func doUpdateBlockHosts(blockAction bool, hostList []string, r *http.Request) (s
 
 					res, _, _ := getReservations([]string{bRes.Name}, tx)
 
-					blockEvent := makeResEditNotifyEvent(EmailResBlock, &res[0], clusterName, actionUser, isElevated, common.UnsplitList(blockList))
-					if blockEvent != nil {
-						resNotifyChan <- *blockEvent
-					}
+					notices.addRes(makeResEditNotifyEvent(EmailResBlock, &res[0], clusterName, actionUser, isElevated, common.UnsplitList(blockList)))
 				}
 			}
 

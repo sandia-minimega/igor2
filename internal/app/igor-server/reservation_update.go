@@ -18,7 +18,7 @@ import (
 	"igor2/internal/pkg/common"
 )
 
-func doUpdateReservation(resName string, editParams map[string]interface{}, r *http.Request) (status int, err error) {
+func doUpdateReservation(resName string, editParams map[string]interface{}, r *http.Request, notices *notifyBuffer) (status int, err error) {
 
 	status = http.StatusInternalServerError // default status, overridden at end if no errors
 	clog := hlog.FromRequest(r)
@@ -302,10 +302,8 @@ func doUpdateReservation(resName string, editParams map[string]interface{}, r *h
 		}
 	}
 
-	if len(editEvents) > 0 {
-		for _, event := range editEvents {
-			resNotifyChan <- *event
-		}
+	for _, event := range editEvents {
+		notices.addRes(event)
 	}
 
 	return

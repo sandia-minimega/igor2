@@ -642,9 +642,9 @@ func printShow(rb *common.ResponseBodyShow, flagset *pflag.FlagSet) {
 			endTimeStr = common.FormatDuration(durRemaining.Round(time.Minute), true)
 		}
 		if durRemaining < 12*time.Hour {
-			endTimeStr = cAlert.Sprintf(endTimeStr)
+			endTimeStr = cAlert.Sprint(endTimeStr)
 		} else if durRemaining < 24*time.Hour && durRemaining >= 12*time.Hour {
-			endTimeStr = cWarning.Sprintf(endTimeStr)
+			endTimeStr = cWarning.Sprint(endTimeStr)
 		}
 
 		var startTimeStr string
@@ -836,7 +836,7 @@ func printNodeMap(cData common.ClusterData, hData []common.HostData, rData []com
 
 				} else if restricted[seqID] {
 					// set node background for restricted
-					row = append(row, colorNode.SetBg(BgRestricted).Sprintf(name))
+					row = append(row, colorNode.SetBg(BgRestricted).Sprint(name))
 				} else {
 					// and finally nodes that are reservable
 					row = append(row, colorNode.SetBg(BgUnreserved).Sprint(name))
@@ -871,9 +871,9 @@ func printMotd(clusterData common.ClusterData) {
 	finalMotd += clusterData.Motd + "\n\n"
 
 	if clusterData.MotdUrgent {
-		cMotdUrgent.Printf(finalMotd)
+		cMotdUrgent.Print(finalMotd)
 	} else {
-		cMotdNotUrgent.Printf(finalMotd)
+		cMotdNotUrgent.Print(finalMotd)
 	}
 }
 

@@ -280,63 +280,65 @@ func manageReservations(ct *time.Time, m func(*time.Time) error) error {
 // closeoutReservations will delete expired reservations that have ended up to the given time.
 func closeoutReservations(checkTime *time.Time) error {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
+	var notices notifyBuffer
+	var closeoutErr error
+	lockedDbWrite(func() {
 
-	timeParams := map[string]time.Time{"to-end": *checkTime}
+		timeParams := map[string]time.Time{"to-end": *checkTime}
 
-	// get all reservations that expired on or before checkTime and delete them
-	resList, err := dbReadReservationsTx(nil, timeParams)
-	if err != nil {
-		return err
-	} else if len(resList) > 0 {
+		// get all reservations that expired on or before checkTime and delete them
+		resList, err := dbReadReservationsTx(nil, timeParams)
+		if err != nil {
+			closeoutErr = err
+			return
+		} else if len(resList) > 0 {
 
-		logger.Info().Msgf("removing %d reservations: %v", len(resList), resNamesOfResList(resList))
+			logger.Info().Msgf("removing %d reservations: %v", len(resList), resNamesOfResList(resList))
 
-		clusters, cErr := dbReadClustersTx(nil)
-		if cErr != nil {
-			logger.Error().Msgf("%v", cErr)
+			clusters, cErr := dbReadClustersTx(nil)
+			if cErr != nil {
+				logger.Error().Msgf("%v", cErr)
+			}
+
+			for _, r := range resList {
+
+				logger.Debug().Msgf("begin removing reservation '%s'", r.Name)
+
+				resClone := r.DeepCopy()
+
+				// transaction to delete the reservation
+				if err = performDbTx(func(tx *gorm.DB) error {
+					// delete the reservation - this will uninstall from hosts, remove power perms,
+					// set hosts back to available, and remove the res from the db
+					_, err = doDeleteRes(&r, tx, true, &logger)
+					return err
+				}); err != nil {
+					logger.Error().Msgf("failed to delete reservation '%s' - %v", r.Name, err)
+					continue
+				}
+
+				if hErr := resClone.HistCallback(resClone, HrFinished); hErr != nil {
+					logger.Error().Msgf("failed to record reservation '%s' finished to history", resClone.Name)
+				}
+
+				// notify user of expired reservation
+				logger.Info().Msgf("reservation '%s' expired at %s -- deleting", resClone.Name, resClone.End.Format(common.DateTimeLongFormat))
+				notices.addRes(makeResWarnNotifyEvent(EmailResExpire, 0, resClone, clusters[0].Name))
+
+				// uninstall reservation vlan and tftp
+				if err = uninstallRes(resClone); err != nil {
+					logger.Error().Msgf("%v", err)
+				}
+
+			}
+
+		} else {
+			logger.Debug().Msg("no reservations are expired")
 		}
+	})
 
-		for _, r := range resList {
-
-			logger.Debug().Msgf("begin removing reservation '%s'", r.Name)
-
-			resClone := r.DeepCopy()
-
-			// transaction to delete the reservation
-			if err = performDbTx(func(tx *gorm.DB) error {
-				// delete the reservation - this will uninstall from hosts, remove power perms,
-				// set hosts back to available, and remove the res from the db
-				_, err = doDeleteRes(&r, tx, true, &logger)
-				return err
-			}); err != nil {
-				logger.Error().Msgf("failed to delete reservation '%s' - %v", r.Name, err)
-				continue
-			}
-
-			if hErr := resClone.HistCallback(resClone, HrFinished); hErr != nil {
-				logger.Error().Msgf("failed to record reservation '%s' finished to history", resClone.Name)
-			}
-
-			// notify user of expired reservation
-			logger.Info().Msgf("reservation '%s' expired at %s -- deleting", resClone.Name, resClone.End.Format(common.DateTimeLongFormat))
-			if expireEvent := makeResWarnNotifyEvent(EmailResExpire, 0, resClone, clusters[0].Name); expireEvent != nil {
-				resNotifyChan <- *expireEvent
-			}
-
-			// uninstall reservation vlan and tftp
-			if err = uninstallRes(resClone); err != nil {
-				logger.Error().Msgf("%v", err)
-			}
-
-		}
-
-	} else {
-		logger.Debug().Msg("no reservations are expired")
-	}
-
-	return nil
+	notices.flush()
+	return closeoutErr
 }
 
 // doMaintenance calls the appropriate maintenance management function to operate on the given time parameter.
@@ -502,99 +504,102 @@ func finishMaintenance(now *time.Time) error {
 // installReservations will install any reservation up to the given time provided it hasn't already been installed.
 func installReservations(checkTime *time.Time) error {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
+	var notices notifyBuffer
+	var installErr error
+	lockedDbWrite(func() {
 
-	// now look for any reservations that are starting around the check time
-	timeParams := map[string]time.Time{"to-start": *checkTime}
-	resList, err := dbReadReservationsTx(nil, timeParams)
-	if err != nil {
-		return err
-	} else if len(resList) > 0 {
-		for _, r := range resList {
-			if !r.Installed {
-				// sanity check that the hosts having their state updated should be HOST_AVAILABLE (0)
-				for _, h := range r.Hosts {
-					if h.State > HostAvailable {
-						logger.Error().Msgf("host %s for reservation '%s' start in the state %v before being made available", h.Name, r.Name, h.State)
-					}
-				}
-
-				if err = performDbTx(func(tx *gorm.DB) error {
-
-					// change the reservation's hosts to 'reserved'
-					logger.Debug().Msg("changing state of reservation hosts to reserved")
-					changes := map[string]interface{}{"State": HostReserved}
-					if ehErr := dbEditHosts(r.Hosts, changes, tx); ehErr != nil {
-						return ehErr
-					}
-
-					// create the power permission for the reservation's hosts and add it to the permissions table
-					logger.Debug().Msgf("activating power permissions for reservation %s", r.Name)
-					powerPerm, permErr := NewPermission(makeNodePowerPerm(r.Hosts))
-					if permErr != nil {
-						return permErr
-					}
-
-					if apErr := dbAppendPermissions(&r.Group, []Permission{*powerPerm}, tx); apErr != nil {
-						return apErr
-					}
-
-					// skip if not using vlan
-					if igor.Vlan.Network != "" {
-						// update network config
-						if nsErr := networkSet(r.Hosts, r.Vlan); nsErr != nil {
-							return fmt.Errorf("error setting network isolation: %v", nsErr)
+		// now look for any reservations that are starting around the check time
+		timeParams := map[string]time.Time{"to-start": *checkTime}
+		resList, err := dbReadReservationsTx(nil, timeParams)
+		if err != nil {
+			installErr = err
+			return
+		} else if len(resList) > 0 {
+			for _, r := range resList {
+				if !r.Installed {
+					// sanity check that the hosts having their state updated should be HOST_AVAILABLE (0)
+					for _, h := range r.Hosts {
+						if h.State > HostAvailable {
+							logger.Error().Msgf("host %s for reservation '%s' start in the state %v before being made available", h.Name, r.Name, h.State)
 						}
 					}
 
-					// install the reservation's profile to its hosts
-					logger.Debug().Msgf("installing PXE files for reservation %s", r.Name)
-					if irErr := igor.IResInstaller.Install(&r); irErr != nil {
-						// update the reservation with the error message
-						if irErr = dbEditReservation(&r, map[string]interface{}{"install_error": irErr.Error()}, tx); irErr != nil {
+					if err = performDbTx(func(tx *gorm.DB) error {
+
+						// change the reservation's hosts to 'reserved'
+						logger.Debug().Msg("changing state of reservation hosts to reserved")
+						changes := map[string]interface{}{"State": HostReserved}
+						if ehErr := dbEditHosts(r.Hosts, changes, tx); ehErr != nil {
+							return ehErr
+						}
+
+						// create the power permission for the reservation's hosts and add it to the permissions table
+						logger.Debug().Msgf("activating power permissions for reservation %s", r.Name)
+						powerPerm, permErr := NewPermission(makeNodePowerPerm(r.Hosts))
+						if permErr != nil {
+							return permErr
+						}
+
+						if apErr := dbAppendPermissions(&r.Group, []Permission{*powerPerm}, tx); apErr != nil {
+							return apErr
+						}
+
+						// skip if not using vlan
+						if igor.Vlan.Network != "" {
+							// update network config
+							if nsErr := networkSet(r.Hosts, r.Vlan); nsErr != nil {
+								return fmt.Errorf("error setting network isolation: %v", nsErr)
+							}
+						}
+
+						// install the reservation's profile to its hosts
+						logger.Debug().Msgf("installing PXE files for reservation %s", r.Name)
+						if irErr := igor.IResInstaller.Install(&r); irErr != nil {
+							// update the reservation with the error message
+							if irErr = dbEditReservation(&r, map[string]interface{}{"install_error": irErr.Error()}, tx); irErr != nil {
+								return irErr
+							}
 							return irErr
 						}
-						return irErr
-					}
 
-					if r.CycleOnStart {
-						logger.Debug().Msgf("power cycling hosts for reservation '%s'", r.Name)
-						if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(r.Hosts), &logger); powerErr != nil {
-							// don't return this error we still want to mark it installed
-							logger.Error().Msgf("problem powering cycling hosts for reservation '%s': %v", r.Name, powerErr)
+						if r.CycleOnStart {
+							logger.Debug().Msgf("power cycling hosts for reservation '%s'", r.Name)
+							if _, powerErr := doPowerHosts(PowerCycle, hostNamesOfHosts(r.Hosts), &logger); powerErr != nil {
+								// don't return this error we still want to mark it installed
+								logger.Error().Msgf("problem powering cycling hosts for reservation '%s': %v", r.Name, powerErr)
+							}
+						} else {
+							logger.Warn().Msgf("The reservation '%s' was not powered cycled at start", r.Name)
 						}
-					} else {
-						logger.Warn().Msgf("The reservation '%s' was not powered cycled at start", r.Name)
+
+						// update the reservation as installed
+						return dbEditReservation(&r, map[string]interface{}{"installed": true}, tx)
+
+					}); err != nil {
+						logger.Error().Msgf("failed to install reservation '%s' - %v", r.Name, err)
+						continue
 					}
 
-					// update the reservation as installed
-					return dbEditReservation(&r, map[string]interface{}{"installed": true}, tx)
+					if hErr := r.HistCallback(&r, HrInstalled); hErr != nil {
+						logger.Error().Msgf("failed to record historical change to reservation '%s'", r.Name)
+					}
 
-				}); err != nil {
-					logger.Error().Msgf("failed to install reservation '%s' - %v", r.Name, err)
-					continue
-				}
+					clusters, cErr := dbReadClustersTx(nil)
+					if cErr != nil {
+						installErr = cErr
+						return
+					}
 
-				if hErr := r.HistCallback(&r, HrInstalled); hErr != nil {
-					logger.Error().Msgf("failed to record historical change to reservation '%s'", r.Name)
-				}
-
-				clusters, cErr := dbReadClustersTx(nil)
-				if cErr != nil {
-					return cErr
-				}
-
-				if startEvent := makeResWarnNotifyEvent(EmailResStart, 0, r.DeepCopy(), clusters[0].Name); startEvent != nil {
-					resNotifyChan <- *startEvent
+					notices.addRes(makeResWarnNotifyEvent(EmailResStart, 0, r.DeepCopy(), clusters[0].Name))
 				}
 			}
+		} else {
+			logger.Debug().Msg("no reservations are starting")
 		}
-	} else {
-		logger.Debug().Msg("no reservations are starting")
-	}
+	})
 
-	return nil
+	notices.flush()
+	return installErr
 }
 
 // sendExpirationWarnings will check if any reservation at the given time is due to get a warning email and

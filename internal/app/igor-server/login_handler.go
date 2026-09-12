@@ -65,8 +65,8 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 
 	username, password, baOK := r.BasicAuth()
 	if !baOK {
-		errLine := actionPrefix + " " + username + " " + password + " failed - problem reading basic auth header"
-		clog.Warn().Msgf(errLine)
+		errLine := actionPrefix + " failed - problem reading basic auth header"
+		clog.Warn().Msg(errLine)
 		rb.Message = errLine
 		makeJsonResponse(w, http.StatusBadRequest, rb)
 		return
@@ -81,7 +81,7 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 	if username == "" || password == "" {
 		// "<script>alert('Please login')</script>"
 		errLine := actionPrefix + " failed - username or password are blank"
-		clog.Warn().Msgf(errLine)
+		clog.Warn().Msg(errLine)
 		rb.Message = errLine
 		makeJsonResponse(w, http.StatusBadRequest, rb)
 		return
@@ -109,11 +109,11 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 			// at this point igor CLI came from the /login handler and the
 			// user must have entered their username/password wrong. For igorweb
 			// they will have been on the login page already. So both fail here.
-			clog.Warn().Msgf(errLine)
+			clog.Warn().Msg(errLine)
 			makeJsonResponse(w, http.StatusUnauthorized, rb)
 			return
 		default:
-			clog.Error().Msgf(errLine)
+			clog.Error().Msg(errLine)
 			makeJsonResponse(w, http.StatusInternalServerError, rb)
 			return
 		}
@@ -131,7 +131,7 @@ func doPasswordAuth(w http.ResponseWriter, r *http.Request) (user *User, err err
 	tokenString, gtErr := generateToken(user.Name, exprTime)
 	if gtErr != nil {
 		errLine := fmt.Sprintf("%s failed - %v", actionPrefix, gtErr)
-		clog.Error().Msgf(errLine)
+		clog.Error().Msg(errLine)
 		makeJsonResponse(w, http.StatusInternalServerError, rb)
 		return
 	}

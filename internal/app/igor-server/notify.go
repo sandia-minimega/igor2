@@ -7,6 +7,7 @@ package igorserver
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"html/template"
 	"strings"
@@ -93,6 +94,13 @@ func initNotify() {
 		t, _ = t.Parse(SenderInfoTemplate)
 		tMap[EmailGroupAddOwner] = t
 
+		t = template.New("EmailGroupRmvOwner")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyGroupOwnerRemoveTemplate)
+		t, _ = t.Parse(SenderInfoTemplate)
+		tMap[EmailGroupRmvOwner] = t
+
 		t = template.New("EmailGroupChangeName")
 		t.Funcs(tFuncs)
 		t = template.Must(t.Parse(BaseEmailTemplate))
@@ -135,37 +143,33 @@ func initNotify() {
 		setCommonInfo(t)
 		tMap[EmailResNewGroup] = t
 
-		// if reservation notification is turned on, load these
-		if *igor.Email.ResNotifyOn {
+		t = template.New("EmailResExpire")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyResExpireTemplate)
+		setCommonInfo(t)
+		tMap[EmailResExpire] = t
 
-			t = template.New("EmailResExpire")
-			t.Funcs(tFuncs)
-			t = template.Must(t.Parse(BaseEmailTemplate))
-			t, _ = t.Parse(NotifyResExpireTemplate)
-			setCommonInfo(t)
-			tMap[EmailResExpire] = t
+		t = template.New("EmailResWarn")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyResWarnTemplate)
+		setCommonInfo(t)
+		tMap[EmailResWarn] = t
 
-			t = template.New("EmailResWarn")
-			t.Funcs(tFuncs)
-			t = template.Must(t.Parse(BaseEmailTemplate))
-			t, _ = t.Parse(NotifyResWarnTemplate)
-			setCommonInfo(t)
-			tMap[EmailResWarn] = t
+		t = template.New("EmailResStart")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyResStartTemplate)
+		setCommonInfo(t)
+		tMap[EmailResStart] = t
 
-			t = template.New("EmailResStart")
-			t.Funcs(tFuncs)
-			t = template.Must(t.Parse(BaseEmailTemplate))
-			t, _ = t.Parse(NotifyResStartTemplate)
-			setCommonInfo(t)
-			tMap[EmailResStart] = t
-
-			t = template.New("EmailResFinalWarn")
-			t.Funcs(tFuncs)
-			t = template.Must(t.Parse(BaseEmailTemplate))
-			t, _ = t.Parse(NotifyResFinalWarnTemplate)
-			setCommonInfo(t)
-			tMap[EmailResFinalWarn] = t
-		}
+		t = template.New("EmailResFinalWarn")
+		t.Funcs(tFuncs)
+		t = template.Must(t.Parse(BaseEmailTemplate))
+		t, _ = t.Parse(NotifyResFinalWarnTemplate)
+		setCommonInfo(t)
+		tMap[EmailResFinalWarn] = t
 	}
 }
 
@@ -289,6 +293,52 @@ type NotifyEvent struct {
 	HelpLink string
 }
 
+// notifyBuffer collects notification events produced while dbAccess is held, so they can be
+// dispatched once it has been released.
+type notifyBuffer struct {
+	res   []ResNotifyEvent
+	acct  []AcctNotifyEvent
+	group []GroupNotifyEvent
+}
+
+// addRes queues a reservation event. A nil event is ignored, since the makeXNotifyEvent
+// constructors return nil when the email configuration disables that notification.
+func (nb *notifyBuffer) addRes(e *ResNotifyEvent) {
+	if e != nil {
+		nb.res = append(nb.res, *e)
+	}
+}
+
+// addAcct queues an account event, ignoring nil.
+func (nb *notifyBuffer) addAcct(e *AcctNotifyEvent) {
+	if e != nil {
+		nb.acct = append(nb.acct, *e)
+	}
+}
+
+// addGroup queues a group event, ignoring nil.
+func (nb *notifyBuffer) addGroup(e *GroupNotifyEvent) {
+	if e != nil {
+		nb.group = append(nb.group, *e)
+	}
+}
+
+// flush dispatches every queued notify event and empties the buffer.
+//
+// This method should be called when the dbAccess write lock is not active.
+func (nb *notifyBuffer) flush() {
+	for _, e := range nb.res {
+		resNotifyChan <- e
+	}
+	for _, e := range nb.acct {
+		acctNotifyChan <- e
+	}
+	for _, e := range nb.group {
+		groupNotifyChan <- e
+	}
+	nb.res, nb.acct, nb.group = nil, nil, nil
+}
+
 type AcctNotifyEvent struct {
 	NotifyEvent
 	IsLocal bool
@@ -352,12 +402,18 @@ func processAcctNotifyEvent(msg AcctNotifyEvent) error {
 		t = tMap[EmailPasswordReset]
 	case EmailAcctRemovedIssue:
 		subj = "auto-removal of igor account needs review"
-		admin, _, _ := getIgorAdminTx()
-		if len(admin.Email) != 0 {
-			addEmailToList(&toList, admin.Email)
-		} else {
-			addEmailToList(&toList, igor.Email.HelpLink)
+		admin, _, aErr := getIgorAdminTx()
+		if aErr != nil {
+			return aErr
 		}
+
+		if admin.Email == "" {
+			logger.Warn().Msgf("account '%s' was auto-removed and one or more of its groups, reservations "+
+				"and/or distros were re-assigned to %s, but no alert could be sent because %s has no email "+
+				"address configured - review the re-assigned resources manually", msg.User.Name, IgorAdmin, IgorAdmin)
+			return nil
+		}
+		addEmailToList(&toList, admin.Email)
 		t = tMap[EmailAcctRemovedIssue]
 	default:
 		err := fmt.Errorf("unrecognized notify type '%d' - aborting email send", msg.Type)
@@ -514,8 +570,8 @@ func makeResWarnNotifyEvent(nType int, next time.Duration, r *Reservation, c str
 
 func processResNotifyEvent(msg ResNotifyEvent) error {
 
-	// filter out reservation time emails of flag is turned off (extend, expire, time left...)
-	if !*igor.Email.ResNotifyOn && 1200 <= msg.Type && msg.Type < 1300 {
+	// filter out reservation time emails if the flag is turned off
+	if !*igor.Email.ResNotifyOn && EmailResStart <= msg.Type && msg.Type < EmailAcctCreated {
 		logger.Debug().Msg("reservation time emails are disabled (no email sent)")
 		return nil
 	}
@@ -575,7 +631,7 @@ func processResNotifyEvent(msg ResNotifyEvent) error {
 	}
 
 	if strings.HasPrefix(msg.Res.Group.Name, GroupUserPrefix) {
-		toList = append(toList, msg.Res.Owner.Email)
+		addEmailToList(&toList, msg.Res.Owner.Email)
 	} else {
 		queryParams := map[string]interface{}{"name": msg.Res.Group.Name, "showMembers": true}
 		if group, err := dbReadGroupsTx(queryParams, true); err != nil {
@@ -596,29 +652,40 @@ func processResNotifyEvent(msg ResNotifyEvent) error {
 		}
 	}
 
+	sent := true
 	if err := sendEmail(t, subj, toList, ccList, nil, priority, msg); err != nil {
-		return err
+		var noRcpt *NoEmailRecipientError
+		if !errors.As(err, &noRcpt) {
+			return err
+		}
+		// Nobody attached to this reservation has an address on file.
+		logger.Warn().Msgf("%v (reservation '%s')", err, msg.Res.Name)
+		sent = false
 	}
 
 	if msg.Type == EmailResWarn || msg.Type == EmailResFinalWarn {
 
-		logger.Info().Msgf("res expire warning sent to members of reservation '%s'", msg.Res.Name)
+		if sent {
+			logger.Info().Msgf("res expire warning sent to members of reservation '%s'", msg.Res.Name)
+		}
 
-		dbAccess.Lock()
-		defer dbAccess.Unlock()
+		var updateErr error
+		lockedDbWrite(func() {
+			updateErr = performDbTx(func(tx *gorm.DB) error {
 
-		if err := performDbTx(func(tx *gorm.DB) error {
+				resList, rrErr := dbReadReservations(map[string]interface{}{"name": msg.Res.Name}, nil, tx)
+				if rrErr != nil {
+					return rrErr
+				}
+				res := &resList[0]
+				changes := map[string]interface{}{"NextNotify": msg.NextNotify}
+				return dbEditReservation(res, changes, tx)
 
-			resList, rrErr := dbReadReservations(map[string]interface{}{"name": msg.Res.Name}, nil, tx)
-			if rrErr != nil {
-				return rrErr
-			}
-			res := &resList[0]
-			changes := map[string]interface{}{"NextNotify": msg.NextNotify}
-			return dbEditReservation(res, changes, tx)
+			})
+		})
 
-		}); err != nil {
-			return err
+		if updateErr != nil {
+			return updateErr
 		}
 	}
 
@@ -633,8 +700,16 @@ func addEmailToList(mList *[]string, addr string) {
 
 func sendEmail(t *template.Template, subject string, toList []string, ccList []string, bccList []string, isPriority bool, mInfo ...interface{}) error {
 
+	if t == nil {
+		return NewMissingEmailTemplateError(subject)
+	}
+
+	toList = dedupeEmailList(toList)
+	ccList = dedupeEmailList(ccList)
+	bccList = dedupeEmailList(bccList)
+
 	if len(toList) == 0 && len(ccList) == 0 && len(bccList) == 0 {
-		return fmt.Errorf("no recipient address for outbound email, subject: %v", subject)
+		return NewNoEmailRecipientError(subject)
 	}
 	// Settings for SMTP server
 	d := gomail.NewDialer(igor.Email.SmtpServer, igor.Email.SmtpPort, igor.Email.SmtpUsername, igor.Email.SmtpPassword)
@@ -651,17 +726,14 @@ func sendEmail(t *template.Template, subject string, toList []string, ccList []s
 			m.SetHeader("Reply-To", igor.Email.ReplyTo)
 		}
 		m.SetHeader("Subject", subject)
-		if len(toList) == 0 && len(ccList) == 0 && len(bccList) == 0 {
-			return fmt.Errorf("composed email had no recipients")
-		}
 		if len(toList) > 0 {
-			m.SetHeader("To", dedupeEmailList(toList)...)
+			m.SetHeader("To", toList...)
 		}
 		if len(ccList) > 0 {
-			m.SetHeader("Cc", dedupeEmailList(ccList)...)
+			m.SetHeader("Cc", ccList...)
 		}
 		if len(bccList) > 0 {
-			m.SetHeader("Bcc", dedupeEmailList(bccList)...)
+			m.SetHeader("Bcc", bccList...)
 		}
 		if isPriority {
 			m.SetHeader("X-Priority", "1 (Highest)")
@@ -678,11 +750,7 @@ func sendEmail(t *template.Template, subject string, toList []string, ccList []s
 		msgs = append(msgs, m)
 	}
 
-	if mailErr := d.DialAndSend(msgs...); mailErr != nil {
-		logger.Error().Msgf("%v", mailErr)
-		return mailErr
-	}
-	return nil
+	return d.DialAndSend(msgs...)
 }
 
 func dedupeEmailList(emailList []string) []string {
@@ -953,6 +1021,17 @@ const (
 <p>Greetings,</p>
 
 <p>You have been added as an owner of the group '{{.Group.Name}}'.
+
+{{block "sender-info" .}}{{end}}
+{{end}}
+`
+
+	NotifyGroupOwnerRemoveTemplate = `
+{{template "base" .}}
+{{define "mail-body"}}
+<p>Greetings,</p>
+
+<p>You have been removed from the owner list of the group '{{.Group.Name}}'.
 
 {{block "sender-info" .}}{{end}}
 {{end}}

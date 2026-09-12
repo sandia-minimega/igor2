@@ -548,7 +548,7 @@ func printHosts(rb *common.ResponseBodyHosts) {
 		case "blocked":
 			return cBlockedUp.Sprint(state)
 		default:
-			return cInstError.Sprintf(state)
+			return cInstError.Sprint(state)
 		}
 	}
 
@@ -597,6 +597,6 @@ func printHosts(rb *common.ResponseBodyHosts) {
 		tw.SetStyle(igorTableStyle)
 	}
 
-	fmt.Printf("\n" + tw.Render() + "\n\n")
+	fmt.Print("\n" + tw.Render() + "\n\n")
 
 }

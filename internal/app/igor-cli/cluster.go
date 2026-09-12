@@ -291,9 +291,9 @@ func printClusters(rb *common.ResponseBodyClusters) {
 
 		tw.SetStyle(igorTableStyle)
 
-		fmt.Printf("\n" + tw.Render())
+		fmt.Print("\n" + tw.Render())
 		if len(msg) > 0 {
-			fmt.Printf("\n\n" + color.FgLightYellow.Sprint(msg) + "\n\n")
+			fmt.Print("\n\n" + color.FgLightYellow.Sprint(msg) + "\n\n")
 		} else {
 			fmt.Printf("\n\n")
 		}

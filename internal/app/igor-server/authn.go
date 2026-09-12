@@ -71,11 +71,11 @@ func authnHandler(handler http.Handler) http.Handler {
 					return
 				}
 				// otherwise bounce the user
-				clog.Warn().Msgf(errLine)
+				clog.Warn().Msg(errLine)
 				makeJsonResponse(w, http.StatusUnauthorized, rb)
 				return
 			default:
-				clog.Error().Msgf(errLine)
+				clog.Error().Msg(errLine)
 				makeJsonResponse(w, http.StatusInternalServerError, rb)
 				return
 			}

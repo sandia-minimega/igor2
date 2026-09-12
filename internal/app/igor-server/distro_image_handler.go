@@ -59,16 +59,20 @@ func handleReadDistroImage(w http.ResponseWriter, r *http.Request) {
 
 func handleDeleteDistroImage(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	distroImageName := ps.ByName("imageName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete distro image"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteDistroImage(distroImageName, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteDistroImage(distroImageName, r)
+	})
+
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
@@ -84,11 +88,12 @@ func validateDistroImageParams(handler http.Handler) http.Handler {
 		var validateErr error
 		clog := hlog.FromRequest(r)
 
+		defer removeUploadTempFiles(r)
+
 		if r.Method == http.MethodPost || r.Method == http.MethodPut {
 			// should only need to parse form once
 			if validateErr = r.ParseMultipartForm(MaxMemory); validateErr != nil {
-				clog.Warn().Msgf("validateDistroImageParams - %v", validateErr)
-				createValidationErrMessage(validateErr, w)
+				respondUploadParseErr(w, clog, validateErr)
 				return
 			}
 			diParams := r.PostForm

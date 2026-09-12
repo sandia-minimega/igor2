@@ -152,7 +152,7 @@ func initLog() {
 // exitPrintFatal does some standard formatting and printing of an error condition before failing out the app.
 func exitPrintFatal(errMsg string) {
 	// print fatal to STDERR
-	fmt.Fprintln(os.Stderr, fatalColor.Sprintf("igor-web: "+errMsg))
+	fmt.Fprintln(os.Stderr, fatalColor.Sprint("igor-web: "+errMsg))
 	if loggerInited {
 		logger.Fatal().Msg(errMsg)
 		// program exits with code 1

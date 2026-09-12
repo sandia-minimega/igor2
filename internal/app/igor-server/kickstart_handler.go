@@ -86,16 +86,20 @@ func handleUpdateKickstart(w http.ResponseWriter, r *http.Request) {
 
 func handleDeleteKickstart(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	ksName := ps.ByName("kickstartName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete kickstart file"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteKS(ksName, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteKS(ksName, r)
+	})
+
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
@@ -110,10 +114,12 @@ func validateKSParams(handler http.Handler) http.Handler {
 
 		var validateErr error
 		clog := hlog.FromRequest(r)
+
+		defer removeUploadTempFiles(r)
+
 		// should only need to parse form once
 		if validateErr = r.ParseMultipartForm(MaxMemory); validateErr != nil {
-			clog.Warn().Msgf("validateKickstartParams - %v", validateErr)
-			createValidationErrMessage(validateErr, w)
+			respondUploadParseErr(w, clog, validateErr)
 			return
 		}
 
@@ -137,9 +143,7 @@ func validateKSParams(handler http.Handler) http.Handler {
 
 		if r.Method == http.MethodPatch {
 			if validateErr = r.ParseMultipartForm(MaxMemory); validateErr != nil {
-				clog.Warn().Msgf("validateKSParams - %v", validateErr)
-				createValidationErrMessage(validateErr, w)
-				handler.ServeHTTP(w, r)
+				respondUploadParseErr(w, clog, validateErr)
 				return
 			}
 			ksParams := r.PostForm

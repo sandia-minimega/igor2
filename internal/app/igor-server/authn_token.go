@@ -51,7 +51,7 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	}
 	if tokenString == "" {
 		errLine := actionPrefix + " failed - no token"
-		clog.Warn().Msgf(errLine)
+		clog.Warn().Msg(errLine)
 		return nil, &BadCredentialsError{msg: errLine}
 	}
 
@@ -73,7 +73,7 @@ func (l *TokenAuth) authenticate(r *http.Request) (*User, error) {
 	if !ok {
 		// expired or invalid token
 		errLine := actionPrefix + " failed - expired or invalid token"
-		clog.Warn().Msgf(errLine)
+		clog.Warn().Msg(errLine)
 		return nil, &BadCredentialsError{msg: errLine}
 	}
 
@@ -91,7 +91,7 @@ func acquireTokenSecret(token *jwt.Token) (interface{}, error) {
 	// make sure the signing method is the same as when we first generated the token
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		err := fmt.Errorf("validate token failed - Unexpected signing method: %v", token.Header["alg"])
-		logger.Warn().Msgf(err.Error())
+		logger.Warn().Msg(err.Error())
 		return nil, err
 	}
 	return getJwtToken()

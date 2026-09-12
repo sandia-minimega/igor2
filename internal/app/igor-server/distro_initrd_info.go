@@ -146,15 +146,14 @@ func (q *InitrdJobQueue) processInitrdJob(job InitrdJob) {
 	// Update the DistroImage record with the initrd info.
 	image.InitrdInfo = initrdInfo
 
-	dbAccess.Lock()
-
-	saveErr := performDbTx(func(tx *gorm.DB) error {
-		return tx.Model(&DistroImage{}).
-			Where("image_id = ?", job.Image.ImageID).
-			Update("initrd_info", initrdInfo).Error
+	var saveErr error
+	lockedDbWrite(func() {
+		saveErr = performDbTx(func(tx *gorm.DB) error {
+			return tx.Model(&DistroImage{}).
+				Where("image_id = ?", job.Image.ImageID).
+				Update("initrd_info", initrdInfo).Error
+		})
 	})
-
-	dbAccess.Unlock()
 
 	if saveErr != nil {
 		logger.Error().Msgf("Failed to update DistroImage %s with initrd info: %v", image.ImageID, saveErr)

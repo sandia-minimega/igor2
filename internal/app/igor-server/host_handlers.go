@@ -59,9 +59,6 @@ func handleReadHosts(w http.ResponseWriter, r *http.Request) {
 // destination for route PATCH /hosts/:hostName
 func handleUpdateHost(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	editParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update host"
@@ -72,7 +69,9 @@ func handleUpdateHost(w http.ResponseWriter, r *http.Request) {
 
 	changes, status, err := parseHostEditParams(editParams, clog)
 	if err == nil {
-		status, err = doUpdateHost(name, changes, r)
+		lockedDbWrite(func() {
+			status, err = doUpdateHost(name, changes, r)
+		})
 	}
 
 	if err != nil {
@@ -98,16 +97,19 @@ func handleUpdateHost(w http.ResponseWriter, r *http.Request) {
 // destination for route DELETE /hosts/:hostName
 func handleDeleteHosts(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	name := ps.ByName("hostName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete host"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteHost(name, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteHost(name, r)
+	})
 
 	if err != nil {
 		if status < http.StatusBadRequest {
@@ -380,9 +382,6 @@ func validatePowerParams(handler http.Handler) http.Handler {
 
 func handleBlockHosts(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	powerParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "block host(s)"
@@ -390,8 +389,12 @@ func handleBlockHosts(w http.ResponseWriter, r *http.Request) {
 	if !block {
 		actionPrefix = "unblock host(s)"
 	}
+	var notices notifyBuffer
 	if err == nil {
-		status, err = doUpdateBlockHosts(block, hostList, r)
+		lockedDbWrite(func() {
+			status, err = doUpdateBlockHosts(block, hostList, r, &notices)
+		})
+		notices.flush()
 	}
 
 	rb := common.NewResponseBody()

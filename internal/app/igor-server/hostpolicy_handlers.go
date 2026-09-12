@@ -19,15 +19,19 @@ import (
 // destination for route POST /hosts
 func handleCreateHostPolicy(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	createParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create host policy"
 	rb := common.NewResponseBody()
 
-	hostPolicy, status, err := doCreateHostPolicy(createParams, r)
+	var (
+		hostPolicy *HostPolicy
+		status     int
+		err        error
+	)
+	lockedDbWrite(func() {
+		hostPolicy, status, err = doCreateHostPolicy(createParams, r)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -72,9 +76,6 @@ func handleReadHostPolicies(w http.ResponseWriter, r *http.Request) {
 // destination for route PATCH /hosts/:hostName
 func handleUpdateHostPolicy(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	editParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update host policy"
@@ -82,10 +83,18 @@ func handleUpdateHostPolicy(w http.ResponseWriter, r *http.Request) {
 	ps := httprouter.ParamsFromContext(r.Context())
 	name := ps.ByName("hostpolicyName")
 
-	changes, status, err := parseHostPolicyEditParams(editParams, clog)
-	if err == nil {
-		status, err = doUpdateHostPolicy(name, changes, r)
-	}
+	var (
+		changes map[string]interface{}
+		status  int
+		err     error
+	)
+	lockedDbWrite(func() {
+		changes, status, err = parseHostPolicyEditParams(editParams, clog)
+		if err == nil {
+			status, err = doUpdateHostPolicy(name, changes, r)
+		}
+	})
+
 	rb := common.NewResponseBody()
 
 	if err != nil {
@@ -99,16 +108,19 @@ func handleUpdateHostPolicy(w http.ResponseWriter, r *http.Request) {
 // destination for route DELETE /hosts/:hostName
 func handleDeleteHostPolicy(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	name := ps.ByName("hostpolicyName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete host policy"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteHostPolicy(name, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteHostPolicy(name, r)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -324,16 +336,23 @@ func validateScheduleBlockParams(key string, val interface{}) error {
 
 func handleApplyPolicy(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	applyParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "apply policy"
-	policy, hosts, status, err := checkApplyPolicyParams(applyParams, clog)
-	if err == nil {
-		status, err = doApplyPolicy(policy, hosts)
-	}
+
+	var (
+		policy *HostPolicy
+		hosts  *[]Host
+		status int
+		err    error
+	)
+
+	lockedDbWrite(func() {
+		policy, hosts, status, err = checkApplyPolicyParams(applyParams, clog)
+		if err == nil {
+			status, err = doApplyPolicy(policy, hosts)
+		}
+	})
 
 	rb := common.NewResponseBody()
 	if err != nil {

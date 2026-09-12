@@ -46,10 +46,11 @@ func registerKickstart(r *http.Request, tx *gorm.DB) (ks *Kickstart, status int,
 	ks.Owner = *user
 	ks.OwnerID = user.ID
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
 	// create db entry of the image
-	if err = dbCreateKS(ks, tx); err != nil {
+	lockedDbWrite(func() {
+		err = dbCreateKS(ks, tx)
+	})
+	if err != nil {
 		return ks, http.StatusInternalServerError, err
 	}
 

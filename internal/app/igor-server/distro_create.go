@@ -28,6 +28,8 @@ func doCreateDistro(r *http.Request) (distro *Distro, code int, err error) {
 	user := getUserFromContext(r)
 	code = http.StatusInternalServerError // default status, overridden at end if no errors
 
+	var newImage *DistroImage
+
 	if err = performDbTx(func(tx *gorm.DB) error {
 
 		// verify distro name is unique
@@ -94,13 +96,16 @@ func doCreateDistro(r *http.Request) (distro *Distro, code int, err error) {
 				if kickstart != "" {
 					return fmt.Errorf("distro image intended for local install/boot must be registered as a seperate step")
 				}
-				image, status, err := registerImage(r, tx)
+				image, created, status, err := registerImage(r, tx)
 				if err != nil {
 					code = status
 					return err
 				}
 				if image != nil {
 					distro.DistroImage = *image
+					if created {
+						newImage = image
+					}
 				} else {
 					return fmt.Errorf("received empty image object when registering image files") // uses default err code
 				}
@@ -255,13 +260,19 @@ func doCreateDistro(r *http.Request) (distro *Distro, code int, err error) {
 			distro.Groups = []Group{*pug}
 		}
 
-		dbAccess.Lock()
-		defer dbAccess.Unlock()
 		// commit to DB
-		return dbCreateDistro(distro, tx) // uses default err code
+		var createErr error
+		lockedDbWrite(func() {
+			createErr = dbCreateDistro(distro, tx)
+		})
+		return createErr // uses default err code
 
 	}); err == nil {
 		code = http.StatusCreated
+	}
+
+	if err == nil && newImage != nil {
+		enqueueInitrdJob(newImage)
 	}
 	return
 }

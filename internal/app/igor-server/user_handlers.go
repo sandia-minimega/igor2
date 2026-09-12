@@ -20,9 +20,6 @@ import (
 // destination for route POST /users
 func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	createParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create user"
@@ -34,7 +31,18 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		err := fmt.Errorf("cannot create local user when LDAP manages account creation")
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
-		if user, ucStatus, err := doCreateUser(createParams, r); err != nil {
+		var (
+			user     *User
+			ucStatus int
+			err      error
+			notices  notifyBuffer
+		)
+		lockedDbWrite(func() {
+			user, ucStatus, err = doCreateUser(createParams, r, &notices)
+		})
+		notices.flush()
+
+		if err != nil {
 			stdErrorResp(rb, ucStatus, actionPrefix, err, clog)
 		} else {
 			status = ucStatus
@@ -86,9 +94,6 @@ func handleReadUsers(w http.ResponseWriter, r *http.Request) {
 // destination for PATCH /users/:username
 func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	editParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update user"
@@ -96,7 +101,16 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	username := ps.ByName("userName") // the user we area altering
 	rb := common.NewResponseBody()
 
-	updateMsg, status, err := doUpdateUser(username, editParams, r)
+	var (
+		updateMsg string
+		status    int
+		err       error
+		notices   notifyBuffer
+	)
+	lockedDbWrite(func() {
+		updateMsg, status, err = doUpdateUser(username, editParams, r, &notices)
+	})
+	notices.flush()
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -111,16 +125,19 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 // destination for DELETE /users/:username
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	name := ps.ByName("userName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete user"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteUser(name, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteUser(name, r)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)

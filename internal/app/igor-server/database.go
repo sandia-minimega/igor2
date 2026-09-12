@@ -224,3 +224,21 @@ func performDbTx(txFn func(tx *gorm.DB) error) error {
 	db := igor.IGormDb.GetDB()
 	return db.Transaction(txFn)
 }
+
+// lockedDbWrite runs fn while holding dbAccess, the process-wide write mutex.
+//
+// The unlock is deferred, so the mutex is released even when fn panics. A bare Unlock
+// placed after the call is not equivalent: a panic unwinds straight past it, leaving
+// dbAccess held by a goroutine that no longer exists. Nothing recovers from that, because
+// sync.Mutex has no owner tracking -- the server keeps serving reads, which take no lock,
+// while every write blocks forever and only a SIGKILL clears it.
+//
+// Use this in preference to locking inline where the locked region must end before the
+// rest of the handler runs. A plain 'defer dbAccess.Unlock()' at the top of a handler is
+// only correct when nothing later in that handler re-acquires the mutex, since sync.Mutex
+// is not reentrant.
+func lockedDbWrite(fn func()) {
+	dbAccess.Lock()
+	defer dbAccess.Unlock()
+	fn()
+}

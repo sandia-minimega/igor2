@@ -620,7 +620,7 @@ func printDistros(rb *common.ResponseBodyDistros) {
 		})
 
 		tw.SetStyle(igorTableStyle)
-		fmt.Printf("\n" + tw.Render() + "\n\n")
+		fmt.Print("\n" + tw.Render() + "\n\n")
 	}
 
 }

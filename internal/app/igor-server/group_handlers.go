@@ -20,15 +20,22 @@ import (
 // destination for route POST /groups
 func handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	createParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create group"
 	rb := common.NewResponseBody()
 
-	group, status, addMsg, err := doCreateGroup(createParams, r)
+	var (
+		group   *Group
+		status  int
+		addMsg  string
+		err     error
+		notices notifyBuffer
+	)
+	lockedDbWrite(func() {
+		group, status, addMsg, err = doCreateGroup(createParams, r, &notices)
+	})
+	notices.flush()
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -82,9 +89,6 @@ func handleReadGroups(w http.ResponseWriter, r *http.Request) {
 // destination for PATCH /groups/:groupName
 func handleUpdateGroup(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	editParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update group"
@@ -92,7 +96,15 @@ func handleUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	name := ps.ByName("groupName")
 	rb := common.NewResponseBody()
 
-	status, err := doUpdateGroup(name, editParams, r)
+	var (
+		status  int
+		err     error
+		notices notifyBuffer
+	)
+	lockedDbWrite(func() {
+		status, err = doUpdateGroup(name, editParams, r, &notices)
+	})
+	notices.flush()
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -106,16 +118,19 @@ func handleUpdateGroup(w http.ResponseWriter, r *http.Request) {
 // destination for DELETE /groups/:groupName
 func handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	name := ps.ByName("groupName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete group"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteGroup(name, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteGroup(name, r)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)

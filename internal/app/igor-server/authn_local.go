@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"unicode"
@@ -27,7 +28,7 @@ func (l *BasicAuth) authenticate(r *http.Request) (*User, error) {
 	username, password, ok := r.BasicAuth()
 	if !ok {
 		errLine := actionPrefix + " failed - problem reading basic auth header"
-		return nil, fmt.Errorf(errLine)
+		return nil, errors.New(errLine)
 	}
 
 	// verify Igor knows the user

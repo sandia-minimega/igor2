@@ -17,7 +17,7 @@ import (
 // doDeleteReservation deletes a reservation from the DB. It also removes the permissions for the reservation and the
 // hosts it runs on (if the reservation was active). It ends by updating any node that was part of the reservation with
 // a pending change to its access group (HostFuture).
-func doDeleteReservation(resName string, r *http.Request) (status int, err error) {
+func doDeleteReservation(resName string, r *http.Request, notices *notifyBuffer) (status int, err error) {
 
 	clog := hlog.FromRequest(r)
 	actionUser := getUserFromContext(r)
@@ -55,9 +55,7 @@ func doDeleteReservation(resName string, r *http.Request) (status int, err error
 
 		// Only send an email if the premature deletion was done by someone other than the owner
 		if actionUser.Name != resClone.Owner.Name {
-			if delEvent := makeResEditNotifyEvent(EmailResDelete, resClone, clusters[0].Name, actionUser, isElevated, ""); delEvent != nil {
-				resNotifyChan <- *delEvent
-			}
+			notices.addRes(makeResEditNotifyEvent(EmailResDelete, resClone, clusters[0].Name, actionUser, isElevated, ""))
 		}
 
 		if activeRes {

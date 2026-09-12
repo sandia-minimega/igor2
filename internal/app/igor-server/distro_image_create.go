@@ -25,22 +25,29 @@ import (
 // doRegisterImage calls registerImage in a new transaction.
 func doRegisterImage(r *http.Request) (image *DistroImage, status int, err error) {
 	status = http.StatusInternalServerError
+	var created bool
 	err = performDbTx(func(tx *gorm.DB) error {
-		image, status, err = registerImage(r, tx)
+		image, created, status, err = registerImage(r, tx)
 		return err
 	})
+
+	if err == nil && created {
+		enqueueInitrdJob(image)
+	}
 	return
 }
 
-// registerImage processes the request to register an image.
-func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int, err error) {
+// registerImage processes the request to register an image. The returned 'created' flag
+// reports whether a new image row was written, as opposed to an identical one already
+// existing; it tells the caller whether an initrd job is owed for this image.
+func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, created bool, status int, err error) {
 	clog := hlog.FromRequest(r)
 	clog.Debug().Msgf("Number of files attached: %v", len(r.MultipartForm.File))
 	tempFiles := []string{}
 
 	breed := strings.ToLower(r.FormValue("breed"))
 	if breed != "" && !hasValidBreed(breed) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid value for required image breed - %s", breed)
+		return nil, false, http.StatusBadRequest, fmt.Errorf("invalid value for required image breed - %s", breed)
 	}
 	if breed == "" {
 		breed = "generic-linux"
@@ -49,7 +56,7 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	if image == nil {
 		image, tempFiles, err = stageUploadedFiles(r)
 		if err != nil {
-			return nil, http.StatusInternalServerError, err
+			return nil, false, http.StatusInternalServerError, err
 		}
 	} else {
 		tempK := image.Kernel + ".kernel"
@@ -62,11 +69,11 @@ func registerImage(r *http.Request, tx *gorm.DB) (image *DistroImage, status int
 	}
 
 	image.Breed = breed
-	image, err = processImage(image, tempFiles, tx)
+	image, created, err = processImage(image, tempFiles, tx)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, false, http.StatusInternalServerError, err
 	}
-	return image, http.StatusOK, nil
+	return image, created, http.StatusOK, nil
 }
 
 // stageUploadedFiles extracts files from the multipart form and saves them to the staging directory.
@@ -104,7 +111,7 @@ func saveUploadedFile(r *http.Request, key string) (string, string, error) {
 }
 
 // processImage processes the image files and stores them in the image directory.
-func processImage(image *DistroImage, tempFiles []string, tx *gorm.DB) (*DistroImage, error) {
+func processImage(image *DistroImage, tempFiles []string, tx *gorm.DB) (*DistroImage, bool, error) {
 	tempK := ""
 	tempI := ""
 	switch image.Type {
@@ -120,55 +127,54 @@ func processImage(image *DistroImage, tempFiles []string, tx *gorm.DB) (*DistroI
 		stagedKernel := filepath.Join(igor.Server.ImageStagePath, tempK)
 		stagedInitrd := filepath.Join(igor.Server.ImageStagePath, tempI)
 		if err := checkFileExists(stagedKernel); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if err := checkFileExists(stagedInitrd); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		hash, err := hashKIPair(stagedKernel, stagedInitrd)
 		if err != nil {
 			destroyStagedImages([]string{tempK, tempI})
-			return nil, err
+			return nil, false, err
 		}
 		image.ImageID = hash
 	default:
-		return nil, fmt.Errorf("image type not recognized: %v", image.Type)
+		return nil, false, fmt.Errorf("image type not recognized: %v", image.Type)
 	}
 
 	existingImages, err := dbReadImage(map[string]interface{}{"image_id": image.ImageID}, 0, tx)
 
 	if err != nil {
 		destroyStagedImages([]string{tempK, tempI})
-		return nil, err
+		return nil, false, err
 	}
 	if len(existingImages) > 0 {
 		destroyStagedImages([]string{tempK, tempI})
-		return &existingImages[0], nil
+		return &existingImages[0], false, nil
 	}
 
 	image.Name = refFromHash(image.Type, image.ImageID)
 	if image.Name == "" {
 		destroyStagedImages([]string{tempK, tempI})
-		return nil, fmt.Errorf("failed to create image ref from type: %v and hash: %v", image.Type, image.ImageID)
+		return nil, false, fmt.Errorf("failed to create image ref from type: %v and hash: %v", image.Type, image.ImageID)
 	}
 
 	if err = processImageFiles(image, tempFiles); err != nil {
 		destroyStagedImages([]string{tempK, tempI})
-		return nil, err
+		return nil, false, err
 	}
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-	if err = dbCreateImage(image, tx); err != nil {
-		destroyStagedImages([]string{tempK, tempI})
-		return nil, err
-	}
-
-	enqueueInitrdJob(image)
-
-	// on success, destroy staged image files
+	var createErr error
+	lockedDbWrite(func() {
+		createErr = dbCreateImage(image, tx)
+	})
+	
 	destroyStagedImages([]string{tempK, tempI})
-	return image, nil
+
+	if createErr != nil {
+		return nil, false, createErr
+	}
+	return image, true, nil
 }
 
 // checkFileExists checks if a file exists at the given path.

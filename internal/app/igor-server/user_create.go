@@ -16,7 +16,7 @@ import (
 // doCreateUser creates a new Igor user. It steps through the process of checking to make sure
 // there are no inherent conflicts with the db, hashing the password, creating the pug and its
 // permissions, and adding the user to the 'all' group.
-func doCreateUser(userParams map[string]interface{}, r *http.Request) (user *User, status int, err error) {
+func doCreateUser(userParams map[string]interface{}, r *http.Request, notices *notifyBuffer) (user *User, status int, err error) {
 
 	clog := &logger
 	if r != nil {
@@ -40,10 +40,7 @@ func doCreateUser(userParams map[string]interface{}, r *http.Request) (user *Use
 		clog.Debug().Msg("new user creation complete")
 		status = http.StatusCreated
 
-		acctCreatedMsg := makeAcctNotifyEvent(EmailAcctCreated, user)
-		if acctCreatedMsg != nil {
-			acctNotifyChan <- *acctCreatedMsg
-		}
+		notices.addAcct(makeAcctNotifyEvent(EmailAcctCreated, user))
 
 	}
 	return

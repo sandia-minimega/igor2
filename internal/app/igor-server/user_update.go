@@ -20,7 +20,7 @@ import (
 //	200,nil if update was successful
 //	404,error if user cannot be found
 //	500,error if an internal error occurred
-func doUpdateUser(username string, editParams map[string]interface{}, r *http.Request) (actionStr string, status int, err error) {
+func doUpdateUser(username string, editParams map[string]interface{}, r *http.Request, notices *notifyBuffer) (actionStr string, status int, err error) {
 
 	clog := hlog.FromRequest(r)
 	actionStr = "updated"
@@ -115,10 +115,7 @@ func doUpdateUser(username string, editParams map[string]interface{}, r *http.Re
 		status = http.StatusOK
 
 		if resetOK && igor.Auth.Scheme == "local" {
-			passResetMsg := makeAcctNotifyEvent(EmailPasswordReset, user)
-			if passResetMsg != nil {
-				acctNotifyChan <- *passResetMsg
-			}
+			notices.addAcct(makeAcctNotifyEvent(EmailPasswordReset, user))
 		}
 
 	} else {

@@ -19,15 +19,19 @@ import (
 // destination for route POST /profiles
 func handleCreateProfile(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	createParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create profile"
 	rb := common.NewResponseBody()
 
-	profile, status, err := doCreateProfile(createParams, r)
+	var (
+		profile *Profile
+		status  int
+		err     error
+	)
+	lockedDbWrite(func() {
+		profile, status, err = doCreateProfile(createParams, r)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -67,9 +71,6 @@ func handleReadProfiles(w http.ResponseWriter, r *http.Request) {
 // destination for route PATCH /profiles/:profileName
 func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	editParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update profile"
@@ -78,7 +79,13 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	ps := httprouter.ParamsFromContext(r.Context())
 	profileName := ps.ByName("profileName")
 
-	status, err := doUpdateProfile(profileName, editParams, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doUpdateProfile(profileName, editParams, r)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -92,16 +99,19 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 // destination for route DELETE /profiles/:profileName
 func handleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	profileName := ps.ByName("profileName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete profile"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteProfile(profileName)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteProfile(profileName)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)

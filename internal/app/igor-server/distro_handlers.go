@@ -66,9 +66,6 @@ func handleReadDistro(w http.ResponseWriter, r *http.Request) {
 
 func handleUpdateDistro(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update distro"
 	rb := common.NewResponseBody()
@@ -79,12 +76,14 @@ func handleUpdateDistro(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var dList []Distro
 
-	dList, status, err = getDistrosTx([]string{distroName})
-	if err == nil {
-		distro := dList[0]
-		// execute update process
-		status, err = doUpdateDistro(&distro, r)
-	}
+	lockedDbWrite(func() {
+		dList, status, err = getDistrosTx([]string{distroName})
+		if err == nil {
+			distro := dList[0]
+			// execute update process
+			status, err = doUpdateDistro(&distro, r)
+		}
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
@@ -97,16 +96,20 @@ func handleUpdateDistro(w http.ResponseWriter, r *http.Request) {
 
 func handleDeleteDistro(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	ps := httprouter.ParamsFromContext(r.Context())
 	distroName := ps.ByName("distroName")
 	clog := hlog.FromRequest(r)
 	actionPrefix := "delete distro"
 	rb := common.NewResponseBody()
 
-	status, err := doDeleteDistro(distroName, r)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doDeleteDistro(distroName, r)
+	})
+
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
 	} else {
@@ -122,12 +125,12 @@ func validateDistroParams(handler http.Handler) http.Handler {
 		var validateErr error
 		clog := hlog.FromRequest(r)
 
+		defer removeUploadTempFiles(r)
+
 		if r.Method == http.MethodPost || r.Method == http.MethodPut {
 			// should only need to parse form once
 			if validateErr = r.ParseMultipartForm(MaxMemory); validateErr != nil {
-				clog.Warn().Msgf("validateDistroParams - %v", validateErr)
-				createValidationErrMessage(validateErr, w)
-				handler.ServeHTTP(w, r)
+				respondUploadParseErr(w, clog, validateErr)
 				return
 			}
 			distroParams := r.PostForm
@@ -273,9 +276,7 @@ func validateDistroParams(handler http.Handler) http.Handler {
 		if r.Method == http.MethodPatch {
 			// should only need to parse form once
 			if validateErr = r.ParseMultipartForm(MaxMemory); validateErr != nil {
-				clog.Warn().Msgf("validateDistroParams - %v", validateErr)
-				createValidationErrMessage(validateErr, w)
-				handler.ServeHTTP(w, r)
+				respondUploadParseErr(w, clog, validateErr)
 				return
 			}
 			distroParams := r.PostForm

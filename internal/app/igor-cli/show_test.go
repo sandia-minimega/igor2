@@ -5,6 +5,7 @@
 package igorcli
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -373,4 +374,35 @@ func TestShowAllNoMapRemainTime(t *testing.T) {
 
 	printShow(rb, flagset)
 
+}
+
+func TestPrintMotdPreservesPercentSign(t *testing.T) {
+
+	motds := []string{
+		"Downtime Saturday, 80% of nodes affected",
+		"Cluster running at 100%",
+		"Maintenance window: 50%-75% capacity",
+	}
+
+	for _, motd := range motds {
+		for _, urgent := range []bool{false, true} {
+			resetGlobalTestVars()
+
+			var buf bytes.Buffer
+			color.SetOutput(&buf)
+			printMotd(common.ClusterData{Motd: motd, MotdUrgent: urgent})
+			color.ResetOutput()
+
+			got := buf.String()
+			if !strings.Contains(got, motd) {
+				t.Errorf("motdUrgent=%v: output %q does not contain the MOTD %q verbatim",
+					urgent, got, motd)
+			}
+			// Go's failed-verb markers all begin "%!"; none of the MOTDs above
+			// contain that sequence, so its presence means the text was formatted.
+			if strings.Contains(got, "%!") {
+				t.Errorf("motdUrgent=%v: MOTD was format-mangled: %q", urgent, got)
+			}
+		}
+	}
 }

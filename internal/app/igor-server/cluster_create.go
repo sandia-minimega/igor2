@@ -6,6 +6,7 @@ package igorserver
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -83,7 +84,7 @@ func doCreateClusters(r *http.Request) (clusters []Cluster, hostnameList []strin
 						return fmt.Errorf("failed to update cluster dimensions for %s", cName)
 					}
 					dimensionsUpdated = true
-					clog.Info().Msgf(cName+": updated cluster display dimensions to w=%d h=%d", cConfig.DisplayWidth, cConfig.DisplayHeight)
+					clog.Info().Msgf("%s: updated cluster display dimensions to w=%d h=%d", cName, cConfig.DisplayWidth, cConfig.DisplayHeight)
 				}
 				cConfigs = append(cConfigs, cConfig)
 			} else {
@@ -231,7 +232,7 @@ func doCreateClusters(r *http.Request) (clusters []Cluster, hostnameList []strin
 			// just fall through
 		} else {
 			status = http.StatusBadRequest
-			return fmt.Errorf(existingHostMsg + " -- no new hosts created")
+			return errors.New(existingHostMsg + " -- no new hosts created")
 		}
 
 		return nil
@@ -247,7 +248,7 @@ func doCreateClusters(r *http.Request) (clusters []Cluster, hostnameList []strin
 	clusters, _ = dbReadClustersTx(nil)
 
 	if existingHostMsg != "" {
-		return clusters, hostnameList, http.StatusCreated, fmt.Errorf(existingHostMsg)
+		return clusters, hostnameList, http.StatusCreated, errors.New(existingHostMsg)
 	}
 	return clusters, hostnameList, http.StatusCreated, nil
 }

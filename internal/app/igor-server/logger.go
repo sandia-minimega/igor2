@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/syslog"
 	"net/http"
 	"net/url"
@@ -232,7 +233,7 @@ func initLog() {
 // exitPrintFatal does some standard formatting and printing of an error condition before failing out the app.
 func exitPrintFatal(errMsg string) {
 	// print fatal to STDERR
-	fmt.Fprintln(os.Stderr, fatalColor.Sprintf("igor-server: "+errMsg))
+	fmt.Fprintln(os.Stderr, fatalColor.Sprint("igor-server: "+errMsg))
 	if loggerInited {
 		logger.Fatal().Msg(errMsg)
 		// program exits with code 1
@@ -319,4 +320,24 @@ func (w *igorSyslogWriter) Emerg(m string) error {
 }
 func (w *igorSyslogWriter) Crit(m string) error {
 	return w.writer.Crit(m)
+}
+
+// zerologWriter adapts the io.Writer that a *log.Logger writes to, sending each line into
+// igor's zerolog logger at error level.
+type zerologWriter struct {
+	source string
+}
+
+func (z zerologWriter) Write(p []byte) (n int, err error) {
+	logger.Error().Msgf("%s - %s", z.source, strings.TrimRight(string(p), "\n"))
+	return len(p), nil
+}
+
+// newHttpErrorLog builds the *log.Logger to hand to http.Server.ErrorLog so that net/http's
+// own errors -- accept failures, TLS handshake errors, and the "panic serving" line raised
+// when a panic escapes a handler -- are written to igor.log rather than to stderr.
+//
+// The flags are cleared because zerolog supplies its own timestamp.
+func newHttpErrorLog(source string) *log.Logger {
+	return log.New(zerologWriter{source: source}, "", 0)
 }

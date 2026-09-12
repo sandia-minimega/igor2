@@ -5,6 +5,7 @@
 package igorserver
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -65,9 +66,9 @@ func runStats(optionParams map[string][]string) (stats common.StatsData, status 
 					logger.Debug().Msgf("Atoi converted %s to %v", v[0], d)
 					if d < 0 {
 						msg := fmt.Sprintf("invalid value received for stats duration: %v", d)
-						logger.Error().Msgf(msg)
+						logger.Error().Msg(msg)
 						status = http.StatusBadRequest
-						err = fmt.Errorf(msg)
+						err = errors.New(msg)
 						return stats, status, err
 					} else if d == 0 {
 						start = time.Time{}
@@ -77,9 +78,9 @@ func runStats(optionParams map[string][]string) (stats common.StatsData, status 
 
 				} else {
 					msg := fmt.Sprintf("error converting string %v to int", v[0])
-					logger.Debug().Msgf(msg)
+					logger.Debug().Msg(msg)
 					status = http.StatusBadRequest
-					return stats, status, fmt.Errorf(msg)
+					return stats, status, errors.New(msg)
 				}
 			case "verbose":
 				verbose = strings.ToLower(v[0]) == "true"

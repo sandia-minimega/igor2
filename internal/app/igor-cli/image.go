@@ -261,6 +261,6 @@ func printImages(rb *common.ResponseBodyImages) {
 		tw.SetStyle(igorTableStyle)
 	}
 
-	fmt.Printf("\n" + tw.Render() + "\n\n")
+	fmt.Print("\n" + tw.Render() + "\n\n")
 
 }

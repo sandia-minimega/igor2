@@ -430,6 +430,6 @@ func printShowUsers(rb *common.ResponseBodyUsers, showAll bool) {
 		tw.SetStyle(igorTableStyle)
 	}
 
-	fmt.Printf("\n" + tw.Render() + "\n\n")
+	fmt.Print("\n" + tw.Render() + "\n\n")
 
 }

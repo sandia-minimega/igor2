@@ -274,6 +274,6 @@ func printKickstart(rb *common.ResponseBodyKickstarts) {
 		tw.SetStyle(igorTableStyle)
 	}
 
-	fmt.Printf("\n" + tw.Render() + "\n\n")
+	fmt.Print("\n" + tw.Render() + "\n\n")
 
 }

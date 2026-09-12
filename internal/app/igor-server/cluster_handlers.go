@@ -17,14 +17,19 @@ import (
 // destination for route POST /clusters
 func handleCreateClusters(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	clog := hlog.FromRequest(r)
 	actionPrefix := "create cluster(s)"
 	rb := common.NewResponseBody()
 
-	clusters, hostnames, status, err := doCreateClusters(r)
+	var (
+		clusters  []Cluster
+		hostnames []string
+		status    int
+		err       error
+	)
+	lockedDbWrite(func() {
+		clusters, hostnames, status, err = doCreateClusters(r)
+	})
 
 	if status >= http.StatusInternalServerError {
 		clog.Error().Msgf("%s error - %v", actionPrefix, err)
@@ -48,9 +53,6 @@ func handleCreateClusters(w http.ResponseWriter, r *http.Request) {
 // destination for route GET /clusters
 func handleReadClusters(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	queryMap := r.URL.Query()
 	clog := hlog.FromRequest(r)
 	actionPrefix := "read cluster(s)"
@@ -60,35 +62,41 @@ func handleReadClusters(w http.ResponseWriter, r *http.Request) {
 	var getYamlFile bool
 	var yDoc []byte
 	var finalPath string
+	var clusters []Cluster
+	var status int
+	var err error
 
 	queryParams, doFileDump, getYamlFile = parseClusterSearchParams(queryMap, r)
-	clusters, status, err := doReadClusters(queryParams)
-	if err != nil {
-		rb.Message = err.Error()
-		clog.Error().Msgf("%s error - %v", actionPrefix, err)
-	} else if doFileDump || getYamlFile {
 
-		yDoc, _, err = assembleYamlOutput(clusters)
+	lockedDbWrite(func() {
+		clusters, status, err = doReadClusters(queryParams)
 		if err != nil {
-			status = http.StatusInternalServerError
 			rb.Message = err.Error()
 			clog.Error().Msgf("%s error - %v", actionPrefix, err)
-		} else {
+		} else if doFileDump || getYamlFile {
 
-			if doFileDump {
-				finalPath, err = updateClusterConfigFile(yDoc, clog)
+			yDoc, _, err = assembleYamlOutput(clusters)
+			if err != nil {
+				status = http.StatusInternalServerError
+				rb.Message = err.Error()
+				clog.Error().Msgf("%s error - %v", actionPrefix, err)
+			} else {
 
-				if err != nil {
-					rb.Message = err.Error()
-				} else {
-					rb.Message = fmt.Sprintf("dumped cluster config to %s", finalPath)
+				if doFileDump {
+					finalPath, err = updateClusterConfigFile(yDoc, clog)
+
+					if err != nil {
+						rb.Message = err.Error()
+					} else {
+						rb.Message = fmt.Sprintf("dumped cluster config to %s", finalPath)
+					}
 				}
 			}
-		}
 
-	} else {
-		clog.Info().Msgf("%s success", actionPrefix)
-	}
+		} else {
+			clog.Info().Msgf("%s success", actionPrefix)
+		}
+	})
 
 	if status < http.StatusBadRequest {
 		if getYamlFile {
@@ -157,15 +165,18 @@ func validateClusterParams(handler http.Handler) http.Handler {
 
 func handleUpdateMotd(w http.ResponseWriter, r *http.Request) {
 
-	dbAccess.Lock()
-	defer dbAccess.Unlock()
-
 	createParams := getBodyFromContext(r)
 	clog := hlog.FromRequest(r)
 	actionPrefix := "update motd"
 	rb := common.NewResponseBody()
 
-	status, err := doUpdateMotd(createParams)
+	var (
+		status int
+		err    error
+	)
+	lockedDbWrite(func() {
+		status, err = doUpdateMotd(createParams)
+	})
 
 	if err != nil {
 		stdErrorResp(rb, status, actionPrefix, err, clog)
