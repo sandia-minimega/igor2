@@ -2,10 +2,9 @@
 # ---------------- IGOR SERVER CONFIGURATION FILE ----------------
 #
 # This configuration file is designed to get igor up and running quickly. If a field has a default indicated that is
-# the value that will be used if the field is left blank. Review carefully for required fields. At startup the server 
-# will print all finalized config values to the igor log file for review. Password settings are masked in the log file 
+# the value that will be used if the field is left blank. Review carefully for required fields. At startup the server
+# will print all finalized config values to the igor log file for review. Password settings are masked in the log file
 # output for security.
-
 
 # -- ENVIRONMENT SETTINGS --
 
@@ -15,11 +14,9 @@
 # Default: igor
 instanceName:
 
-
-# -- SERVER SETTINGS -- 
+# -- SERVER SETTINGS --
 # Server setup. The relevant settings will make connections to the REST API available at https://[host]:[port]/igor
 server:
-
   # host (string) - Igor server host name or IP. If left blank will call 'hostname -f' at startup to get the FQDN for
   # use in this field. Alternatively you can specify the hostname or an IP directly, including 0.0.0.0 or localhost.
   # Default: FQDN, if available
@@ -62,7 +59,7 @@ server:
   # Default: (blank -- but REQUIRED if igorweb is being used!)
   allowedOrigins:
     - localhost:3000
-    
+
   # allowPublicShow (true|false) - Enables an API call at GET https://[host]:[port]/igor/public that can be reached
   # without the need to authenticate the requester. The information returned is a plain text message in CSV format
   # with a header row summarizing the reservations on the cluster similar to 'igor show'. This is a handy way to let
@@ -100,7 +97,7 @@ server:
   # Default: false
   allowImageUpload:
 
-  # userLocalBootDC (true|false) - Restrict Local Boot Distro creation. If false, restricts the creation of 
+  # userLocalBootDC (true|false) - Restrict Local Boot Distro creation. If false, restricts the creation of
   # local boot distros to be admin only. If true, any user can create a distro using a local-boot-only image.
   # Distros with images intended for local boot require a kickstart script to be associated with the distro.
   # Default: false
@@ -111,25 +108,24 @@ server:
   # Default: 22
   probePorts:
 
-# -- AUTHENTICATION SETTINGS -- 
+# -- AUTHENTICATION SETTINGS --
 # Parameters for how users identify themselves to igor and for how long.
 auth:
-
   # scheme (string) - Determines authentication mechanism for igor users.
   # Accepted values: local, ldap, ldaps or ldapi.
-  # Default: local 
-  scheme: 
+  # Default: local
+  scheme:
 
   # defaultUserPassword (string) - Specifies the password that is set when a new user is created or a user's password
   # is reset by an admin. It is advised to set this in accordance with your organization's recommended security practices.
   # This value is only used when authScheme = local. Does not affect the igor-admin account default password.
-  # Default: changeMe$1 
+  # Default: changeMe$1
   defaultUserPassword:
 
   # tokenDuration (integer) - Specifies the duration (in hours) a generated authentication token is valid for a
   # given user. When the token expires the user must re-authenticate. Applies both to igorweb and CLI client.
   # Accepted values: 1-720 (1 hour to 30 days)
-  # Default: 72 
+  # Default: 72
   tokenDuration:
 
   # elevateTimeout (int) - The number of minutes that a member of the admin group will be able to issue admin commands
@@ -143,7 +139,6 @@ auth:
   # requires a host (server address) and baseDN depending on your LDAP service configuration. If LDAP isn't being
   # used then settings in this section are ignored.
   ldap:
-
     # Host (string) - LDAP server hostname.
     # REQUIRED. Cannot be left blank.
     host: example.ldap.com
@@ -161,7 +156,6 @@ auth:
     # tlsConfig: is used for either SSL connection (LDAPS) or tls connection, whichever is chosen.
     # If a cert is not specified, InsecureSkipVerify: true will be used
     tlsConfig:
-
       # tlsCheckPeer (true|false) - Set false to use InsecureSkipVerify: true
       # Default: false
       tlsCheckPeer:
@@ -202,7 +196,6 @@ auth:
     # will start with a worker that will regularly connect to LDAP using the settings provided above to perform sync
     # functions using the filters and attributes specified below.
     sync:
-
       # enableUserSync (bool) - If true, Igor will periodically sync its user list with the members of the specified
       # LDAP groups. This will automatically create Igor accounts for those members who do not already have one,
       # therefore best practice should limit the groups used here specifically for this purpose. The final list of
@@ -232,7 +225,7 @@ auth:
 
       # syncFrequency (int) - number in minutes Igor will wait before syncing the user list with group membership in LDAP
       # Default: 60
-      syncFrequency: 
+      syncFrequency:
 
       # groupFilters (string list) - for the Group Object Filter. This is a comma-delimited list specifying which groups will
       # be used to auto-sync igor account creation. Groups can contain the same members, however to be removed from igor
@@ -276,10 +269,8 @@ auth:
       # Default: (blank)
       groupOwnerAttributes:
 
-
 # -- DATABASE SETTINGS --
 database:
-
   # adapter (string) - the database type to be used. Only 'sqlite' is a valid option at this time.
   # Accepted values: sqlite
   # REQUIRED. Cannot be left blank.
@@ -290,15 +281,13 @@ database:
   # Default: $IGOR_HOME/.database
   dbFolderPath:
 
-
 # -- LOGGER SETTINGS --
 # Igor has a configurable logger that can be adjusted for organizational requirements. See the file
 # init/igor.logrotate for an example of how to set up igor using the Linux logrotate utility.
 log:
-
   # level (string) - The logging level
   # Accepted values: debug, info, warn, error
-  # Default: info 
+  # Default: info
   level:
 
   # dir (string) - Specifies the logfile directory. If the log path is inaccessible, $IGOR_HOME will be used.
@@ -306,14 +295,13 @@ log:
   dir:
 
   # file (string) - The name of the igor log file
-  # Default: igor.log 
+  # Default: igor.log
   file:
 
   # Igor supports optional writing to a syslog endpoint on the local machine or over a network.
   # Note that if this option is enabled it is best to keep the logging level at 'info' or above to avoid extremely
   # verbose output in syslog files.
   syslog:
-
     # network (string) - Defines what kind of syslog endpoint to connect to.
     # Accepted values: none, local, or see https://golang.org/pkg/net/#Dial for a list of acceptable values for network field.
     # Default: none
@@ -324,12 +312,10 @@ log:
     # Default: (blank)
     addr:
 
-
 # -- VLAN SETTINGS --
 # These settings configure a VLAN service provided by a network switch allowing reservation nodes to communicate with
 # each other on a private LAN.
 vlan:
-
   # network (string) - The name of the switch/service you wish to use. Leaving this setting blank turns off VLAN service
   # and ignores all other settings in this section.
   # Accepted values: arista
@@ -365,10 +351,8 @@ vlan:
   rangeMin: 100
   rangeMax: 200
 
-
 # -- EMAIL SETTINGS --
 email:
-
   # smtpServer (string) - The hostname of the SMTP mail server igor will use to send messages to users.
   # If left blank then email from igor is completely disabled.
   # Default: (blank)
@@ -420,11 +404,9 @@ email:
   # Default: 3d,1d
   resNotifyTimes:
 
-
 # -- RESERVATION SCHEDULER SETTINGS --
 # These settings define global limits on how reservations can be made and extended.
 scheduler:
-
   # nodeReserveLimit (int) - The maximum number of public nodes a user can be granted per reservation. This setting does
   # NOT affect reserving restricted nodes if the owner belongs to an allowed access group.
   # Elevated admins ignore this setting and can always make a reservation using as many nodes as are available.
@@ -481,22 +463,19 @@ scheduler:
   # Default: 4320
   extendWithin:
 
-
 # -- RESERVATION MAINTENANCE SETTINGS --
-# These settings define features for how reservations can be padded with maintenance times and hosts can be booted with a 
+# These settings define features for how reservations can be padded with maintenance times and hosts can be booted with a
 # default image when not in use. You can register an image to Igor with a special flag to indicate it as a default image which
 # Igor should install to a host once a reservation it's associated with ends. See the admin guide for details on registering
 # a default image.
 maintenance:
-
   # hostMaintenanceDuration (int) - The maximum number of minutes the host(s) of a reservation will be made unavailable after
   # the reservation has ended. A value greater than 0 is required if using Igor to install a default image to a host after
-  # a reservation ends. You should put a sufficient amount of time to allow Igor to install the image to the host to avoid  
+  # a reservation ends. You should put a sufficient amount of time to allow Igor to install the image to the host to avoid
   # colliding with the start time of a new reservation. This may lead to an incomplete overwrite of the host.
   # Default: 0
   hostMaintenanceDuration:
 
-  
 # -- EXTERNAL COMMAND SETTINGS --
 # Specifies parameters and commands that igor will use when calling other apps to perform actions on cluster nodes.
 externalCmds:
@@ -533,3 +512,8 @@ externalCmds:
   # Default: (blank)
   powerStatus:
 
+  # forcePXE (string) - the command used to force the hosts of a reservation to PXE boot over network on its next reboot. This is executed
+  # as a bash command. When a reservation ends, Igor will send this command after uninstalling (removing) the boot config so that the
+  # next time a new image is installed (maintenance or new reservation), the hosts are forced to boot over network and use the new config.
+  # Default: (blank)
+  forcePXE:

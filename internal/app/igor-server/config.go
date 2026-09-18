@@ -202,6 +202,7 @@ type Config struct {
 		PowerOff         string `yaml:"powerOff" json:"powerOff"`
 		PowerCycle       string `yaml:"powerCycle" json:"powerCycle"`
 		PowerStatus      string `yaml:"powerStatus" json:"powerStatus"`
+		ForcePXE		 string `yaml:"forcePXE" json:"forcePXE"`
 	} `yaml:"externalCmds" json:"externalCmds"`
 }
 

@@ -136,6 +136,13 @@ func (b *TFTPInstaller) Uninstall(r *Reservation) error {
 			logger.Warn().Msgf("pxeconfig file for host %v encountered a problem during uninstall: %v", host.Name, err.Error())
 		}
 	}
+	// force PXEboot if command is present
+	if igor.ExternalCmds.ForcePXE != "" {
+		hostlist := hostNamesOfHosts(r.Hosts)
+		if err := runAll(igor.ExternalCmds.ForcePXE, hostlist, 0); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

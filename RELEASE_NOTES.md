@@ -1,15 +1,33 @@
 # Release Notes
 
+## v2.3.4
+
+17-September-2026
+
+***This release includes a change to the igor-server.yaml config file. See full documentation for details.***
+
+### Updates
+
+- Add forcePXE setting to external commands section of server config (see description in config for usage notes).
+
+### Security Updates
+
+- Bump minimum required Golang to 1.25.x
+- Updated x/crypto package to 0.52.0
+- Updated x/net package to 0.54.0
+
 ## v2.3.3
 
 11-September-2026
+
+***This release includes a change to the igor-server.yaml config file. See full documentation for details.***
 
 ### Updates
 
 - Added a configurable timeout to arista RPC calls. This can be changed from the default 30 seconds in the igor-server.yaml file.
 - Added GOTRACEBACK setting to the server systemd service file to assist diagnosis of problems.
 
-## Fixes
+### Fixes
 
 - Fixed an issue to stop the standard panic handler from re-panicking and respond instead with the intended HTTP 500 code.
 - Fixed an issue where every multipart file upload would strand its spooled file in /tmp instead of cleaning it up when finished.
@@ -19,8 +37,8 @@
 - Replaced database write operation calls with a unified mutex architecture that properly defers releasing the database lock until it is safe to do so.
 - Arista RPC calls now put credentials into an HTTP Basic Auth header instead of fields in the URL.
 - Fixed an issue where trying to access a missing email template for removing a group owner or when reservation notifications are turned off would cause a server panic.
-- Fixed an issue where the help link was being substituted as a sender address when the igor-admin email field was blank. A warning is sent to the igor log if admin email doesn't have an address to send to.
-- Fixed an issue where queued mail for a removed user is dropped instead re-queued every minute indefinitely.
+- Fixed an issue where the help link was being substituted as a sender address when the igor-admin email field was blank. A warning is now sent to the igor log if igor-admin doesn't have an email address to send to.
+- Fixed an issue where queued mail for a removed user was re-queued every minute indefinitely instead of dropped.
 - Fixed an issue where use of the percent-sign '%' character in format strings could result in mangled output for the MOTD and console messages.
 
 
