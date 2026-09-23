@@ -5,16 +5,19 @@
         <b-col class="mt-4 align-top">
           <b-row>
             <b-col>
-              <node-grid></node-grid>
+              <node-grid
+                :highlighted-nodes="focusedReservationHosts"
+                @node-focused="focusNode"
+              ></node-grid>
             </b-col>
           </b-row>
           <b-row>
             <b-col>
-              <reservation-table></reservation-table>
+              <reservation-table :focused-node="focusedNode"></reservation-table>
             </b-col>
           </b-row>
         </b-col>
-        <b-col class="mt-4  mr-2 p-1 align-top" rowspan="2">
+        <b-col class="mt-4  me-2 p-1 align-top" rowspan="2">
           <tab-menu></tab-menu>
         </b-col>
       </b-row>
@@ -36,6 +39,8 @@ export default {
   },
   data() {
     return {
+      focusedNode: null,
+      focusedReservationHosts: [],
       hosts: [],
       hostNames: [],
       reservations: [],
@@ -132,6 +137,41 @@ export default {
     this.fetchFromServer();
   },
   methods: {
+    normalizeReservationHosts(hosts) {
+      if (Array.isArray(hosts)) {
+        return [...new Set(hosts.filter(Boolean))];
+      }
+
+      if (typeof hosts === "string") {
+        return [
+          ...new Set(
+            hosts
+              .split(",")
+              .map((host) => host.trim())
+              .filter(Boolean)
+          ),
+        ];
+      }
+
+      return [];
+    },
+    focusNode(host) {
+      this.focusedNode = host;
+
+      if (!host) {
+        this.focusedReservationHosts = [];
+        return;
+      }
+
+      const reservation = this.$store.getters.reservations.find((item) =>
+        this.normalizeReservationHosts(item.hosts).includes(host)
+      );
+
+      this.focusedReservationHosts = reservation
+        ? this.normalizeReservationHosts(reservation.hosts)
+        : [];
+    },
+
     // Redirect to Login on Session expiration
     sessionExpired() {
       this.$store.dispatch("logout").then(() => {

@@ -7,15 +7,15 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <b-row>
@@ -105,7 +105,7 @@
                   </div>
                 </div>
               </b-tab>
-              <b-tab no-body title="Distro" title-link-class="text-dark">
+              <b-tab no-body title="Distro" title-link-class="">
                 <div class="container">
                   <div class="row col-sm-6 form-group">
                     <label for="distro" class="col-form-label text-primary"
@@ -135,7 +135,7 @@
                   </div>
                 </div>
               </b-tab>
-              <b-tab no-body title="Profile" title-link-class="text-dark">
+              <b-tab no-body title="Profile" title-link-class="">
                 <div class="container">
                   <div class="row col-sm-6 form-group">
                     <label for="profile" class="col-form-label text-primary"
@@ -165,7 +165,7 @@
                   </div>
                 </div>
               </b-tab>
-              <b-tab no-body title="Hosts" title-link-class="text-dark">
+              <b-tab no-body title="Hosts" title-link-class="">
                 <div class="container">
                   <div class="row col-sm-6 form-group">
                     <label for="hosts" class="col-form-label text-primary"
@@ -214,7 +214,7 @@
                 class="btn btn-danger"
               >
                 Delete
-                <b-icon icon="trash" class="ml-1"></b-icon>
+                <b-icon icon="trash" class="ms-1"></b-icon>
               </button>
               <button
                 type="button"
@@ -235,39 +235,38 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <div class="row col-sm-6 form-group">
                     <label for="extTime" class="col-form-label text-primary"
                       >Time:</label
                     >
-                    <b-form-timepicker
-                      locale="en"
+                    <b-form-input
                       id="extTime"
-                      placeholder="Extension Time"
+                      type="time"
+                      step="60"
                       v-model="extendResv.extTime"
-                    >
-                    </b-form-timepicker>
+                    ></b-form-input>
                   </div>
                   <div class="row col-sm-6 form-group">
-                    <label for="extTime" class="col-form-label text-primary"
+                    <label for="extDate" class="col-form-label text-primary"
                       >Date:</label
                     >
-                    <b-form-datepicker
+                    <b-form-input
                       id="extDate"
+                      type="date"
                       v-model="extendResv.extDate"
-                      :min="new Date()"
-                    >
-                    </b-form-datepicker>
+                      :min="minimumExtendDate"
+                    ></b-form-input>
                   </div>
                   <div class="modal-footer">
                     <button
@@ -306,15 +305,15 @@
           <b-card no-body>
             <b-tabs
               card
-              active-nav-item-class="font-weight-bold text-dark"
-              active-tab-class="text-dark"
-              title-item-class="text-dark"
+              active-nav-item-class="fw-bold"
+              active-tab-class=""
+              title-item-class=""
             >
               <b-tab
                 active
                 no-body
                 title="Details"
-                title-link-class="text-dark"
+                title-link-class=""
               >
                 <div class="container">
                   <div class="row col-sm-6">
@@ -360,7 +359,7 @@
                   </div>
                 </div>
               </b-tab>
-              <b-tab no-body title="Hosts" title-link-class="text-dark">
+              <b-tab no-body title="Hosts" title-link-class="">
                 <div class="container">
                   <div class="row col-sm-6 form-group">
                     <label for="hosts" class="col-form-label text-primary"
@@ -412,8 +411,12 @@
     </div>
     <!-- Reservation Tab and table -->
     <div>
-      <b-card no-body>
-        <b-tabs card active-nav-item-class="font-weight-bold">
+      <b-card no-body :class="{ 'border-0': embedded }">
+        <b-tabs
+          card
+          active-nav-item-class="fw-bold"
+          :nav-wrapper-class="embedded ? 'd-none' : null"
+        >
           <b-tab active no-body title=" My Reservations">
             <b-row class="mt-3">
             <b-col lg="6">
@@ -428,14 +431,12 @@
                     v-model="filter"
                     type="search"
                     placeholder="Search"
-                    class="form-control col-4 ml-3"
+                    class="form-control col-4 ms-3"
                   ></b-form-input>
 
-                  <b-input-group-append>
-                    <b-button :disabled="!filter" @click="filter = ''"
-                      >Clear</b-button
-                    >
-                  </b-input-group-append>
+                  <b-button :disabled="!filter" @click="filter = ''"
+                    >Clear</b-button
+                  >
                 </b-input-group>
               </b-form-group>
             </b-col>
@@ -450,56 +451,56 @@
                   :current-page="currentPage"
                   :per-page="perPage"
                   responsive="sm"
-                  class="rtable pl-3 pr-3 pb-3"
+                  class="rtable ps-3 pe-3 pb-3"
                   show-empty
                   :filter="filter"
                 :filter-included-fields="filterOn"
                 @filtered="onFiltered"
                 >
                   <template #empty="scope">
-                    <h6 class="font-italic">{{ scope.emptyText }}</h6>
+                    <h6 class="fst-italic">{{ scope.emptyText }}</h6>
                   </template>
                   <template #cell(show_details)="row">
                     <div v-show="isUserReservation(row.item.name)">
                       <!-- Edit Reservation -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getEditId(row.item.name)"
                       >
                         <b-icon-pencil-fill
-                          scale="0.8"
+                          scale="1.2"
                           variant="primary"
                         ></b-icon-pencil-fill>
                       </b-button>
                       <!-- Extend Reservation -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getExtendId(row.item.name)"
                       >
                         <b-icon-clock-fill
-                          scale="0.8"
+                          scale="1.2"
                           variant="success"
                         ></b-icon-clock-fill>
                       </b-button>
                       <!-- Power Cycle Reservation -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getCycleId(row.item.name)"
                       >
                         <b-icon
                           icon="power"
                           class="rounded-circle bg-warning"
-                          scale="0.7"
+                          scale="1.2"
                           variant="white"
                         ></b-icon>
                       </b-button>
                       <!-- Delete Reservation -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getResvId(row.item.name)"
                       >
                         <b-icon-x-circle-fill
-                          scale="0.8"
+                          scale="1.2"
                           variant="danger"
                         ></b-icon-x-circle-fill>
                       </b-button>
@@ -507,23 +508,23 @@
                     <div v-show="!isUserReservation(row.item.name)">
                       <!-- Extend Reservation -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getExtendId(row.item.name)"
                       >
                         <b-icon-clock-fill
-                          scale="0.8"
+                          scale="1.2"
                           variant="success"
                         ></b-icon-clock-fill>
                       </b-button>
                       <!-- Power Cycle Reservation -->
                       <b-button
-                        class="btn bg-transparent btn-outline-light text-dark buttonfocus"
+                        class="btn bg-transparent btn-outline-light buttonfocus"
                         v-on:click="getCycleId(row.item.name)"
                       >
                         <b-icon
                           icon="power"
                           class="rounded-circle bg-warning"
-                          scale="0.7"
+                          scale="1.2"
                           variant="white"
                         ></b-icon>
                       </b-button>
@@ -571,13 +572,38 @@
 
 <script>
 import axios from "axios";
-import Vue from "vue";
 import moment from "moment";
-import SmartTable from "vuejs-smart-table";
-Vue.use(SmartTable);
+
+const formatUnixTimestamp = (formatterInput) => {
+  const value =
+    formatterInput !== null &&
+    typeof formatterInput === "object" &&
+    "value" in formatterInput
+      ? formatterInput.value
+      : formatterInput;
+
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const numericTimestamp = Number(value);
+  const date = Number.isFinite(numericTimestamp)
+    ? Math.abs(numericTimestamp) >= 100000000000
+      ? moment(numericTimestamp)
+      : moment.unix(numericTimestamp)
+    : moment(value);
+
+  return date.isValid()
+    ? date.format("MMM[-]DD[-]YY[ ]h:mm a")
+    : "";
+};
 export default {
   name: "UserReservations",
   props: {
+    embedded: {
+      type: Boolean,
+      default: false,
+    },
     msg: {
       type: String,
       value: "",
@@ -603,11 +629,7 @@ export default {
           key: "end",
           thClass: "theader",
           thStyle: "font-weight: bold",
-          formatter: (value) => {
-            return moment(new Date(value * 1000)).format(
-              "MMM[-]DD[-]YY[ ]h:mm a"
-            );
-          },
+          formatter: formatUnixTimestamp,
         },
         {
           sortable: true,
@@ -679,6 +701,9 @@ export default {
     this.totalRows = this.$store.getters.associatedReservations.length;
   },
   computed: {
+    minimumExtendDate() {
+      return moment().format("YYYY-MM-DD");
+    },
     userReservations() {
       return this.$store.getters.userReservations;
     },
@@ -961,16 +986,16 @@ export default {
       };
       // Sanity check
       if (this.editResv.name === this.name) {
-        this.$delete(editData, "name");
+        delete editData.name;
       }
       if (this.editResv.description === this.description) {
-        this.$delete(editData, "description");
+        delete editData.description;
       }
       if (this.editResv.owner === this.owner) {
-        this.$delete(editData, "owner");
+        delete editData.owner;
       }
       if (this.editResv.group === this.group) {
-        this.$delete(editData, "group");
+        delete editData.group;
       }
       axios
         .patch(saveResvUrl, editData, { withCredentials: true })

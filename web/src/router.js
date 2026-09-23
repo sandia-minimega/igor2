@@ -1,5 +1,4 @@
-import Vue from "vue";
-import Router from "vue-router";
+import { createRouter, createWebHistory } from "vue-router";
 import Login from "./components/Login.vue";
 import Secure from "./components/Secure.vue";
 import NotFound from "./components/error-pages/NotFound.vue";
@@ -17,17 +16,12 @@ import SideMenu from "./components/SideMenu.vue";
 import CreateGroup from "./components/CreateGroup.vue";
 import CreateProfile from "./components/CreateProfile.vue";
 
-Vue.use(Router);
-let router = new Router({
-  mode: "history",
+const router = createRouter({
+  history: createWebHistory(process.env.BASE_URL),
   routes: [
     {
       path: "/",
-      name: "login",
-      component: Login,
-      meta: {
-        requiresAuth: false,
-      },
+      redirect: "/login",
     },
     {
       path: "/login",
@@ -154,7 +148,7 @@ let router = new Router({
       },
     },
     {
-      path: "*",
+      path: "/:pathMatch(.*)*",
       name: "NotFound",
       component: NotFound,
       meta: {
@@ -163,17 +157,15 @@ let router = new Router({
     },
   ],
 });
-router.beforeEach((to, from, next) => {
-  if (to.fullPath === '/userview') {
-    if (sessionStorage.getItem("authenticated")) {
-      next();
-    }
-    else {
-      next("/login");
-    } 
+
+router.beforeEach((to) => {
+  if (
+    to.fullPath === "/userview" &&
+    !sessionStorage.getItem("authenticated")
+  ) {
+    return "/login";
   }
-  else{
-    next();
-  }
+  return true;
 });
+
 export default router;

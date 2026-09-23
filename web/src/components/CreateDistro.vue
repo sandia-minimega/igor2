@@ -20,7 +20,7 @@
               class="btn btn-danger"
             >
               Cancel
-              <b-icon icon="x-circle" class="ml-1"></b-icon>
+              <b-icon icon="x-circle" class="ms-1"></b-icon>
             </button> -->
           </div>
         </div>
@@ -188,7 +188,7 @@
                     v-model="form.public"
                     switch
                     inline
-                    class="align-top ml-2"
+                    class="align-top ms-2"
                     id="publicChkBox"
                   >
                   </b-form-checkbox>

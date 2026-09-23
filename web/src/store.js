@@ -1,10 +1,21 @@
-import Vue from "vue";
-import Vuex from "vuex";
+import { createStore } from "vuex";
 import axios from "axios";
 
-Vue.use(Vuex);
+let runtimeConfig;
 
-export default new Vuex.Store({
+export function setRuntimeConfig(config) {
+  runtimeConfig = config;
+}
+
+function getApiBaseUrl() {
+  if (!runtimeConfig) {
+    throw new Error("Runtime configuration has not been loaded");
+  }
+
+  return runtimeConfig.IGOR_API_BASE_URL;
+}
+
+export default createStore({
   state: {
     // Authentication
     status: "",
@@ -720,7 +731,7 @@ export default new Vuex.Store({
     // Authentication
     login({ commit }, user) {
       const uname = user.username;
-      const session_url = Vue.prototype.$config.IGOR_API_BASE_URL + "/login";
+      const session_url = getApiBaseUrl() + "/login";
       return new Promise((resolve, reject) => {
         commit("auth_request");
         axios
@@ -749,7 +760,7 @@ export default new Vuex.Store({
       return new Promise((resolve, reject) => {
         commit("auth_request");
         axios({
-          url: Vue.prototype.$config.IGOR_API_BASE_URL + "/login",
+          url: getApiBaseUrl() + "/login",
           data: user,
           method: "GET",
         })

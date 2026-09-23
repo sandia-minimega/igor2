@@ -96,7 +96,7 @@
               </b-form-select>
             </b-form-group>
           </div>
-          <div class="form-group row pl-2">
+          <div class="form-group row ps-2">
             <b-form-group>
               <b-button type="submit" variant="primary" class="m-2"
                 >Submit</b-button
@@ -195,7 +195,7 @@ export default {
         .post(createGroupUrl, payload, { withCredentials: true })
         .then((response) => {
           alert("Group created successfully!");
-          this.$set(payload, "owner", sessionStorage.getItem("username"));
+          payload.owner = sessionStorage.getItem("username");
           this.$store.dispatch("insertNewGroup", payload);
           this.$store.dispatch("insertNewGroupName", payload.name);
         })

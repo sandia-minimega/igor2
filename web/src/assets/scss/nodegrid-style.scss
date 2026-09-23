@@ -1,0 +1,226 @@
+
+/* General Style */
+
+$igor-node-red: red;
+$igor-node-violet: violet;
+$igor-node-green: green;
+$igor-node-lightgreen: lightgreen;
+$igor-node-black: black;
+$igor-node-white: white;
+$igor-node-orange:orange;
+$igor-node-blue:cornflowerblue;
+$igor-node-blocked:rgb(160, 137, 4);
+$igor-node-gray:gray;
+$igor-node-dimgray: dimgray;
+$igor-node-purple:rebeccapurple;
+
+
+/* Links */
+ul,
+li {
+  list-style-type: none;
+  color: gray;
+}
+
+a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+[data-bvtoggle="nodeLegend"] {
+  color: orange !important;
+  font-weight: bold;
+}
+
+/* Style for Node Grid */
+.node-grid {
+  background-color: var(--bs-body-bg);
+  border-radius: 4px;
+  border-color:   var(--bs-border-color);
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.card-list {
+  display: grid;
+  grid-gap: 0.2em;
+  border-radius: 4px;
+  font-size: initial; /* overrides: font-size: small; */
+}
+
+.card-list > .list-group-item {
+  height: 100%;                 /* fill the gridAutoRows height */
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+  container-type: inline-size;  /* enables cqi sizing for the label */
+}
+/* If you wrapped the hostname in <span class="node-name"> */
+.card-list > .list-group-item .node-name {
+  font-size: clamp(0.80rem, 14cqi, 1.25rem);
+  line-height: 1em;
+  padding: 0 0.35rem;           /* keeps visible background margin */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+$card-backgrounds: (
+        reserved: $igor-node-green,
+        other-reserved: rebeccapurple,
+        blocked: $igor-node-blocked,
+        restricted: $igor-node-violet,
+        insterr: $igor-node-red,
+        selected: $igor-node-lightgreen,
+);
+
+$card-status-colors: (
+        up: $igor-node-white,
+        on: $igor-node-blue,
+        ping: $igor-node-orange,
+        off: $igor-node-red,
+        unknown: $igor-node-dimgray,
+);
+
+.card-item {
+  --card-background: #{$igor-node-black};
+  --card-color: #{$igor-node-white};
+  --border-color: #{$igor-node-white};
+  font-weight: bold;
+  border-radius: 4px;
+  padding-left: 3px;
+  padding-right: 3px;
+  border-color:  var(--card-background);
+  background-color: var(--card-background);
+  color: var(--card-color);
+
+  &:hover {
+    background-color: gray;
+    color: $igor-node-white;
+    font-weight: bold;
+  }
+}
+
+html.theme-dark {
+  .card-item,
+  .card-available-off,
+  .card-available-unknown {
+    border: 1px solid #5a657a;
+  }
+}
+
+// Generate category classes such as .card-reserved and .card-blocked
+@each $category, $background in $card-backgrounds {
+  .card-#{$category} {
+    --card-background: #{$background};
+  }
+}
+
+// Generate status classes such as .card-up and .card-off
+@each $status, $color in $card-status-colors {
+  .card-#{$status} {
+    --card-color: #{$color};
+  }
+}
+
+.card-blocked {
+  pointer-events: none;
+}
+
+.card-grp-reserved {
+  --card-background: #{$igor-node-green};
+
+  background-image: repeating-linear-gradient(
+                  45deg,
+                  green,
+                  green 10px,
+                  darkgreen 10px,
+                  darkgreen 20px
+  );
+}
+
+.card-available {
+  --card-background: #{$igor-node-black};
+
+  &.card-off:hover {
+    --card-background: #{tint-color($igor-node-black, 50%)};
+    --card-color: #{tint-color($igor-node-red, 50%)};
+  }
+
+  &.card-unknown {
+    &:hover {
+      --card-background: #{tint-color($igor-node-gray, 50%)};
+      --card-color: #{tint-color($igor-node-orange, 50%)};
+    }
+
+    &:active {
+      --card-background: #{$igor-node-gray};
+      --card-color: #{$igor-node-orange};
+    }
+  }
+}
+
+.card-insterr {
+  &.card-displayonly {
+    --card-color: #{$igor-node-white};
+  }
+
+  &.card-off {
+    --card-color: black;
+  }
+}
+
+.card-expiring {
+  background-color: rgb(234, 206, 241);
+  padding: 1em;
+  animation: blinker 1s infinite;
+}
+
+.expiring {
+  background-color: rgb(244, 231, 248) !important;
+}
+
+@keyframes blinker {
+  from {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.node-label {
+  padding: 1em;
+}
+.tooltip-wrap {
+  position: relative;
+}
+.tooltip-wrap .tooltip-content {
+  display: none;
+  position: absolute;
+  padding: 0.1em;
+  z-index: 1;
+  border-radius: 15px;
+  background-image: linear-gradient(rgb(223, 234, 245), rgb(184, 211, 238));
+}
+.tooltip-wrap:hover .tooltip-content {
+  display: block;
+}
+
+@media screen and (max-width: 700px) {
+  .card-list {
+    font-size: x-small;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+}

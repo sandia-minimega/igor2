@@ -3,9 +3,9 @@
     <b-card no-body>
       <b-tabs
         card
-        active-nav-item-class="font-weight-bold text-dark"
-        active-tab-class="text-dark"
-        title-item-class="text-dark"
+        active-nav-item-class="fw-bold"
+        active-tab-class=""
+        title-item-class=""
       >
         <b-tab active no-body>
           <template #title>
@@ -15,16 +15,16 @@
             <home-tab></home-tab>
           </div>
         </b-tab>
-        <b-tab title="Reservation" title-link-class="text-dark">
+        <b-tab title="Reservation" >
           <b-card-text><create-reservation></create-reservation></b-card-text>
         </b-tab>
-        <b-tab title="Distro" title-link-class="text-dark">
+        <b-tab title="Distro" >
           <b-card-text><create-distro></create-distro></b-card-text>
         </b-tab>
-        <b-tab title="Profile" title-link-class="text-dark">
+        <b-tab title="Profile" >
           <b-card-text><create-profile></create-profile></b-card-text>
         </b-tab>
-        <b-tab title="Groups" title-link-class="text-dark">
+        <b-tab title="Groups" >
           <b-card-text><create-group></create-group></b-card-text>
         </b-tab>
       </b-tabs>

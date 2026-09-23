@@ -96,7 +96,7 @@
             <template v-slot:label>
                 Select
                 <b-button
-                  class="align-center btn bg-transparent btn-outline-light text-dark buttonfocus"
+                  class="align-center btn bg-transparent btn-outline-light buttonfocus"
                   @click="clearHosts"
                 >
                   <b-icon
@@ -131,41 +131,37 @@
             <b-form-checkbox
               switch
               inline
-              class="align-top ml-2"
+              class="align-top ms-2"
               v-model="dateTimeChecked"
               @change="dateTimeToggle"
             >
             Start Time
             
             </b-form-checkbox>
-              <b-form-datepicker
+              <b-form-input
                 id="startDate"
                 v-model="form.startDate"
                 v-if="dateTimeText"
-                :min="new Date()"
+                type="date"
+                :min="minimumReservationDate"
                 class="form-control"
-              ></b-form-datepicker>
-              <b-form-timepicker
+              ></b-form-input>
+              <b-form-input
                 id="startTime"
                 v-model="form.startTime"
                 v-if="dateTimeText"
+                type="time"
+                step="60"
                 class="form-control"
-                now-button
-                label-now-button="Current Time"
-                reset-button
-                no-close-button
-              ></b-form-timepicker>
+              ></b-form-input>
               <b-form-input
                 id="dateTimeT"
-                v-model="form.dateTimeTextValue"
+                :model-value="resvStartTime"
                 v-if="!dateTimeText"
                 type="text"
-                autocomplete="off"
                 class="form-control"
-                :placeholder="resvStartTime"
                 disabled
-              >
-              </b-form-input>
+              ></b-form-input>
             </b-form-group>
             </b-col>
             <b-col>
@@ -178,36 +174,33 @@
               <b-form-checkbox
                   switch
                   inline
-                  class="align-top ml-2"
+                  class="align-top ms-2"
                   v-model="endDateTimeChecked"
                   @change="endDateTimeToggle"
                 >End Time
               </b-form-checkbox>
-              <b-form-datepicker
+              <b-form-input
                 id="endDate"
                 v-model="form.endDate"
                 v-if="endDateTimeText"
-                :min="new Date()"
+                type="date"
+                :min="minimumReservationDate"
                 class="form-control"
-              ></b-form-datepicker>
-              <b-form-timepicker
+              ></b-form-input>
+              <b-form-input
                 id="endTime"
                 v-model="form.endTime"
                 v-if="endDateTimeText"
+                type="time"
+                step="60"
                 class="form-control"
-                now-button
-                label-now-button="Current Time"
-                reset-button
-                no-close-button
-              ></b-form-timepicker>
+              ></b-form-input>
               <b-form-input
                 id="duration"
-                v-model="form.endDateTimeTextValue"
+                :model-value="resvEndTime"
                 v-if="!endDateTimeText"
                 type="text"
-                autocomplete="off"
                 class="form-control"
-                :placeholder="resvEndTime"
                 disabled
               ></b-form-input>
             </b-form-group>
@@ -241,7 +234,7 @@
               <b-form-checkbox
                   switch
                   inline
-                  class="align-top ml-2"
+                  class="align-top ms-2"
                   v-model="vlanChecked"
                   @change="vlanToggle"
                 >
@@ -291,7 +284,7 @@
             <b-col colspan="2">
               <b-form-group>
                 <b-form-checkbox v-model="powerCycleStatus" @change="doNotCycle">
-                  <p class="font-weight-bold">Do not Power Cycle on start</p>
+                  <p class="fw-bold">Do not Power Cycle on start</p>
                 </b-form-checkbox>
               </b-form-group>
             </b-col>
@@ -377,6 +370,8 @@ export default {
       vlanValue: false,
       resvStartTime: "",
       resvEndTime: "",
+      currentTimeTimer: null,
+      minDurationTimer: null,
     };
   },
   
@@ -407,6 +402,9 @@ export default {
           .add(5, "minutes")
           .format("MM[/]DD[/]YYYY[ ]hh:mm")
       );
+    },
+    minimumReservationDate() {
+      return moment().format("YYYY-MM-DD");
     },
     defaultReserveMinutes() {
       return this.$store.getters.defaultReserveMinutes;
@@ -509,18 +507,27 @@ export default {
     this.currentTime();
     this.minDurationTime();
   },
+  beforeUnmount() {
+    clearInterval(this.currentTimeTimer);
+    clearInterval(this.minDurationTimer);
+  },
   methods: {
     clearHosts(){
       this.$store.dispatch('selectedResvHosts', []);
     },
     currentTime(){
-      setInterval(() => this.getCurrentTime(), 5000);
+      this.getCurrentTime();
+      this.currentTimeTimer = setInterval(() => this.getCurrentTime(), 5000);
     },
     getCurrentTime(){
       this.resvStartTime = moment().format('MM/DD/YY hh:mm');
     },
     minDurationTime(){
-      setInterval(() => this.getMinDurationTime(), 5000);  
+      this.getMinDurationTime();
+      this.minDurationTimer = setInterval(
+        () => this.getMinDurationTime(),
+        5000
+      );
     },
     getMinDurationTime(){
       this.resvEndTime = moment().add(this.defaultReserveMinutes, "minutes")
@@ -593,65 +600,40 @@ export default {
     },
 
     getStartTime() {
-      if (this.form.startDate === "") {
-        if (this.form.startTime === "") {
-          this.form.start = "";
-        }
-      } else {
-        let d = "";
-        if (this.form.startDate !== "") {
-          d = this.form.startDate;
-        } else {
-          const today = new Date();
-          d =
-            today.getFullYear() +
-            "-" +
-            (today.getMonth() + 1) +
-            "-" +
-            today.getDate();
-        }
-        let t = "";
-        if (this.form.startTime !== "") {
-          t = this.form.startTime;
-        } else {
-          let today = new Date();
-          t = today.getHours() + ":" + today.getMinutes();
-        }
-        let dt = new Date(d + " " + t);
-        this.form.start = moment(dt)
-          .unix();
+      if (!this.dateTimeText || (!this.form.startDate && !this.form.startTime)) {
+        this.form.start = "";
+        return;
       }
+
+      const date = this.form.startDate || moment().format("YYYY-MM-DD");
+      const time = this.form.startTime || moment().format("HH:mm");
+      const dateTime = moment(
+        `${date}T${time}`,
+        "YYYY-MM-DDTHH:mm",
+        true
+      );
+
+      this.form.start = dateTime.isValid() ? dateTime.unix() : "";
     },
 
     getEndTime() {
-      if (this.form.endDate === "") {
-        if (this.form.endTime === "") {
-          this.form.end = "";
-        }
-      } else {
-        let d = "";
-        if (this.form.endDate !== "") {
-          d = this.form.endDate;
-        } else {
-          const today = new Date();
-          d =
-            today.getFullYear() +
-            "-" +
-            (today.getMonth() + 1) +
-            "-" +
-            today.getDate();
-        }
-        let t = "";
-        if (this.form.endTime !== "") {
-          t = this.form.endTime;
-        } else {
-          let today = new Date();
-          t = today.getHours() + ":" + today.getMinutes();
-        }
-        let dt = d + " " + t;
-        this.form.end = moment(dt)
-          .unix();
+      if (
+        !this.endDateTimeText ||
+        (!this.form.endDate && !this.form.endTime)
+      ) {
+        this.form.end = "";
+        return;
       }
+
+      const date = this.form.endDate || moment().format("YYYY-MM-DD");
+      const time = this.form.endTime || moment().format("HH:mm");
+      const dateTime = moment(
+        `${date}T${time}`,
+        "YYYY-MM-DDTHH:mm",
+        true
+      );
+
+      this.form.end = dateTime.isValid() ? dateTime.unix() : "";
     },
 
     getPayload() {
@@ -676,20 +658,20 @@ export default {
         noCycle: this.noCycle,
       };
       if (this.form.eDistroName === "") {
-        this.$delete(payload, "distro");
+        delete payload.distro;
       }
       if (this.form.eProfileName === "") {
-        this.$delete(payload, "profile");
+        delete payload.profile;
       }
       if (!this.form.startDT) {
-        this.$delete(payload, "start");
+        delete payload.start;
       }
       if (!this.form.endDT) {
-        this.$delete(payload, "duration");
+        delete payload.duration;
       }
       if (this.form.nodeCount === 0) {
         if (this.form.nodes !== "") {
-          this.$delete(payload, "nodeCount");
+          delete payload.nodeCount;
         } else {
           this.validateFlag = false;
           alert("Either Node List or Node Count is required!");
@@ -704,26 +686,26 @@ export default {
             this.form.nodeCount = 0;
           }
           else{
-            this.$delete(payload, "nodeCount");  
+            delete payload.nodeCount;
           }
         }
       }
       if (this.form.nodes === "") {
         if (this.form.nodeCount !== 0) {
-          this.$delete(payload, "nodeList");
+          delete payload.nodeList;
         }
       }
       if (vlan === "") {
-        this.$delete(payload, "vlan");
+        delete payload.vlan;
       }
       if (this.form.description === "") {
-        this.$delete(payload, "description");
+        delete payload.description;
       }
       if (this.form.grpname === "") {
-        this.$delete(payload, "group");
+        delete payload.group;
       }
       if (!this.noCycle) {
-        this.$delete(payload, "noCycle");
+        delete payload.noCycle;
       }
       
       return payload;
@@ -738,21 +720,11 @@ export default {
     },
 
     getStartDateOption() {
-      if (this.dateTimeText === true) {
-        this.form.startDT = this.form.start;
-      } else {
-        let dt = moment(String(this.form.dateTimeTextValue));
-        this.form.startDT = moment(dt).unix();
-      }
+      this.form.startDT = this.dateTimeText ? this.form.start : "";
     },
 
     getEndDateOption() {
-      if (this.endDateTimeText === true) {
-        this.form.endDT = this.form.end;
-      } else {
-        let dt = moment(this.form.endDateTimeTextValue);
-        this.form.endDT = moment(dt).unix();
-      }
+      this.form.endDT = this.endDateTimeText ? this.form.end : "";
     },
 
     onSubmit(event) {

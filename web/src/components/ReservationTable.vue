@@ -1,7 +1,7 @@
 <template>
   <div class="mt-3">
     <b-card no-body>
-      <b-tabs card active-nav-item-class="font-weight-bold">
+      <b-tabs card active-nav-item-class="fw-bold">
         <b-tab active no-body title="Reservations">
           <b-row class="mt-3">
             <b-col lg="6">
@@ -21,11 +21,9 @@
                     placeholder="Search"
                   ></b-form-input>
 
-                  <b-input-group-append>
-                    <b-button :disabled="!filter" @click="filter = ''"
-                      >Clear</b-button
-                    >
-                  </b-input-group-append>
+                  <b-button :disabled="!filter" @click="filter = ''"
+                    >Clear</b-button
+                  >
                 </b-input-group>
               </b-form-group>
             </b-col>
@@ -56,17 +54,18 @@
                 bordered
                 :items="rows"
                 :fields="fields"
+                :tbody-tr-class="reservationRowClass"
                 responsive="sm"
                 :current-page="currentPage"
                 :per-page="perPage"
-                class="rtable pl-3 pr-3 pb-3"
+                class="rtable ps-3 pe-3 pb-3"
                 show-empty
                 :filter="filter"
                 :filter-included-fields="filterOn"
                 @filtered="onFiltered"
               >
                 <template #empty="scope">
-                  <h6 class="font-italic">{{ scope.emptyText }}</h6>
+                  <h6 class="fst-italic">{{ scope.emptyText }}</h6>
                 </template>
               </b-table>
             </b-col>
@@ -108,16 +107,41 @@
 </template>
 
 <script>
-import Vue from "vue";
 import moment from "moment";
-import SmartTable from "vuejs-smart-table";
-Vue.use(SmartTable);
+
+const formatUnixTimestamp = (formatterInput) => {
+  const value =
+    formatterInput !== null &&
+    typeof formatterInput === "object" &&
+    "value" in formatterInput
+      ? formatterInput.value
+      : formatterInput;
+
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const numericTimestamp = Number(value);
+  const date = Number.isFinite(numericTimestamp)
+    ? Math.abs(numericTimestamp) >= 100000000000
+      ? moment(numericTimestamp)
+      : moment.unix(numericTimestamp)
+    : moment(value);
+
+  return date.isValid()
+    ? date.format("MMM[-]DD[-]YY[ ]h:mm a")
+    : "";
+};
 export default {
   name: "ReservationTable",
   props: {
     msg: {
       type: String,
       value: "",
+    },
+    focusedNode: {
+      type: String,
+      default: null,
     },
   },
   data() {
@@ -140,22 +164,14 @@ export default {
           key: "start",
           thClass: "theader",
           thStyle: "font-weight: bold",
-          formatter: (value) => {
-            return moment(new Date(value * 1000)).format(
-              "MMM[-]DD[-]YY[ ]h:mm a"
-            );
-          },
+          formatter: formatUnixTimestamp,
         },
         {
           sortable: true,
           key: "end",
           thClass: "theader",
           thStyle: "font-weight: bold",
-          formatter: (value) => {
-            return moment(new Date(value * 1000)).format(
-              "MMM[-]DD[-]YY[ ]h:mm a"
-            );
-          },
+          formatter: formatUnixTimestamp,
         },
         {
           sortable: true,
@@ -186,6 +202,43 @@ export default {
     };
   },
   methods: {
+    reservationContainsNode(reservation) {
+      if (!reservation || !this.focusedNode) {
+        return false;
+      }
+
+      if (Array.isArray(reservation.hosts)) {
+        return reservation.hosts.includes(this.focusedNode);
+      }
+
+      if (typeof reservation.hosts === "string") {
+        return reservation.hosts
+          .split(",")
+          .map((host) => host.trim())
+          .includes(this.focusedNode);
+      }
+
+      return false;
+    },
+    reservationRowClass(item, type) {
+      return type === "row" && this.reservationContainsNode(item)
+        ? "table-warning node-reservation-highlight"
+        : "";
+    },
+    showFocusedReservation() {
+      if (!this.focusedNode || this.filter) {
+        return;
+      }
+
+      const rowIndex = this.rows.findIndex((reservation) =>
+        this.reservationContainsNode(reservation)
+      );
+      const pageSize = Number(this.perPage);
+
+      if (rowIndex >= 0 && Number.isFinite(pageSize) && pageSize > 0) {
+        this.currentPage = Math.floor(rowIndex / pageSize) + 1;
+      }
+    },
     onFiltered(filteredItems) {
       // Trigger pagination to update the number of buttons/pages due to filtering
       this.totalRows = filteredItems.length;
@@ -216,6 +269,18 @@ export default {
     },
     clearFilter() {
       this.searchText = "";
+    },
+  },
+
+  watch: {
+    focusedNode() {
+      this.showFocusedReservation();
+    },
+    perPage() {
+      this.showFocusedReservation();
+    },
+    rows() {
+      this.showFocusedReservation();
     },
   },
 
