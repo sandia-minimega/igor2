@@ -179,8 +179,9 @@ the name Igor references it by, it does not change the file name.
 func newKSDelCmd() *cobra.Command {
 
 	return &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a kickstart file " + adminOnly,
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a kickstart file " + adminOnly,
 		Long: `
 Deletes an igor kickstart file from the database and designated directory.
 

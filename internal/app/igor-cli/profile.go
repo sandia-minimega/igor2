@@ -201,8 +201,9 @@ the field if it contains spaces.
 func newProfileDelCmd() *cobra.Command {
 
 	cmdDeleteProfile := &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a profile",
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a profile",
 		Long: `
 Deletes an igor profile. This can only be done by the profile owner or an
 admin.

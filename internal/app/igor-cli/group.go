@@ -239,8 +239,9 @@ Use the -r flag to remove a list of users from the group.
 func newGroupDelCmd() *cobra.Command {
 
 	cmdDeleteGroup := &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a group",
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a group",
 		Long: `
 Deletes an igor group. This can only be done by a group owner or an admin.
 

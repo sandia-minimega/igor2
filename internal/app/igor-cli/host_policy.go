@@ -338,8 +338,9 @@ new policy's restrictions.
 func newHostPolicyDelCmd() *cobra.Command {
 
 	cmdDeleteHostPolicy := &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a policy " + adminOnly,
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a policy " + adminOnly,
 		Long: `
 Deletes an igor policy. A policy cannot be deleted if it is applied to a host.
 Change the policy on the affected host first.

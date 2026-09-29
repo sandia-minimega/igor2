@@ -50,8 +50,9 @@ func exEndDay() string {
 func newResCmd() *cobra.Command {
 
 	cmdRes := &cobra.Command{
-		Use:   "res",
-		Short: "Perform a reservation command",
+		Use:     "reservation",
+		Aliases: []string{"res"},
+		Short:   "Perform a reservation command",
 		Long: `
 Reservation primary command. A sub-command must be invoked to do anything.
 
@@ -157,7 +158,7 @@ reservation.
 `,
 		Example: `
 
-igor res create Shire -p ubu20 -n 7
+igor reservation create Shire -p ubu20 -n 7
 
   * Minimum for command to work.
   Requests a reservation named 'Shire' using profile 'ubu20' on seven nodes
@@ -165,7 +166,7 @@ igor res create Shire -p ubu20 -n 7
   by the cluster admin team. Note the -d flag could be used instead of -p.
 
 
-igor res create obiwan -d cent7 -n rx[5,12-15] -e ` + exEndDts() + ` -g jedis
+igor reservation create obiwan -d cent7 -n rx[5,12-15] -e ` + exEndDts() + ` -g jedis
 
   * Uses node range, timestamp for end, and group sharing.
   Requests a reservation named 'obiwan' using the distro 'cent7' on five nodes
@@ -173,7 +174,7 @@ igor res create obiwan -d cent7 -n rx[5,12-15] -e ` + exEndDts() + ` -g jedis
   to the 'jedis' group.
 
 
-igor res create Twit2 -p twitserv -n dq74,dq9 -s ` + exStartDts() + ` -e 6d -v Twit1
+igor reservation create Twit2 -p twitserv -n dq74,dq9 -s ` + exStartDts() + ` -e 6d -v Twit1
 
   * Uses node list, future start date, duration to end, and vlan res-name.
   Requests a reservation named 'Twit2' using the profile 'twitserv' on three
@@ -350,7 +351,7 @@ These flags cannot be used with other edit parameters.
 ` + sBold("DROPPING HOSTS:") + `
 
 Use the --drop flag to remove hosts from the reservation. The NODES arg is
-the same used in 'igor res create'; a comma-delimited list (kn1,kn2,...) or a
+the same used in 'igor reservation create'; a comma-delimited list (kn1,kn2,...) or a
 multi-node range (kn[3,16-20,34]).
 
 Drop allows reservation owners and admins to free up nodes without deleting the
@@ -364,7 +365,7 @@ This flag cannot be used with other edit parameters.
 ` + sBold("ADDING HOSTS:") + `
 
 Use the --add flag to add one or more hosts to the reservation. The NODES arg is
-the same used in 'igor res create'; a comma-delimited list (kn1,kn2,...) or a
+the same used in 'igor reservation create'; a comma-delimited list (kn1,kn2,...) or a
 multi-node range (kn[3,16-20,34]), or an int value declaring a number of nodes.
 
 Add allows reservations owners and admins to add one or more nodes to the
@@ -469,8 +470,9 @@ also changing the distro.
 func newResDelCmd() *cobra.Command {
 
 	cmdDeleteRes := &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a reservation",
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a reservation",
 		Long: `
 Deletes a reservation. This can only done by the reservation owner, group 
 member or an admin.

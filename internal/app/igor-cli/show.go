@@ -125,7 +125,7 @@ An optional "message of the day" can also appear to provide user alerts and info
 Color output will be auto-disabled if the terminal lacks color support.
 
 For more details, run the show command for specific subgroups.
-Ex. 'igor res show', 'igor host show'
+Ex. 'igor reservation show', 'igor host show'
 
 ` + optionalFlags + `
 

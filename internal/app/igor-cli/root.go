@@ -49,8 +49,8 @@ All flags that take arguments can be expressed with or without an equals sign.
 Help on igor topics is available either as a flag or by using it as the second
 word in the command.
 
-  'igor res create -h'
-  'igor res create --help'
+  'igor reservation create -h'
+  'igor reservation create --help'
   'igor help res create'
 
 Igor defaults using decorative formatting and color in its output. If you wish

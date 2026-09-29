@@ -369,8 +369,9 @@ intended to be installed/boot locally. Otherwise it should not be used.
 func newDistroDelCmd() *cobra.Command {
 
 	return &cobra.Command{
-		Use:   "del NAME",
-		Short: "Delete a distro",
+		Use:     "delete NAME",
+		Aliases: []string{"del"},
+		Short:   "Delete a distro",
 		Long: `
 Deletes an igor distro. This can only be done by the distro owner or an admin.
 
