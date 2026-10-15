@@ -13,7 +13,18 @@ toolset. Version 2 is a sibling project and a significant upgrade from the origi
 
 ## Documentation and Release Notes
 
-Please visit: https://www.sandia.gov/igor
+Documentation is published at https://sandia-minimega.github.io/igor2/ and its
+sources live in [`doc/content`](doc/content). Release notes are maintained in
+[RELEASE_NOTES.md](RELEASE_NOTES.md).
+
+To build the documentation locally:
+
+```shell
+python -m venv .venv
+. .venv/bin/activate
+pip install -r doc/requirements.txt
+python doc/scripts/build.py serve   # or: build --strict
+```
 
 ## Architecture
 Igor has evolved from a simple scheduling app that updated its entries with a cron job and

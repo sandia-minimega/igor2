@@ -1,0 +1,14 @@
+scheme = ["https", "http"]
+accept = ["200..=299", "429"]
+exclude_loopback = true
+
+# Generated self-links are covered by the strict Zensical build.
+exclude = [
+    "^https://sandia-minimega\\.github\\.io/igor2/",
+    # The legacy WordPress site is retired; its links are recorded for provenance only.
+    "^https://www\\.sandia\\.gov/igor",
+    # Placeholder hosts used in configuration examples.
+    "^https?://myserver\\.coolcluster\\.com",
+    # These resources reject automated clients while remaining browser-accessible.
+    "^https://docs\\.redhat\\.com/",
+]
